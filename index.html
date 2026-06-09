@@ -251,7 +251,15 @@
 
   <!-- CLASS MATCHUPS -->
   <div id="matchups" class="panel">
-    <div class="controls">
+    <div class="controls" style="flex-direction:column;align-items:flex-start;gap:10px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span style="font-size:10px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.06em">Row realm:</span>
+        <div class="time-filters" id="tf-matchups-realm">
+          <div class="tf" data-realm="alb" style="color:var(--alb)">Albion</div>
+          <div class="tf" data-realm="mid" style="color:var(--mid)">Midgard</div>
+          <div class="tf" data-realm="hib" style="color:var(--hib)">Hibernia</div>
+        </div>
+      </div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
         <div class="time-filters" id="tf-matchups-time">
           <div class="tf" data-matchup="time-1">24h</div>
@@ -265,6 +273,7 @@
           <div class="tf" data-matchup="count-500">Last 500</div>
           <div class="tf" data-matchup="count-1000">Last 1000</div>
         </div>
+      </div>
       </div>
     </div>
     <p class="matrix-note">Win rate of row class against column class</p>
@@ -296,6 +305,7 @@ let lbSortDir = -1;
 let lbSearch = '';
 let csSortKey = 'fights';
 let matchupFilter = 'count-100';
+let matchupRealmFilter = null;
 let csSortDir = -1;
 let drillSort = {};
 
@@ -589,6 +599,18 @@ function sortDrill(classId,key){
   },10);
 }
 
+function setRealmFilter(realm){
+  if(matchupRealmFilter === realm){
+    matchupRealmFilter = null;
+    document.querySelectorAll('#tf-matchups-realm .tf').forEach(b=>b.classList.remove('active'));
+  } else {
+    matchupRealmFilter = realm;
+    document.querySelectorAll('#tf-matchups-realm .tf').forEach(b=>b.classList.remove('active'));
+    document.querySelector(`#tf-matchups-realm .tf[data-realm="${realm}"]`).classList.add('active');
+  }
+  renderMatchups();
+}
+
 function sortCs(key){
   if(csSortKey===key){csSortDir*=-1;}else{csSortKey=key;csSortDir=-1;}
   renderClassStats();
@@ -621,7 +643,16 @@ function renderMatchups(){
   const nameMapTmp={};
   matchups.forEach(m=>{nameMapTmp[m.class_a]=m.class_a_name;nameMapTmp[m.class_b]=m.class_b_name;});
 
-  const classes=[...classSet].sort((a,b)=>{
+  const REALM_MAP_FILTER = {
+    alb:[1,2,3,4,5,6,7,8,9,10,11,12,13,19,33,63],
+    mid:[21,22,23,24,25,26,27,28,29,30,31,32,34,59],
+    hib:[39,40,41,42,43,44,45,46,47,48,49,50,55,56,58],
+  };
+  const rowClasses = matchupRealmFilter
+    ? [...classSet].filter(c=>REALM_MAP_FILTER[matchupRealmFilter]?.includes(c))
+    : [...classSet];
+
+  const classes=rowClasses.sort((a,b)=>{
     const ra=REALM_ORDER[a]??3, rb=REALM_ORDER[b]??3;
     if(ra!==rb) return ra-rb;
     return (nameMapTmp[a]||'').localeCompare(nameMapTmp[b]||'');
@@ -714,6 +745,8 @@ function switchTab(id,el){
 document.querySelectorAll('.time-filters').forEach(group=>{
   group.querySelectorAll('.tf').forEach(btn=>{
     btn.addEventListener('click',()=>{
+      const realm = btn.dataset.realm;
+      if(realm){ setRealmFilter(realm); return; }
       const matchup = btn.dataset.matchup;
       if(matchup){
         // Matchup Filter: beide Gruppen deaktivieren, dann nur diesen aktivieren
