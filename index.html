@@ -648,6 +648,11 @@ function renderMatchups(){
     ? [...classSet].filter(c=>REALM_MAP_FILTER[matchupRealmFilter]?.includes(c))
     : [...classSet];
 
+  const allClasses=[...classSet].sort((a,b)=>{
+    const ra=REALM_ORDER[a]??3, rb=REALM_ORDER[b]??3;
+    if(ra!==rb) return ra-rb;
+    return (nameMapTmp[a]||'').localeCompare(nameMapTmp[b]||'');
+  });
   const classes=rowClasses.sort((a,b)=>{
     const ra=REALM_ORDER[a]??3, rb=REALM_ORDER[b]??3;
     if(ra!==rb) return ra-rb;
@@ -664,12 +669,12 @@ function renderMatchups(){
 
   let html=`<div class="matrix-wrap"><table class="matrix-table"><thead><tr>
     <th style="text-align:left;min-width:110px">vs. →</th>`;
-  classes.forEach(c=>{html+=`<th>${nameMap[c]||c}</th>`;});
+  allClasses.forEach(c=>{html+=`<th>${nameMap[c]||c}</th>`;});
   html+='</tr></thead><tbody>';
   classes.forEach(rowC=>{
     const rlm=realmCss(rowC);
     html+=`<tr><td class="row-header" style="color:var(--${rlm})">${nameMap[rowC]||rowC}</td>`;
-    classes.forEach(colC=>{
+    allClasses.forEach(colC=>{
       if(rowC===colC){html+=`<td class="cell-self">–</td>`;return;}
       const d=lookup[`${rowC}_${colC}`];
       if(!d){html+=`<td class="cell-na">–</td>`;return;}
