@@ -1,35 +1,29 @@
 """
 Export-Script: Liest fights.db und schreibt data.json (letzte 30 Tage).
-Wird nach jedem Fetch-Durchlauf aufgerufen und pusht zu GitHub.
 """
 
 import sqlite3
 import json
 import subprocess
-import os
 from datetime import datetime, timezone, timedelta
-from collections import defaultdict
 
-DB_PATH      = "fights.db"
-JSON_PATH    = "data.json"   # liegt im gleichen Ordner wie index.html
-DAYS_KEEP    = 30
-MIN_FIGHTS   = 5             # Minimum für Matchup-Matrix
+DB_PATH   = "fights.db"
+JSON_PATH = "data.json"
+DAYS_KEEP = 30
+MIN_FIGHTS_LEADERBOARD = 1
+MIN_FIGHTS_MATCHUP     = 1
 
-# ──────────────────────────────────────────────
-# KONSTANTEN
-# ──────────────────────────────────────────────
 CLASSES = {
-    1:"Paladin", 2:"Armsman", 3:"Scout", 4:"Minstrel", 5:"Theurgist",
-    6:"Cleric", 7:"Wizard", 8:"Sorcerer", 9:"Infiltrator", 10:"Friar",
-    11:"Mercenary", 12:"Necromancer", 13:"Cabalist", 19:"Reaver",
-    33:"Heretic", 63:"Occultist",
-    21:"Thane", 22:"Warrior", 23:"Shadowblade", 24:"Skald", 25:"Hunter",
-    26:"Healer", 27:"Spiritmaster", 28:"Shaman", 29:"Runemaster",
-    30:"Bonedancer", 31:"Berserker", 32:"Savage", 34:"Valkyrie", 59:"Warlock",
-    39:"Bainshee", 40:"Eldritch", 41:"Enchanter", 42:"Mentalist",
-    43:"Blademaster", 44:"Hero", 45:"Champion", 46:"Warden", 47:"Druid",
-    48:"Bard", 49:"Nightshade", 50:"Ranger", 55:"Animist", 56:"Valewalker",
-    58:"Vampiir",
+    1:"Paladin",2:"Armsman",3:"Scout",4:"Minstrel",5:"Theurgist",
+    6:"Cleric",7:"Wizard",8:"Sorcerer",9:"Infiltrator",10:"Friar",
+    11:"Mercenary",12:"Necromancer",13:"Cabalist",19:"Reaver",
+    33:"Heretic",63:"Occultist",
+    21:"Thane",22:"Warrior",23:"Shadowblade",24:"Skald",25:"Hunter",
+    26:"Healer",27:"Spiritmaster",28:"Shaman",29:"Runemaster",
+    30:"Bonedancer",31:"Berserker",32:"Savage",34:"Valkyrie",59:"Warlock",
+    39:"Bainshee",40:"Eldritch",41:"Enchanter",42:"Mentalist",
+    43:"Blademaster",44:"Hero",45:"Champion",46:"Warden",47:"Druid",
+    48:"Bard",49:"Nightshade",50:"Ranger",55:"Animist",56:"Valewalker",58:"Vampiir",
 }
 
 CLASS_REALM = {
@@ -38,7 +32,7 @@ CLASS_REALM = {
     39:3,40:3,41:3,42:3,43:3,44:3,45:3,46:3,47:3,48:3,49:3,50:3,55:3,56:3,58:3,
 }
 
-REALM_NAMES = {1: "Albion", 2: "Midgard", 3: "Hibernia"}
+REALM_NAMES = {1:"Albion", 2:"Midgard", 3:"Hibernia"}
 
 REALM_RANKS = [
     (0,"1L1"),(25,"1L2"),(125,"1L3"),(350,"1L4"),(750,"1L5"),
@@ -67,69 +61,37 @@ REALM_RANKS = [
 def rp_to_rr(rp):
     label = "1L1"
     for min_rp, lbl in REALM_RANKS:
-        if rp >= min_rp:
+        if rp and rp >= min_rp:
             label = lbl
     return label
 
-# ──────────────────────────────────────────────
-# DATEN LADEN
-# ──────────────────────────────────────────────
-def load_fights(con, since_dt):
-    cur = con.cursor()
-    rows = cur.execute("""
-        SELECT f.id, f.started_at, f.duration, f.zone_id,
-               p.class_id, p.race_id, p.realm_pts,
-               t.side, t.won
-        FROM fights f
-        JOIN fight_teams t ON t.fight_id = f.id
-        JOIN fight_players p ON p.fight_id = f.id AND p.side = t.side
-        WHERE f.started_at >= ?
-        ORDER BY f.started_at DESC
-    """, (since_dt.isoformat(),)).fetchall()
-    return rows
 
-# ──────────────────────────────────────────────
-# STATISTIKEN BERECHNEN
-# ──────────────────────────────────────────────
 def compute_stats(con, since_dt):
     cur = con.cursor()
 
-    # ── Fights pro Tag (letzte 7 Tage) ──
+    # ── Daily fights (letzte 7 Tage) ──
     daily = cur.execute("""
         SELECT date(started_at) as day, count(*) as cnt
         FROM fights
         WHERE started_at >= ?
-        GROUP BY day
-        ORDER BY day ASC
+        GROUP BY day ORDER BY day ASC
     """, ((datetime.now(timezone.utc) - timedelta(days=7)).isoformat(),)).fetchall()
 
-    # ── Summary Zahlen ──
-    total_fights = cur.execute(
-        "SELECT count(*) FROM fights WHERE started_at >= ?", (since_dt.isoformat(),)
-    ).fetchone()[0]
-
+    # ── Summary ──
     total_all = cur.execute("SELECT count(*) FROM fights").fetchone()[0]
-
-    fights_today = cur.execute("""
-        SELECT count(*) FROM fights
-        WHERE date(started_at) = date('now')
-    """).fetchone()[0]
-
-    fights_yesterday = cur.execute("""
-        SELECT count(*) FROM fights
-        WHERE date(started_at) = date('now', '-1 day')
-    """).fetchone()[0]
-
+    fights_today = cur.execute(
+        "SELECT count(*) FROM fights WHERE date(started_at) = date('now')"
+    ).fetchone()[0]
+    fights_yesterday = cur.execute(
+        "SELECT count(*) FROM fights WHERE date(started_at) = date('now','-1 day')"
+    ).fetchone()[0]
     avg_duration = cur.execute(
         "SELECT avg(duration) FROM fights WHERE started_at >= ?", (since_dt.isoformat(),)
     ).fetchone()[0] or 0
-
-    # ── Klassen die aktiv waren (letzte 24h) ──
     active_classes = cur.execute("""
-        SELECT count(DISTINCT p.class_id)
-        FROM fight_players p
+        SELECT count(DISTINCT p.class_id) FROM fight_players p
         JOIN fights f ON f.id = p.fight_id
-        WHERE f.started_at >= datetime('now', '-1 day')
+        WHERE f.started_at >= datetime('now','-1 day')
     """).fetchone()[0]
 
     # ── Class Stats ──
@@ -143,99 +105,62 @@ def compute_stats(con, since_dt):
         JOIN fights f ON f.id = p.fight_id
         JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
         WHERE f.started_at >= ?
-        GROUP BY p.class_id
-        HAVING fights >= 3
+        GROUP BY p.class_id HAVING fights >= 3
         ORDER BY fights DESC
     """, (since_dt.isoformat(),)).fetchall()
 
     class_stats = []
     for row in class_rows:
-        cid = row[0]
-        fights = row[1]
-        wins = row[2] or 0
-        winrate = round(wins / fights * 100) if fights > 0 else 0
+        cid, fights, wins, awd, ald = row
+        wins = wins or 0
         class_stats.append({
-            "class_id":   cid,
-            "class_name": CLASSES.get(cid, f"Class {cid}"),
-            "realm":      CLASS_REALM.get(cid, 0),
-            "realm_name": REALM_NAMES.get(CLASS_REALM.get(cid, 0), ""),
-            "fights":     fights,
-            "wins":       wins,
-            "winrate":    winrate,
-            "avg_dur_win":  round(row[3]) if row[3] else None,
-            "avg_dur_loss": round(row[4]) if row[4] else None,
+            "class_id":     cid,
+            "class_name":   CLASSES.get(cid, f"Class {cid}"),
+            "realm":        CLASS_REALM.get(cid, 0),
+            "realm_name":   REALM_NAMES.get(CLASS_REALM.get(cid, 0), ""),
+            "fights":       fights,
+            "wins":         wins,
+            "winrate":      round(wins / fights * 100) if fights > 0 else 0,
+            "avg_dur_win":  round(awd) if awd else None,
+            "avg_dur_loss": round(ald) if ald else None,
         })
 
     # ── Matchup Matrix ──
     matchup_rows = cur.execute("""
-        SELECT
-            pa.class_id as class_a,
-            pb.class_id as class_b,
-            count(*) as fights,
-            sum(ta.won) as wins_a
+        SELECT pa.class_id, pb.class_id, count(*) as fights, sum(ta.won) as wins_a
         FROM fights f
         JOIN fight_teams ta ON ta.fight_id = f.id AND ta.side = 'a'
         JOIN fight_teams tb ON tb.fight_id = f.id AND tb.side = 'b'
         JOIN fight_players pa ON pa.fight_id = f.id AND pa.side = 'a'
         JOIN fight_players pb ON pb.fight_id = f.id AND pb.side = 'b'
         WHERE f.started_at >= ?
-        GROUP BY pa.class_id, pb.class_id
-        HAVING fights >= ?
-    """, (since_dt.isoformat(), MIN_FIGHTS)).fetchall()
+        GROUP BY pa.class_id, pb.class_id HAVING fights >= ?
+    """, (since_dt.isoformat(), MIN_FIGHTS_MATCHUP)).fetchall()
 
     matchups = []
-    for row in matchup_rows:
-        ca, cb, fights, wins_a = row
+    for ca, cb, fights, wins_a in matchup_rows:
         matchups.append({
-            "class_a":      ca,
-            "class_b":      cb,
-            "class_a_name": CLASSES.get(ca, f"Class {ca}"),
-            "class_b_name": CLASSES.get(cb, f"Class {cb}"),
-            "fights":       fights,
-            "winrate_a":    round(wins_a / fights * 100) if fights > 0 else 0,
+            "class_a": ca, "class_a_name": CLASSES.get(ca, f"Class {ca}"),
+            "class_b": cb, "class_b_name": CLASSES.get(cb, f"Class {cb}"),
+            "fights": fights,
+            "winrate_a": round(wins_a / fights * 100) if fights > 0 else 0,
         })
-
-    # ── Top Zonen ──
-    zone_rows = cur.execute("""
-        SELECT zone_id, count(*) as cnt
-        FROM fights
-        WHERE started_at >= ? AND zone_id IS NOT NULL
-        GROUP BY zone_id
-        ORDER BY cnt DESC
-        LIMIT 8
-    """, (since_dt.isoformat(),)).fetchall()
-
-    # Zone IDs → Namen (die wichtigsten Frontier-Zonen)
-    ZONE_NAMES = {
-        163: "Emain Macha", 165: "Hadrian's Wall", 161: "Odin's Gate",
-        162: "Snowdonia", 164: "Breifine", 166: "Pennine Mountains",
-        167: "Forest Sauvage", 168: "Yggdra Forest", 169: "Jamtland Mountains",
-        200: "Darkness Falls",
-    }
-    zones = [{"zone_id": r[0], "name": ZONE_NAMES.get(r[0], f"Zone {r[0]}"), "count": r[1]}
-             for r in zone_rows]
 
     # ── Häufigste Matchups ──
     top_matchups = cur.execute("""
-        SELECT
-            pa.class_id as ca,
-            pb.class_id as cb,
-            count(*) as cnt
+        SELECT pa.class_id, pb.class_id, count(*) as cnt
         FROM fights f
         JOIN fight_players pa ON pa.fight_id = f.id AND pa.side = 'a'
         JOIN fight_players pb ON pb.fight_id = f.id AND pb.side = 'b'
         WHERE f.started_at >= ?
-        GROUP BY ca, cb
-        ORDER BY cnt DESC
-        LIMIT 8
+        GROUP BY pa.class_id, pb.class_id ORDER BY cnt DESC LIMIT 8
     """, (since_dt.isoformat(),)).fetchall()
 
     common_matchups = []
     seen = set()
     for ca, cb, cnt in top_matchups:
         key = tuple(sorted([ca, cb]))
-        if key in seen:
-            continue
+        if key in seen: continue
         seen.add(key)
         common_matchups.append({
             "class_a": ca, "class_a_name": CLASSES.get(ca, f"Class {ca}"),
@@ -243,6 +168,45 @@ def compute_stats(con, since_dt):
             "class_b": cb, "class_b_name": CLASSES.get(cb, f"Class {cb}"),
             "realm_b": CLASS_REALM.get(cb, 0),
             "count": cnt,
+        })
+
+    # ── Leaderboard ──
+    lb_rows = cur.execute("""
+        SELECT
+            p.name,
+            p.class_id,
+            max(p.realm_pts) as realm_pts,
+            count(DISTINCT f.id) as fights,
+            sum(t.won) as wins,
+            avg(CASE WHEN t.won=1 THEN f.duration END) as avg_dur_win,
+            avg(CASE WHEN t.won=0 THEN f.duration END) as avg_dur_loss
+        FROM fight_players p
+        JOIN fights f ON f.id = p.fight_id
+        JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
+        WHERE f.started_at >= ?
+        GROUP BY p.name
+        HAVING fights >= ?
+        ORDER BY wins * 1.0 / fights DESC
+    """, (since_dt.isoformat(), MIN_FIGHTS_LEADERBOARD)).fetchall()
+
+    leaderboard = []
+    for row in lb_rows:
+        name, cid, rp, fights, wins, awd, ald = row
+        wins = wins or 0
+        losses = fights - wins
+        leaderboard.append({
+            "name":         name,
+            "class_id":     cid,
+            "class_name":   CLASSES.get(cid, f"Class {cid}"),
+            "realm":        CLASS_REALM.get(cid, 0),
+            "realm_name":   REALM_NAMES.get(CLASS_REALM.get(cid, 0), ""),
+            "rr":           rp_to_rr(rp),
+            "fights":       fights,
+            "wins":         wins,
+            "losses":       losses,
+            "winrate":      round(wins / fights * 100) if fights > 0 else 0,
+            "avg_dur_win":  round(awd) if awd else None,
+            "avg_dur_loss": round(ald) if ald else None,
         })
 
     return {
@@ -256,20 +220,16 @@ def compute_stats(con, since_dt):
         },
         "class_stats":     class_stats,
         "matchups":        matchups,
-        "zones":           zones,
         "common_matchups": common_matchups,
         "daily_fights":    [{"day": r[0], "count": r[1]} for r in daily],
+        "leaderboard":     leaderboard,
     }
 
 
-# ──────────────────────────────────────────────
-# EXPORT & GIT PUSH
-# ──────────────────────────────────────────────
 def export(push=True):
     con = sqlite3.connect(DB_PATH)
     since = datetime.now(timezone.utc) - timedelta(days=DAYS_KEEP)
 
-    # Alte Fights löschen
     deleted = con.execute(
         "DELETE FROM fights WHERE started_at < ?", (since.isoformat(),)
     ).rowcount
@@ -300,6 +260,6 @@ def export(push=True):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--no-push", action="store_true", help="Kein Git Push")
+    parser.add_argument("--no-push", action="store_true")
     args = parser.parse_args()
     export(push=not args.no_push)
