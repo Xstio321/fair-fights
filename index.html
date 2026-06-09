@@ -126,7 +126,10 @@
   .matrix-table{width:100%;border-collapse:collapse;font-size:12px}
   .matrix-table th{font-size:10px;padding:7px 8px;font-weight:400;color:var(--text3);background:var(--bg2);letter-spacing:0.08em;text-transform:uppercase;font-family:'Cinzel',serif;border:0.5px solid var(--border)}
   .matrix-table td{padding:6px 8px;text-align:center;border:0.5px solid var(--border);font-family:'Cinzel',serif;font-size:12px;transition:background 0.1s}
-  .row-header{font-size:11px;font-weight:600;color:var(--text2);background:var(--bg2);text-align:left;padding:6px 12px;white-space:nowrap;font-family:'Cinzel',serif}
+  .row-header{font-size:11px;font-weight:600;color:var(--text2);background:var(--bg2);text-align:left;padding:6px 12px;white-space:nowrap;font-family:'Cinzel',serif;position:sticky;left:0;z-index:1}
+  .matrix-table thead th:first-child{position:sticky;left:0;z-index:2}
+  .matrix-table th{position:sticky;top:0;z-index:1}
+  .matrix-wrap{max-height:600px;overflow:auto}
   .cell-high{background:rgba(122,182,72,0.15);color:var(--hib);font-weight:600}
   .cell-mid{background:rgba(201,168,76,0.12);color:var(--amber);font-weight:600}
   .cell-low{background:rgba(196,74,74,0.12);color:var(--alb);font-weight:600}
