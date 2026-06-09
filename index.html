@@ -561,11 +561,21 @@ function renderMatchups(){
 
   const classSet=new Set();
   matchups.forEach(m=>{classSet.add(m.class_a);classSet.add(m.class_b);});
+
+  // Sortierung: Albion → Hibernia → Midgard, innerhalb alphabetisch
+  const REALM_ORDER={
+    1:0, 2:0, 3:0, 4:0, 5:0, 6:0, 7:0, 8:0, 9:0, 10:0, 11:0, 12:0, 13:0, 19:0, 33:0, 63:0, // Albion
+    39:1,40:1,41:1,42:1,43:1,44:1,45:1,46:1,47:1,48:1,49:1,50:1,55:1,56:1,58:1, // Hibernia
+    21:2,22:2,23:2,24:2,25:2,26:2,27:2,28:2,29:2,30:2,31:2,32:2,34:2,59:2,       // Midgard
+  };
+  const nameMapTmp={};
+  matchups.forEach(m=>{nameMapTmp[m.class_a]=m.class_a_name;nameMapTmp[m.class_b]=m.class_b_name;});
+
   const classes=[...classSet].sort((a,b)=>{
-    const fa=matchups.filter(m=>m.class_a===a||m.class_b===a).reduce((s,m)=>s+m.fights,0);
-    const fb=matchups.filter(m=>m.class_a===b||m.class_b===b).reduce((s,m)=>s+m.fights,0);
-    return fb-fa;
-  }).slice(0,14);
+    const ra=REALM_ORDER[a]??3, rb=REALM_ORDER[b]??3;
+    if(ra!==rb) return ra-rb;
+    return (nameMapTmp[a]||'').localeCompare(nameMapTmp[b]||'');
+  });
 
   const lookup={};
   matchups.forEach(m=>{
