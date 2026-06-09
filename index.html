@@ -159,6 +159,18 @@
   .day-bar:hover{opacity:0.8}
   .day-count{font-size:10px;color:var(--text3);font-family:'Cinzel',serif;margin-top:2px}
   .day-peak{color:var(--hib)}
+  .top5-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:1.5rem}
+  .top5-card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:1.25rem}
+  .top5-title{font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:1rem}
+  .top5-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .top5-row:last-child{margin-bottom:0}
+  .top5-rank{font-size:12px;color:var(--text3);font-family:'Cinzel',serif;min-width:16px}
+  .top5-rank-1{color:var(--amber)}.top5-rank-2{color:var(--text2)}.top5-rank-3{color:#a07040}
+  .top5-name{font-size:13px;color:var(--text);font-weight:600;flex:1}
+  .top5-class{font-size:11px;color:var(--text3)}
+  .top5-value{font-size:13px;font-family:'Cinzel',serif;color:var(--hib);font-weight:600;white-space:nowrap}
+  .top5-heal-value{color:var(--mid)}
+  @media(max-width:600px){.top5-grid{grid-template-columns:1fr}}
   .loading{text-align:center;padding:3rem;color:var(--text3);font-family:'Cinzel',serif;font-size:13px;letter-spacing:0.1em}
   .error-msg{background:rgba(196,74,74,0.1);border:0.5px solid var(--alb2);border-radius:var(--radius);padding:12px 16px;color:var(--alb);font-size:13px;font-family:'Cinzel',serif;margin-bottom:1rem}
   footer{margin-top:3rem;padding-top:1.5rem;border-top:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
@@ -329,6 +341,45 @@ function getFilteredLb(){
     return(va-vb)*lbSortDir;
   });
   return lb;
+}
+
+function renderTop5(){
+  const dmg  = DATA.top_damage  || [];
+  const heal = DATA.top_healing || [];
+
+  function top5Card(items, title, valueClass){
+    if(!items.length) return `<div class="top5-card"><div class="top5-title">${title}</div><div style="color:var(--text3);font-size:13px">No data yet.</div></div>`;
+    const rows = items.map((p,i)=>{
+      const rlm = realmCss(p.class_id);
+      const rk = i===0?'top5-rank-1':i===1?'top5-rank-2':i===2?'top5-rank-3':'';
+      return `<div class="top5-row">
+        <span class="top5-rank ${rk}">${i+1}</span>
+        <div class="class-icon av-${rlm}" style="width:24px;height:24px;font-size:9px">${initials(p.class_name)}</div>
+        <div style="flex:1;min-width:0">
+          <div class="top5-name">${p.name}</div>
+          <div class="top5-class">${p.class_name}</div>
+        </div>
+        <span class="top5-value ${valueClass}">${p.value.toLocaleString()}</span>
+      </div>`;
+    }).join('');
+    return `<div class="top5-card"><div class="top5-title">${title}</div>${rows}</div>`;
+  }
+
+  const html = `<div class="top5-grid">
+    ${top5Card(dmg,  '⚔ Top Damage in 1 Fight', '')}
+    ${top5Card(heal, '✦ Top Healing in 1 Fight', 'top5-heal-value')}
+  </div>`;
+
+  // In leaderboard panel vor der tabelle einfügen
+  const existing = document.getElementById('leaderboard-top5');
+  if(existing) existing.outerHTML = `<div id="leaderboard-top5">${html}</div>`;
+  else {
+    const body = document.getElementById('leaderboard-body');
+    const div = document.createElement('div');
+    div.id = 'leaderboard-top5';
+    div.innerHTML = html;
+    body.parentNode.insertBefore(div, body);
+  }
 }
 
 function renderLeaderboard(){
@@ -680,6 +731,7 @@ async function loadData(){
     if(!r.ok)throw new Error('HTTP '+r.status);
     DATA=await r.json();
     renderSummary();
+    renderTop5();
     renderLeaderboard();
     renderClassStats();
     renderMatchups();

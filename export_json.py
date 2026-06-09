@@ -133,47 +133,43 @@ def compute_stats(con, since_dt):
             "winrate":      round(wins / fights * 100) if fights > 0 else 0,
         })
 
-    # ── Matchup Matrix (seitenunabhängig) ──
-    # Für jeden Fight: Gewinner-Klasse vs Verlierer-Klasse ermitteln
-    # unabhängig ob sie auf Seite a oder b waren
+    # ── Matchup Matrix ──
+    # Jeden Fight einmal laden: Gewinner-Klasse + Verlierer-Klasse
+    # key = (min_class_id, max_class_id) damit Reihenfolge egal ist
     fight_rows = cur.execute("""
         SELECT
             pw.class_id as winner_class,
-            pl.class_id as loser_class,
-            count(*) as fights
+            pl.class_id as loser_class
         FROM fights f
         JOIN fight_players pw ON pw.fight_id = f.id
         JOIN fight_teams tw ON tw.fight_id = f.id AND tw.side = pw.side AND tw.won = 1
         JOIN fight_players pl ON pl.fight_id = f.id
         JOIN fight_teams tl ON tl.fight_id = f.id AND tl.side = pl.side AND tl.won = 0
         WHERE f.started_at >= ?
-        GROUP BY winner_class, loser_class
     """, (since_str,)).fetchall()
 
-    # In beide Richtungen aggregieren
     from collections import defaultdict
-    matchup_data = defaultdict(lambda: {"wins": 0, "total": 0})
+    # key: (class_a, class_b) wobei class_a < class_b
+    # value: {"total": N, "wins_a": N}
+    matchup_data = defaultdict(lambda: {"total": 0, "wins_a": 0})
 
-    for winner_class, loser_class, cnt in fight_rows:
-        key = tuple(sorted([winner_class, loser_class]))
-        matchup_data[key]["total"] += cnt
-        # winner_class hat cnt Wins gegen loser_class
-        if winner_class == key[0]:
-            matchup_data[key]["wins_0"] = matchup_data[key].get("wins_0", 0) + cnt
-        else:
-            matchup_data[key]["wins_1"] = matchup_data[key].get("wins_1", 0) + cnt
+    for winner_class, loser_class in fight_rows:
+        ca = min(winner_class, loser_class)
+        cb = max(winner_class, loser_class)
+        matchup_data[(ca, cb)]["total"] += 1
+        if winner_class == ca:
+            matchup_data[(ca, cb)]["wins_a"] += 1
 
     matchups = []
     for (ca, cb), d in matchup_data.items():
         total = d["total"]
         if total < MIN_FIGHTS_MATCHUP:
             continue
-        wins_a = d.get("wins_0", 0)
         matchups.append({
             "class_a": ca, "class_a_name": CLASSES.get(ca, f"Class {ca}"),
             "class_b": cb, "class_b_name": CLASSES.get(cb, f"Class {cb}"),
             "fights": total,
-            "winrate_a": round(wins_a / total * 100) if total > 0 else 0,
+            "winrate_a": round(d["wins_a"] / total * 100) if total > 0 else 0,
         })
 
     # ── Häufigste Matchups ──
@@ -248,6 +244,48 @@ def compute_stats(con, since_dt):
             "wilson":  wilson_score(wins, fights),
         })
 
+    # ── Top 5 Damage per Fight ──
+    top_dmg = cur.execute("""
+        SELECT p.name, p.class_id, p.dmg_done, f.id
+        FROM fight_players p
+        JOIN fights f ON f.id = p.fight_id
+        WHERE f.started_at >= ? AND p.dmg_done > 0
+        ORDER BY p.dmg_done DESC
+        LIMIT 5
+    """, (since_str,)).fetchall()
+
+    top_damage = []
+    for name, cid, dmg, fid in top_dmg:
+        top_damage.append({
+            "name":       name,
+            "class_id":   cid,
+            "class_name": CLASSES.get(cid, f"Class {cid}"),
+            "realm":      CLASS_REALM.get(cid, 0),
+            "value":      dmg,
+            "fight_id":   fid,
+        })
+
+    # ── Top 5 Healing per Fight ──
+    top_heal = cur.execute("""
+        SELECT p.name, p.class_id, p.heal_done, f.id
+        FROM fight_players p
+        JOIN fights f ON f.id = p.fight_id
+        WHERE f.started_at >= ? AND p.heal_done > 0
+        ORDER BY p.heal_done DESC
+        LIMIT 5
+    """, (since_str,)).fetchall()
+
+    top_healing = []
+    for name, cid, heal, fid in top_heal:
+        top_healing.append({
+            "name":       name,
+            "class_id":   cid,
+            "class_name": CLASSES.get(cid, f"Class {cid}"),
+            "realm":      CLASS_REALM.get(cid, 0),
+            "value":      heal,
+            "fight_id":   fid,
+        })
+
     return {
         "generated_at":    datetime.now(timezone.utc).isoformat(),
         "summary": {
@@ -262,6 +300,8 @@ def compute_stats(con, since_dt):
         "common_matchups": common_out,
         "daily_fights":    [{"day": r[0], "count": r[1]} for r in daily],
         "leaderboard":     leaderboard,
+        "top_damage":      top_damage,
+        "top_healing":     top_healing,
     }
 
 
