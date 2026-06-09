@@ -34,6 +34,22 @@ CLASS_REALM = {
 
 REALM_NAMES = {1:"Albion", 2:"Midgard", 3:"Hibernia"}
 
+ZONE_NAMES = {
+    163: "Ellan Vannin",
+    167: "Odin's Gate",
+    168: "Jamtland Mountains",
+    169: "Yggdra Forest",
+    170: "Uppland",
+    171: "Emain Macha",
+    172: "Breifine",
+    173: "Cruachan Gorge",
+    174: "Mount Collory",
+    175: "Snowdonia",
+    176: "Forest Sauvage",
+    177: "Pennine Mountains",
+    178: "Hadrian's Wall",
+}
+
 REALM_RANKS = [
     (0,"1L1"),(25,"1L2"),(125,"1L3"),(350,"1L4"),(750,"1L5"),
     (1375,"1L6"),(2275,"1L7"),(3500,"1L8"),(5100,"1L9"),
@@ -82,12 +98,37 @@ def compute_stats(con, since_dt):
     since_str = since_dt.isoformat()
 
     # ── Daily fights ──
+    two_days_ago = (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()
     daily = cur.execute("""
         SELECT date(started_at) as day, count(*) as cnt
         FROM fights
         WHERE started_at >= ?
         GROUP BY day ORDER BY day ASC
     """, ((datetime.now(timezone.utc) - timedelta(days=7)).isoformat(),)).fetchall()
+
+    # ── Zone Zeitreihe (heute + gestern, stündlich) ──
+    zone_timeseries_rows = cur.execute("""
+        SELECT
+            zone_id,
+            strftime('%Y-%m-%d %H:00', started_at) as hour,
+            count(*) as cnt
+        FROM fights
+        WHERE started_at >= ? AND zone_id IS NOT NULL
+        GROUP BY zone_id, hour
+        ORDER BY hour ASC
+    """, (two_days_ago,)).fetchall()
+
+    # Gruppieren nach Zone
+    from collections import defaultdict
+    zone_ts = defaultdict(list)
+    for zone_id, hour, cnt in zone_timeseries_rows:
+        if zone_id in ZONE_NAMES:
+            zone_ts[zone_id].append({"hour": hour, "count": cnt})
+
+    zone_timeseries = [
+        {"zone_id": zid, "name": ZONE_NAMES[zid], "data": data}
+        for zid, data in sorted(zone_ts.items(), key=lambda x: -sum(d["count"] for d in x[1]))
+    ]
 
     # ── Summary ──
     total_all = cur.execute("SELECT count(*) FROM fights").fetchone()[0]
@@ -284,6 +325,7 @@ def compute_stats(con, since_dt):
         "matchups_1000":   matchups_1000,
         "common_matchups": common_out,
         "daily_fights":    [{"day": r[0], "count": r[1]} for r in daily],
+        "zone_timeseries": zone_timeseries,
         "leaderboard":     leaderboard,
     }
 
