@@ -110,7 +110,7 @@ def compute_stats(con, since_dt):
     class_rows = cur.execute("""
         SELECT p.class_id,
                count(DISTINCT f.id) as fights,
-               sum(t.won) as wins,
+               sum(t.won) as wins
         FROM fight_players p
         JOIN fights f ON f.id = p.fight_id
         JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
@@ -195,7 +195,7 @@ def compute_stats(con, since_dt):
             p.class_id,
             max(p.realm_pts) as realm_pts,
             count(DISTINCT f.id) as fights,
-            sum(t.won) as wins,
+            sum(t.won) as wins
         FROM fight_players p
         JOIN fights f ON f.id = p.fight_id
         JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
@@ -227,7 +227,7 @@ def compute_stats(con, since_dt):
     # ── Class Drill-Down ──
     cp_rows = cur.execute("""
         SELECT p.class_id, p.name, max(p.realm_pts) as rp,
-               count(DISTINCT f.id) as fights, sum(t.won) as wins,
+               count(DISTINCT f.id) as fights, sum(t.won) as wins
         FROM fight_players p
         JOIN fights f ON f.id = p.fight_id
         JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
