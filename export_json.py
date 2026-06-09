@@ -68,8 +68,9 @@ def rp_to_rr(rp):
 
 def compute_stats(con, since_dt):
     cur = con.cursor()
+    since_str = since_dt.isoformat()
 
-    # ── Daily fights (letzte 7 Tage) ──
+    # ── Daily fights ──
     daily = cur.execute("""
         SELECT date(started_at) as day, count(*) as cnt
         FROM fights
@@ -86,10 +87,13 @@ def compute_stats(con, since_dt):
         "SELECT count(*) FROM fights WHERE date(started_at) = date('now','-1 day')"
     ).fetchone()[0]
     avg_duration = cur.execute(
-        "SELECT avg(duration) FROM fights WHERE started_at >= ?", (since_dt.isoformat(),)
+        "SELECT avg(duration) FROM fights WHERE started_at >= ?", (since_str,)
     ).fetchone()[0] or 0
-    active_classes = cur.execute("""
-        SELECT count(DISTINCT p.class_id) FROM fight_players p
+
+    # 1v1 aktive Spieler (letzte 24h) statt Klassen
+    active_players = cur.execute("""
+        SELECT count(DISTINCT p.name)
+        FROM fight_players p
         JOIN fights f ON f.id = p.fight_id
         WHERE f.started_at >= datetime('now','-1 day')
     """).fetchone()[0]
@@ -105,9 +109,9 @@ def compute_stats(con, since_dt):
         JOIN fights f ON f.id = p.fight_id
         JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
         WHERE f.started_at >= ?
-        GROUP BY p.class_id HAVING fights >= 3
+        GROUP BY p.class_id
         ORDER BY fights DESC
-    """, (since_dt.isoformat(),)).fetchall()
+    """, (since_str,)).fetchall()
 
     class_stats = []
     for row in class_rows:
@@ -125,49 +129,59 @@ def compute_stats(con, since_dt):
             "avg_dur_loss": round(ald) if ald else None,
         })
 
-    # ── Matchup Matrix ──
-    matchup_rows = cur.execute("""
-        SELECT pa.class_id, pb.class_id, count(*) as fights, sum(ta.won) as wins_a
+    # ── Matchup Matrix (seitenunabhängig) ──
+    # Für jeden Fight: Gewinner-Klasse vs Verlierer-Klasse ermitteln
+    # unabhängig ob sie auf Seite a oder b waren
+    fight_rows = cur.execute("""
+        SELECT
+            pw.class_id as winner_class,
+            pl.class_id as loser_class,
+            count(*) as fights
         FROM fights f
-        JOIN fight_teams ta ON ta.fight_id = f.id AND ta.side = 'a'
-        JOIN fight_teams tb ON tb.fight_id = f.id AND tb.side = 'b'
-        JOIN fight_players pa ON pa.fight_id = f.id AND pa.side = 'a'
-        JOIN fight_players pb ON pb.fight_id = f.id AND pb.side = 'b'
+        JOIN fight_players pw ON pw.fight_id = f.id
+        JOIN fight_teams tw ON tw.fight_id = f.id AND tw.side = pw.side AND tw.won = 1
+        JOIN fight_players pl ON pl.fight_id = f.id
+        JOIN fight_teams tl ON tl.fight_id = f.id AND tl.side = pl.side AND tl.won = 0
         WHERE f.started_at >= ?
-        GROUP BY pa.class_id, pb.class_id HAVING fights >= ?
-    """, (since_dt.isoformat(), MIN_FIGHTS_MATCHUP)).fetchall()
+        GROUP BY winner_class, loser_class
+    """, (since_str,)).fetchall()
+
+    # In beide Richtungen aggregieren
+    from collections import defaultdict
+    matchup_data = defaultdict(lambda: {"wins": 0, "total": 0})
+
+    for winner_class, loser_class, cnt in fight_rows:
+        key = tuple(sorted([winner_class, loser_class]))
+        matchup_data[key]["total"] += cnt
+        # winner_class hat cnt Wins gegen loser_class
+        if winner_class == key[0]:
+            matchup_data[key]["wins_0"] = matchup_data[key].get("wins_0", 0) + cnt
+        else:
+            matchup_data[key]["wins_1"] = matchup_data[key].get("wins_1", 0) + cnt
 
     matchups = []
-    for ca, cb, fights, wins_a in matchup_rows:
+    for (ca, cb), d in matchup_data.items():
+        total = d["total"]
+        if total < MIN_FIGHTS_MATCHUP:
+            continue
+        wins_a = d.get("wins_0", 0)
         matchups.append({
             "class_a": ca, "class_a_name": CLASSES.get(ca, f"Class {ca}"),
             "class_b": cb, "class_b_name": CLASSES.get(cb, f"Class {cb}"),
-            "fights": fights,
-            "winrate_a": round(wins_a / fights * 100) if fights > 0 else 0,
+            "fights": total,
+            "winrate_a": round(wins_a / total * 100) if total > 0 else 0,
         })
 
     # ── Häufigste Matchups ──
-    top_matchups = cur.execute("""
-        SELECT pa.class_id, pb.class_id, count(*) as cnt
-        FROM fights f
-        JOIN fight_players pa ON pa.fight_id = f.id AND pa.side = 'a'
-        JOIN fight_players pb ON pb.fight_id = f.id AND pb.side = 'b'
-        WHERE f.started_at >= ?
-        GROUP BY pa.class_id, pb.class_id ORDER BY cnt DESC LIMIT 8
-    """, (since_dt.isoformat(),)).fetchall()
-
-    common_matchups = []
-    seen = set()
-    for ca, cb, cnt in top_matchups:
-        key = tuple(sorted([ca, cb]))
-        if key in seen: continue
-        seen.add(key)
-        common_matchups.append({
-            "class_a": ca, "class_a_name": CLASSES.get(ca, f"Class {ca}"),
-            "realm_a": CLASS_REALM.get(ca, 0),
-            "class_b": cb, "class_b_name": CLASSES.get(cb, f"Class {cb}"),
-            "realm_b": CLASS_REALM.get(cb, 0),
-            "count": cnt,
+    common_matchups = sorted(matchups, key=lambda x: x["fights"], reverse=True)[:8]
+    common_out = []
+    for m in common_matchups:
+        common_out.append({
+            "class_a": m["class_a"], "class_a_name": m["class_a_name"],
+            "realm_a": CLASS_REALM.get(m["class_a"], 0),
+            "class_b": m["class_b"], "class_b_name": m["class_b_name"],
+            "realm_b": CLASS_REALM.get(m["class_b"], 0),
+            "count": m["fights"],
         })
 
     # ── Leaderboard ──
@@ -187,7 +201,7 @@ def compute_stats(con, since_dt):
         GROUP BY p.name
         HAVING fights >= ?
         ORDER BY wins * 1.0 / fights DESC
-    """, (since_dt.isoformat(), MIN_FIGHTS_LEADERBOARD)).fetchall()
+    """, (since_str, MIN_FIGHTS_LEADERBOARD)).fetchall()
 
     leaderboard = []
     for row in lb_rows:
@@ -209,18 +223,46 @@ def compute_stats(con, since_dt):
             "avg_dur_loss": round(ald) if ald else None,
         })
 
+    # ── Class Drill-Down ──
+    cp_rows = cur.execute("""
+        SELECT p.class_id, p.name, max(p.realm_pts) as rp,
+               count(DISTINCT f.id) as fights, sum(t.won) as wins,
+               avg(CASE WHEN t.won=1 THEN f.duration END) as awd,
+               avg(CASE WHEN t.won=0 THEN f.duration END) as ald
+        FROM fight_players p
+        JOIN fights f ON f.id = p.fight_id
+        JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
+        WHERE f.started_at >= ?
+        GROUP BY p.class_id, p.name
+        ORDER BY p.class_id, wins * 1.0 / count(DISTINCT f.id) DESC
+    """, (since_str,)).fetchall()
+
+    class_players = {}
+    for cid, name, rp, fights, wins, awd, ald in cp_rows:
+        wins = wins or 0
+        if cid not in class_players:
+            class_players[cid] = []
+        class_players[cid].append({
+            "name": name, "rr": rp_to_rr(rp),
+            "fights": fights, "wins": wins, "losses": fights - wins,
+            "winrate": round(wins / fights * 100) if fights > 0 else 0,
+            "avg_dur_win": round(awd) if awd else None,
+            "avg_dur_loss": round(ald) if ald else None,
+        })
+
     return {
         "generated_at":    datetime.now(timezone.utc).isoformat(),
         "summary": {
             "fights_today":     fights_today,
             "fights_yesterday": fights_yesterday,
             "total_fights":     total_all,
-            "active_classes":   active_classes,
+            "active_players":   active_players,
             "avg_duration":     round(avg_duration),
         },
         "class_stats":     class_stats,
+        "class_players":   class_players,
         "matchups":        matchups,
-        "common_matchups": common_matchups,
+        "common_matchups": common_out,
         "daily_fights":    [{"day": r[0], "count": r[1]} for r in daily],
         "leaderboard":     leaderboard,
     }

@@ -45,8 +45,7 @@
   .tf{padding:5px 13px;font-size:11px;border:0.5px solid var(--border2);border-radius:20px;cursor:pointer;color:var(--text3);background:transparent;transition:all 0.15s;font-family:'Cinzel',serif;letter-spacing:0.06em;user-select:none}
   .tf:hover{color:var(--text2)}
   .tf.active{background:var(--hib);color:#0d0f0e;border-color:var(--hib);font-weight:600}
-  .panel{display:none}
-  .panel.active{display:block}
+  .panel{display:none}.panel.active{display:block}
   table{width:100%;border-collapse:collapse}
   thead th{font-size:10px;font-weight:400;color:var(--text3);text-align:left;padding:8px 10px;border-bottom:0.5px solid var(--border2);letter-spacing:0.1em;text-transform:uppercase;font-family:'Cinzel',serif;white-space:nowrap}
   th.r,td.r{text-align:right}
@@ -83,10 +82,45 @@
   .rank-1{color:var(--amber);font-weight:600}
   .rank-2{color:var(--text2);font-weight:600}
   .rank-3{color:#a07040;font-weight:600}
+  .drill-row td{padding:0!important;border:none!important}
+  .drill-panel{display:none;background:var(--bg3);border-top:0.5px solid var(--border2)}
+  .drill-panel.open{display:block}
+  .drill-panel table{margin:0}
+  .drill-panel thead th{background:var(--bg3);font-size:9px;padding:6px 10px}
+  .drill-panel tbody td{padding:6px 10px;font-size:13px;background:var(--bg3)}
+  .drill-panel tbody tr:hover td{background:var(--bg4)}
+  .cs-row{cursor:pointer}
+  .cs-row:hover td{background:var(--bg2)!important}
+  .expand-icon{font-size:10px;color:var(--text3);margin-left:6px;transition:transform 0.15s;display:inline-block}
+  .expand-icon.open{transform:rotate(90deg)}
+  .drill-row td{padding:0!important;border:none!important}
+  .drill-panel{display:none;background:var(--bg3);border-top:0.5px solid var(--border2)}
+  .drill-panel.open{display:block}
+  .drill-panel table{margin:0;border-top:none}
+  .drill-panel thead th{background:var(--bg3);font-size:9px;padding:6px 10px}
+  .drill-panel tbody td{padding:6px 10px;font-size:13px;background:var(--bg3)}
+  .drill-panel tbody tr:hover td{background:var(--bg4)}
+  .cs-row{cursor:pointer}
+  .expand-icon{font-size:10px;color:var(--text3);margin-left:6px;transition:transform 0.15s;display:inline-block}
+  .expand-icon.open{transform:rotate(90deg)}
   .dur-legend{display:flex;gap:16px;margin-bottom:1rem;flex-wrap:wrap}
   .dur-legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);font-family:'Cinzel',serif}
   .dur-dot-win{width:8px;height:8px;border-radius:50%;background:var(--green)}
   .dur-dot-loss{width:8px;height:8px;border-radius:50%;background:var(--red)}
+  /* Search */
+  .search-wrap{position:relative;flex:1;max-width:260px}
+  .search-input{width:100%;background:var(--bg2);border:0.5px solid var(--border2);border-radius:20px;padding:5px 14px 5px 32px;font-size:12px;color:var(--text);font-family:'Cinzel',serif;outline:none;transition:border-color 0.15s}
+  .search-input::placeholder{color:var(--text3)}
+  .search-input:focus{border-color:var(--hib)}
+  .search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--text3);pointer-events:none}
+  /* Pagination */
+  .pagination{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:1.25rem}
+  .page-btn{padding:4px 11px;font-size:11px;border:0.5px solid var(--border2);border-radius:4px;cursor:pointer;color:var(--text3);background:transparent;font-family:'Cinzel',serif;transition:all 0.15s}
+  .page-btn:hover{color:var(--text2);border-color:var(--border2)}
+  .page-btn.active{background:var(--hib);color:#0d0f0e;border-color:var(--hib);font-weight:600}
+  .page-btn:disabled{opacity:0.3;cursor:default}
+  .page-info{font-size:11px;color:var(--text3);font-family:'Cinzel',serif}
+  /* Matrix */
   .matrix-note{font-size:12px;color:var(--text3);margin-bottom:12px;letter-spacing:0.04em}
   .matrix-wrap{overflow-x:auto}
   .matrix-table{width:100%;border-collapse:collapse;font-size:12px}
@@ -101,6 +135,7 @@
   .matchup-legend{display:flex;gap:16px;margin-top:12px;flex-wrap:wrap}
   .legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3)}
   .legend-dot{width:10px;height:10px;border-radius:2px}
+  /* Activity */
   .activity-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:1.5rem}
   .activity-card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:1.25rem}
   .activity-card-title{font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:1rem}
@@ -132,6 +167,7 @@
     header{flex-direction:column;gap:10px}
     .activity-grid{grid-template-columns:1fr}
     .activity-card-full{grid-column:1}
+    .search-wrap{max-width:100%}
   }
 </style>
 </head>
@@ -155,8 +191,8 @@
       <div class="stat-sub" id="s-today-sub">loading…</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Classes active</div>
-      <div class="stat-value" id="s-classes">–</div>
+      <div class="stat-label">Players active</div>
+      <div class="stat-value" id="s-players">–</div>
       <div class="stat-sub">last 24h</div>
     </div>
     <div class="stat-card">
@@ -187,8 +223,13 @@
         <div class="tf" data-days="7">7d</div>
         <div class="tf" data-days="30">30d</div>
       </div>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input class="search-input" id="lb-search" type="text" placeholder="Search player…">
+      </div>
     </div>
     <div id="leaderboard-body"><div class="loading">Loading leaderboard…</div></div>
+    <div id="leaderboard-pagination"></div>
   </div>
 
   <!-- CLASS STATS -->
@@ -205,7 +246,7 @@
       <div class="dur-legend-item"><div class="dur-dot-win"></div> Avg. duration on win</div>
       <div class="dur-legend-item"><div class="dur-dot-loss"></div> Avg. duration on loss</div>
     </div>
-    <div id="classstats-body"><div class="loading">Loading fight data…</div></div>
+    <div id="classstats-body"><div class="loading">Loading…</div></div>
   </div>
 
   <!-- CLASS MATCHUPS -->
@@ -219,7 +260,7 @@
       </div>
     </div>
     <p class="matrix-note">Win rate of row class against column class</p>
-    <div id="matchups-body"><div class="loading">Loading matchup data…</div></div>
+    <div id="matchups-body"><div class="loading">Loading…</div></div>
     <div class="matchup-legend">
       <div class="legend-item"><div class="legend-dot" style="background:rgba(122,182,72,0.3);border:0.5px solid var(--hib2)"></div> ≥60% advantage</div>
       <div class="legend-item"><div class="legend-dot" style="background:rgba(201,168,76,0.3);border:0.5px solid var(--gold2)"></div> 45–59% even</div>
@@ -229,15 +270,7 @@
 
   <!-- ACTIVITY -->
   <div id="activity" class="panel">
-    <div class="controls">
-      <div class="time-filters" id="tf-activity">
-        <div class="tf active" data-days="1">24h</div>
-        <div class="tf" data-days="3">3d</div>
-        <div class="tf" data-days="7">7d</div>
-        <div class="tf" data-days="30">30d</div>
-      </div>
-    </div>
-    <div id="activity-body"><div class="loading">Loading activity data…</div></div>
+    <div id="activity-body"><div class="loading">Loading…</div></div>
   </div>
 
   <footer>
@@ -248,203 +281,311 @@
 
 <script>
 let DATA = null;
+const PAGE_SIZE = 50;
+let lbPage = 1;
 let lbSortKey = 'winrate';
-let lbSortDir = -1; // -1 = desc, 1 = asc
+let lbSortDir = -1;
+let lbSearch = '';
+let csSortKey = 'fights';
+let csSortDir = -1;
 
-const REALM_HIB = [39,40,41,42,43,44,45,46,47,48,49,50,55,56,58];
-const REALM_MID = [21,22,23,24,25,26,27,28,29,30,31,32,34,59];
-const REALM_ALB = [1,2,3,4,5,6,7,8,9,10,11,12,13,19,33,63];
+const REALM_HIB=[39,40,41,42,43,44,45,46,47,48,49,50,55,56,58];
+const REALM_MID=[21,22,23,24,25,26,27,28,29,30,31,32,34,59];
+const REALM_ALB=[1,2,3,4,5,6,7,8,9,10,11,12,13,19,33,63];
 
-function realmCss(cid) {
-  if (REALM_HIB.includes(cid)) return 'hib';
-  if (REALM_MID.includes(cid)) return 'mid';
-  if (REALM_ALB.includes(cid)) return 'alb';
-  return 'neu';
-}
-function realmName(cid) {
-  if (REALM_HIB.includes(cid)) return 'Hibernia';
-  if (REALM_MID.includes(cid)) return 'Midgard';
-  if (REALM_ALB.includes(cid)) return 'Albion';
-  return '';
-}
-function initials(name) { return name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase(); }
-function fmtDur(s) { return s ? s+'s' : '–'; }
-function fmtNum(n) { return n ? n.toLocaleString() : '0'; }
-function wrClass(wr) { return wr>=55?'wr-green':wr>=45?'wr-amber':'wr-red'; }
-function barClass(wr) { return wr>=55?'bar-green':wr>=45?'bar-amber':'bar-red'; }
+function realmCss(c){return REALM_HIB.includes(c)?'hib':REALM_MID.includes(c)?'mid':REALM_ALB.includes(c)?'alb':'neu'}
+function realmName(c){return REALM_HIB.includes(c)?'Hibernia':REALM_MID.includes(c)?'Midgard':REALM_ALB.includes(c)?'Albion':''}
+function initials(n){return n.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase()}
+function fmtDur(s){return s?s+'s':'–'}
+function fmtNum(n){return n?n.toLocaleString():'0'}
+function wrCss(w){return w>=55?'wr-green':w>=45?'wr-amber':'wr-red'}
+function barCss(w){return w>=55?'bar-green':w>=45?'bar-amber':'bar-red'}
 
 // ── Summary ──
-function renderSummary() {
-  const s = DATA.summary;
-  document.getElementById('s-today').textContent = fmtNum(s.fights_today);
-  const diff = s.fights_today - s.fights_yesterday;
-  document.getElementById('s-today-sub').textContent = (diff>=0?'+':'')+diff+' vs. yesterday';
-  document.getElementById('s-classes').textContent = s.active_classes;
-  document.getElementById('s-total').textContent = fmtNum(s.total_fights);
-  document.getElementById('s-dur').textContent = s.avg_duration ? s.avg_duration+'s' : '–';
-  const upd = new Date(DATA.generated_at);
-  document.getElementById('s-updated').textContent = 'updated '+upd.toLocaleTimeString();
-  document.getElementById('footer-updated').textContent = 'Data updated: '+upd.toLocaleString();
+function renderSummary(){
+  const s=DATA.summary;
+  document.getElementById('s-today').textContent=fmtNum(s.fights_today);
+  const diff=s.fights_today-s.fights_yesterday;
+  document.getElementById('s-today-sub').textContent=(diff>=0?'+':'')+diff+' vs. yesterday';
+  document.getElementById('s-players').textContent=s.active_players||'0';
+  document.getElementById('s-total').textContent=fmtNum(s.total_fights);
+  document.getElementById('s-dur').textContent=s.avg_duration?s.avg_duration+'s':'–';
+  const upd=new Date(DATA.generated_at);
+  document.getElementById('s-updated').textContent='updated '+upd.toLocaleTimeString();
+  document.getElementById('footer-updated').textContent='Data updated: '+upd.toLocaleString();
 }
 
 // ── Leaderboard ──
-function renderLeaderboard() {
-  const lb = DATA.leaderboard;
-  if (!lb || lb.length === 0) {
-    document.getElementById('leaderboard-body').innerHTML = '<div class="loading">No fight data yet (min. 1 fight required).</div>';
+function getFilteredLb(){
+  let lb=[...DATA.leaderboard];
+  if(lbSearch){
+    const q=lbSearch.toLowerCase();
+    lb=lb.filter(p=>p.name.toLowerCase().includes(q)||p.class_name.toLowerCase().includes(q));
+  }
+  lb.sort((a,b)=>{
+    let va=a[lbSortKey],vb=b[lbSortKey];
+    if(va===null||va===undefined)va=-1;
+    if(vb===null||vb===undefined)vb=-1;
+    return(va-vb)*lbSortDir;
+  });
+  return lb;
+}
+
+function renderLeaderboard(){
+  if(!DATA||!DATA.leaderboard){
+    document.getElementById('leaderboard-body').innerHTML='<div class="loading">No data yet.</div>';
+    return;
+  }
+  const lb=getFilteredLb();
+  const totalPages=Math.max(1,Math.ceil(lb.length/PAGE_SIZE));
+  if(lbPage>totalPages)lbPage=1;
+  const start=(lbPage-1)*PAGE_SIZE;
+  const page=lb.slice(start,start+PAGE_SIZE);
+
+  if(lb.length===0){
+    document.getElementById('leaderboard-body').innerHTML='<div class="loading">No players found.</div>';
+    document.getElementById('leaderboard-pagination').innerHTML='';
     return;
   }
 
-  // Sortieren
-  const sorted = [...lb].sort((a,b) => {
-    let va = a[lbSortKey], vb = b[lbSortKey];
-    if (va === null || va === undefined) va = -1;
-    if (vb === null || vb === undefined) vb = -1;
-    return (va - vb) * lbSortDir;
-  });
-
-  const cols = [
-    { key: null,          label: '#',           cls: '' },
-    { key: null,          label: 'Player',       cls: '' },
-    { key: 'fights',      label: 'Fights',       cls: 'r sortable' },
-    { key: 'winrate',     label: 'Win Rate',     cls: 'r sortable' },
-    { key: 'wins',        label: 'W / L',        cls: 'r sortable' },
-    { key: 'avg_dur_win', label: 'Dur. (win)',   cls: 'r sortable' },
-    { key: 'avg_dur_loss',label: 'Dur. (loss)',  cls: 'r sortable' },
+  const cols=[
+    {key:null,   label:'#',          cls:''},
+    {key:null,   label:'Player',     cls:''},
+    {key:'fights',    label:'Fights',     cls:'r sortable'},
+    {key:'winrate',   label:'Win Rate',   cls:'r sortable'},
+    {key:'wins',      label:'W / L',      cls:'r sortable'},
+    {key:'avg_dur_win', label:'Dur. (win)', cls:'r sortable'},
+    {key:'avg_dur_loss',label:'Dur. (loss)',cls:'r sortable'},
   ];
 
-  let thead = '<thead><tr>';
-  cols.forEach(c => {
-    let extra = '';
-    if (c.key === lbSortKey) extra = lbSortDir === -1 ? ' sort-desc' : ' sort-asc';
-    const click = c.key ? `onclick="sortLb('${c.key}')"` : '';
-    thead += `<th class="${c.cls}${extra}" ${click}>${c.label}</th>`;
+  let thead='<thead><tr>';
+  cols.forEach(c=>{
+    let extra='';
+    if(c.key===lbSortKey) extra=lbSortDir===-1?' sort-desc':' sort-asc';
+    const click=c.key?`onclick="sortLb('${c.key}')"`:'' ;
+    thead+=`<th class="${c.cls}${extra}" ${click}>${c.label}</th>`;
   });
-  thead += '</tr></thead>';
+  thead+='</tr></thead>';
 
-  let tbody = '<tbody>';
-  sorted.forEach((p, i) => {
-    const rlm = realmCss(p.class_id);
-    const wr = p.winrate;
-    const rankCls = i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-num';
-    tbody += `<tr>
-      <td><span class="${rankCls}">${i+1}</span></td>
-      <td>
-        <div class="class-cell">
-          <div class="class-icon av-${rlm}">${initials(p.class_name)}</div>
-          <div>
-            <div class="player-name">${p.name}</div>
-            <div class="player-sub"><span class="realm-${rlm}">${realmName(p.class_id)}</span> · ${p.class_name} · <span class="rr-badge">${p.rr}</span></div>
-          </div>
+  let tbody='<tbody>';
+  page.forEach((p,i)=>{
+    const rank=start+i+1;
+    const rlm=realmCss(p.class_id);
+    const wr=p.winrate;
+    const rankCls=rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'rank-num';
+    tbody+=`<tr>
+      <td><span class="${rankCls}">${rank}</span></td>
+      <td><div class="class-cell">
+        <div class="class-icon av-${rlm}">${initials(p.class_name)}</div>
+        <div>
+          <div class="player-name">${p.name}</div>
+          <div class="player-sub"><span class="realm-${rlm}">${realmName(p.class_id)}</span> · ${p.class_name} · <span class="rr-badge">${p.rr}</span></div>
         </div>
-      </td>
+      </div></td>
       <td class="r"><span class="fights-num">${p.fights}</span></td>
-      <td class="r">
-        <div class="winrate-bar">
-          <span class="wr-num ${wrClass(wr)}">${wr}%</span>
-          <div class="bar-bg"><div class="bar-fill ${barClass(wr)}" style="width:${wr}%"></div></div>
-        </div>
-      </td>
+      <td class="r"><div class="winrate-bar">
+        <span class="wr-num ${wrCss(wr)}">${wr}%</span>
+        <div class="bar-bg"><div class="bar-fill ${barCss(wr)}" style="width:${wr}%"></div></div>
+      </div></td>
       <td class="r"><span class="wl-cell"><span class="w-count">${p.wins}W</span> / <span class="l-count">${p.losses}L</span></span></td>
       <td class="r"><span class="dur-win">${fmtDur(p.avg_dur_win)}</span></td>
       <td class="r"><span class="dur-loss">${fmtDur(p.avg_dur_loss)}</span></td>
     </tr>`;
   });
-  tbody += '</tbody>';
+  tbody+='</tbody>';
 
-  document.getElementById('leaderboard-body').innerHTML = `<table>${thead}${tbody}</table>`;
+  document.getElementById('leaderboard-body').innerHTML=`<table>${thead}${tbody}</table>`;
+  renderPagination(totalPages, lb.length);
 }
 
-function sortLb(key) {
-  if (lbSortKey === key) { lbSortDir *= -1; }
-  else { lbSortKey = key; lbSortDir = -1; }
+function renderPagination(totalPages, total){
+  if(totalPages<=1){document.getElementById('leaderboard-pagination').innerHTML='';return;}
+  let html=`<div class="pagination">`;
+  html+=`<button class="page-btn" onclick="goPage(${lbPage-1})" ${lbPage===1?'disabled':''}>‹</button>`;
+  for(let i=1;i<=totalPages;i++){
+    if(totalPages>7&&i>2&&i<totalPages-1&&Math.abs(i-lbPage)>1){
+      if(i===3||i===totalPages-2) html+=`<span class="page-info">…</span>`;
+      continue;
+    }
+    html+=`<button class="page-btn ${i===lbPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
+  }
+  html+=`<button class="page-btn" onclick="goPage(${lbPage+1})" ${lbPage===totalPages?'disabled':''}>›</button>`;
+  html+=`<span class="page-info">${total} players</span>`;
+  html+=`</div>`;
+  document.getElementById('leaderboard-pagination').innerHTML=html;
+}
+
+function goPage(p){lbPage=p;renderLeaderboard();}
+function sortLb(key){
+  if(lbSortKey===key){lbSortDir*=-1;}else{lbSortKey=key;lbSortDir=-1;}
+  lbPage=1;renderLeaderboard();
+}
+
+document.getElementById('lb-search').addEventListener('input',e=>{
+  lbSearch=e.target.value;
+  lbPage=1;
   renderLeaderboard();
-}
+});
 
 // ── Class Stats ──
-function renderClassStats() {
-  const stats = DATA.class_stats;
-  if (!stats || stats.length === 0) {
-    document.getElementById('classstats-body').innerHTML = '<div class="loading">No fight data yet.</div>';
+function renderClassStats(){
+  const stats=DATA.class_stats;
+  if(!stats||stats.length===0){
+    document.getElementById('classstats-body').innerHTML='<div class="loading">No data yet.</div>';
     return;
   }
-  let html = `<table><thead><tr>
-    <th>Class</th><th class="r">Fights</th><th class="r">Win rate</th>
-    <th class="r">Dur. (win)</th><th class="r">Dur. (loss)</th>
-  </tr></thead><tbody>`;
-  stats.forEach(c => {
-    const rlm = realmCss(c.class_id);
-    const wr = c.winrate;
-    html += `<tr>
+  const sorted=[...stats].sort((a,b)=>{
+    let va=a[csSortKey],vb=b[csSortKey];
+    if(va===null||va===undefined)va=-1;
+    if(vb===null||vb===undefined)vb=-1;
+    return(va-vb)*csSortDir;
+  });
+
+  const cols=[
+    {key:null,          label:'Class',      cls:''},
+    {key:'fights',      label:'Fights',     cls:'r sortable'},
+    {key:'winrate',     label:'Win rate',   cls:'r sortable'},
+    {key:'avg_dur_win', label:'Dur. (win)', cls:'r sortable'},
+    {key:'avg_dur_loss',label:'Dur. (loss)',cls:'r sortable'},
+  ];
+
+  let thead='<thead><tr>';
+  cols.forEach(c=>{
+    let extra='';
+    if(c.key===csSortKey) extra=csSortDir===-1?' sort-desc':' sort-asc';
+    const click=c.key?`onclick="sortCs('${c.key}')"`:'' ;
+    thead+=`<th class="${c.cls}${extra}" ${click}>${c.label}</th>`;
+  });
+  thead+='</tr></thead>';
+
+  let tbody='<tbody>';
+  sorted.forEach(c=>{
+    const rlm=realmCss(c.class_id);
+    const wr=c.winrate;
+    const players=(DATA.class_players&&DATA.class_players[c.class_id])||[];
+
+    // Hauptzeile (klickbar)
+    tbody+=`<tr class="cs-row" onclick="toggleDrill(${c.class_id})">
       <td><div class="class-cell">
         <div class="class-icon av-${rlm}">${initials(c.class_name)}</div>
-        <div><div class="class-name">${c.class_name}</div>
-        <div class="realm-badge realm-${rlm}">${realmName(c.class_id)}</div></div>
+        <div>
+          <div class="class-name">${c.class_name}<span class="expand-icon" id="ei-${c.class_id}">▶</span></div>
+          <div class="realm-badge realm-${rlm}">${realmName(c.class_id)}</div>
+        </div>
       </div></td>
       <td class="r"><span class="fights-num">${c.fights}</span></td>
       <td class="r"><div class="winrate-bar">
-        <span class="wr-num ${wrClass(wr)}">${wr}%</span>
-        <div class="bar-bg"><div class="bar-fill ${barClass(wr)}" style="width:${wr}%"></div></div>
+        <span class="wr-num ${wrCss(wr)}">${wr}%</span>
+        <div class="bar-bg"><div class="bar-fill ${barCss(wr)}" style="width:${wr}%"></div></div>
       </div></td>
       <td class="r"><span class="dur-win">${fmtDur(c.avg_dur_win)}</span></td>
       <td class="r"><span class="dur-loss">${fmtDur(c.avg_dur_loss)}</span></td>
     </tr>`;
+
+    // Drill-Down Zeile
+    let drillRows='';
+    players.forEach((p,i)=>{
+      const wr2=p.winrate;
+      drillRows+=`<tr>
+        <td><span class="rank-num" style="margin-right:8px">${i+1}</span>
+          <span style="font-weight:600">${p.name}</span>
+          <span class="rr-badge" style="margin-left:6px">${p.rr}</span>
+        </td>
+        <td class="r"><span class="fights-num">${p.fights}</span></td>
+        <td class="r"><div class="winrate-bar">
+          <span class="wr-num ${wrCss(wr2)}">${wr2}%</span>
+          <div class="bar-bg"><div class="bar-fill ${barCss(wr2)}" style="width:${wr2}%"></div></div>
+        </div></td>
+        <td class="r"><span class="wl-cell"><span class="w-count">${p.wins}W</span> / <span class="l-count">${p.losses}L</span></span></td>
+        <td class="r"><span class="dur-win">${fmtDur(p.avg_dur_win)}</span></td>
+      </tr>`;
+    });
+
+    tbody+=`<tr class="drill-row">
+      <td colspan="5">
+        <div class="drill-panel" id="drill-${c.class_id}">
+          <table>
+            <thead><tr>
+              <th>Player</th><th class="r">Fights</th>
+              <th class="r">Win rate</th><th class="r">W / L</th>
+              <th class="r">Dur. (win)</th>
+            </tr></thead>
+            <tbody>${drillRows}</tbody>
+          </table>
+        </div>
+      </td>
+    </tr>`;
   });
-  document.getElementById('classstats-body').innerHTML = html + '</tbody></table>';
+
+  document.getElementById('classstats-body').innerHTML=`<table>${thead}${tbody}</table>`;
+}
+
+function toggleDrill(classId){
+  const panel=document.getElementById('drill-'+classId);
+  const icon=document.getElementById('ei-'+classId);
+  if(!panel)return;
+  panel.classList.toggle('open');
+  icon.classList.toggle('open');
+}
+
+function sortCs(key){
+  if(csSortKey===key){csSortDir*=-1;}else{csSortKey=key;csSortDir=-1;}
+  renderClassStats();
 }
 
 // ── Matchup Matrix ──
-function renderMatchups() {
-  const matchups = DATA.matchups;
-  if (!matchups || matchups.length === 0) {
-    document.getElementById('matchups-body').innerHTML = '<div class="loading">Not enough fight data yet.</div>';
+function renderMatchups(){
+  const matchups=DATA.matchups;
+  if(!matchups||matchups.length===0){
+    document.getElementById('matchups-body').innerHTML='<div class="loading">Not enough fight data yet.</div>';
     return;
   }
-  const classSet = new Set();
-  matchups.forEach(m => { classSet.add(m.class_a); classSet.add(m.class_b); });
-  const classes = [...classSet].sort((a,b) => {
-    const fa = matchups.filter(m=>m.class_a===a||m.class_b===a).reduce((s,m)=>s+m.fights,0);
-    const fb = matchups.filter(m=>m.class_a===b||m.class_b===b).reduce((s,m)=>s+m.fights,0);
+
+  const classSet=new Set();
+  matchups.forEach(m=>{classSet.add(m.class_a);classSet.add(m.class_b);});
+  const classes=[...classSet].sort((a,b)=>{
+    const fa=matchups.filter(m=>m.class_a===a||m.class_b===a).reduce((s,m)=>s+m.fights,0);
+    const fb=matchups.filter(m=>m.class_a===b||m.class_b===b).reduce((s,m)=>s+m.fights,0);
     return fb-fa;
-  }).slice(0,12);
+  }).slice(0,14);
 
-  const lookup = {};
-  matchups.forEach(m => {
-    lookup[`${m.class_a}_${m.class_b}`] = {fights:m.fights, wr:m.winrate_a};
-    lookup[`${m.class_b}_${m.class_a}`] = {fights:m.fights, wr:100-m.winrate_a};
+  const lookup={};
+  matchups.forEach(m=>{
+    lookup[`${m.class_a}_${m.class_b}`]={fights:m.fights,wr:m.winrate_a};
+    lookup[`${m.class_b}_${m.class_a}`]={fights:m.fights,wr:100-m.winrate_a};
   });
-  const nameMap = {};
-  matchups.forEach(m => { nameMap[m.class_a]=m.class_a_name; nameMap[m.class_b]=m.class_b_name; });
+  const nameMap={};
+  matchups.forEach(m=>{nameMap[m.class_a]=m.class_a_name;nameMap[m.class_b]=m.class_b_name;});
 
-  let html = `<div class="matrix-wrap"><table class="matrix-table"><thead><tr>
+  let html=`<div class="matrix-wrap"><table class="matrix-table"><thead><tr>
     <th style="text-align:left;min-width:110px">vs. →</th>`;
-  classes.forEach(c => { html += `<th>${nameMap[c]||c}</th>`; });
-  html += '</tr></thead><tbody>';
-  classes.forEach(rowC => {
-    const rlm = realmCss(rowC);
-    html += `<tr><td class="row-header" style="color:var(--${rlm})">${nameMap[rowC]||rowC}</td>`;
-    classes.forEach(colC => {
-      if (rowC===colC) { html += `<td class="cell-self">–</td>`; return; }
-      const d = lookup[`${rowC}_${colC}`];
-      if (!d) { html += `<td class="cell-na">–</td>`; return; }
-      const cc = d.wr>=60?'cell-high':d.wr>=45?'cell-mid':'cell-low';
-      html += `<td class="${cc}">${d.wr}%<br><span style="font-size:10px;font-weight:400;color:var(--text3)">(${d.fights})</span></td>`;
+  classes.forEach(c=>{html+=`<th>${nameMap[c]||c}</th>`;});
+  html+='</tr></thead><tbody>';
+  classes.forEach(rowC=>{
+    const rlm=realmCss(rowC);
+    html+=`<tr><td class="row-header" style="color:var(--${rlm})">${nameMap[rowC]||rowC}</td>`;
+    classes.forEach(colC=>{
+      if(rowC===colC){html+=`<td class="cell-self">–</td>`;return;}
+      const d=lookup[`${rowC}_${colC}`];
+      if(!d){html+=`<td class="cell-na">–</td>`;return;}
+      const cc=d.wr>=60?'cell-high':d.wr>=45?'cell-mid':'cell-low';
+      html+=`<td class="${cc}">${d.wr}%<br><span style="font-size:10px;font-weight:400;color:var(--text3)">(${d.fights})</span></td>`;
     });
-    html += '</tr>';
+    html+='</tr>';
   });
-  html += '</tbody></table></div>';
-  document.getElementById('matchups-body').innerHTML = html;
+  html+='</tbody></table></div>';
+  document.getElementById('matchups-body').innerHTML=html;
 }
 
 // ── Activity ──
-function renderActivity() {
-  const common = DATA.common_matchups || [];
-  const daily  = DATA.daily_fights   || [];
-  const maxPair = Math.max(...common.map(p=>p.count), 1);
-  const maxDay  = Math.max(...daily.map(d=>d.count), 1);
+function renderActivity(){
+  const common=DATA.common_matchups||[];
+  const daily=DATA.daily_fights||[];
+  const maxPair=Math.max(...common.map(p=>p.count),1);
+  const maxDay=Math.max(...daily.map(d=>d.count),1);
 
-  let pairsHtml = common.slice(0,6).map(p => {
-    const ra = realmCss(p.class_a), rb = realmCss(p.class_b);
+  let pairsHtml=common.slice(0,6).map(p=>{
+    const ra=realmCss(p.class_a),rb=realmCss(p.class_b);
     return `<div class="matchup-pair">
       <div class="pair-classes">
         <span class="pair-badge av-${ra}">${p.class_a_name}</span>
@@ -454,14 +595,14 @@ function renderActivity() {
       <div class="pair-bar-bg"><div class="pair-bar-fill" style="width:${Math.round(p.count/maxPair*100)}%"></div></div>
       <div class="pair-count">${p.count}</div>
     </div>`;
-  }).join('') || '<div style="color:var(--text3);font-size:13px">No data yet.</div>';
+  }).join('')||'<div style="color:var(--text3);font-size:13px">No data yet.</div>';
 
-  const days = daily.slice(-7);
-  while (days.length < 7) days.unshift({day:'',count:0});
-  let dayHtml = days.map(d => {
-    const isPeak = d.count === maxDay && d.count > 0;
-    const h = Math.max(4, Math.round((d.count/maxDay)*76));
-    const label = d.day ? new Date(d.day).toLocaleDateString('en',{weekday:'short'}) : '–';
+  const days=daily.slice(-7);
+  while(days.length<7)days.unshift({day:'',count:0});
+  let dayHtml=days.map(d=>{
+    const isPeak=d.count===maxDay&&d.count>0;
+    const h=Math.max(4,Math.round((d.count/maxDay)*76));
+    const label=d.day?new Date(d.day).toLocaleDateString('en',{weekday:'short'}):'–';
     return `<div class="day-col">
       <div class="day-bar-wrap">
         <div class="day-bar" style="height:${h}px;background:${isPeak?'var(--hib)':'var(--bg4)'};border:0.5px solid ${isPeak?'var(--hib2)':'var(--border2)'}"></div>
@@ -471,7 +612,7 @@ function renderActivity() {
     </div>`;
   }).join('');
 
-  document.getElementById('activity-body').innerHTML = `
+  document.getElementById('activity-body').innerHTML=`
     <div class="activity-grid">
       <div class="activity-card activity-card-full">
         <div class="activity-card-title">Most common matchups</div>${pairsHtml}
@@ -484,7 +625,7 @@ function renderActivity() {
 }
 
 // ── Tab switching ──
-function switchTab(id, el) {
+function switchTab(id,el){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById(id).classList.add('active');
@@ -492,9 +633,9 @@ function switchTab(id, el) {
 }
 
 // ── Time filters ──
-document.querySelectorAll('.time-filters').forEach(group => {
-  group.querySelectorAll('.tf').forEach(btn => {
-    btn.addEventListener('click', () => {
+document.querySelectorAll('.time-filters').forEach(group=>{
+  group.querySelectorAll('.tf').forEach(btn=>{
+    btn.addEventListener('click',()=>{
       group.querySelectorAll('.tf').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
     });
@@ -502,27 +643,27 @@ document.querySelectorAll('.time-filters').forEach(group => {
 });
 
 // ── Load data ──
-async function loadData() {
-  try {
-    const r = await fetch('data.json?t='+Date.now());
-    if (!r.ok) throw new Error('HTTP '+r.status);
-    DATA = await r.json();
+async function loadData(){
+  try{
+    const r=await fetch('data.json?t='+Date.now());
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    DATA=await r.json();
     renderSummary();
     renderLeaderboard();
     renderClassStats();
     renderMatchups();
     renderActivity();
-  } catch(e) {
+  }catch(e){
     console.error(e);
-    ['leaderboard-body','classstats-body','matchups-body','activity-body'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.innerHTML = `<div class="error-msg">⚠ Could not load fight data. Make sure data.json exists and the fetcher has run at least once.</div>`;
+    ['leaderboard-body','classstats-body','matchups-body','activity-body'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el)el.innerHTML=`<div class="error-msg">⚠ Could not load fight data.</div>`;
     });
   }
 }
 
 loadData();
-setInterval(loadData, 5*60*1000);
+setInterval(loadData,5*60*1000);
 </script>
 </body>
 </html>
