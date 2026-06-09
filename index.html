@@ -201,9 +201,9 @@
       <div class="stat-sub">last 30 days</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Avg. duration</div>
-      <div class="stat-value" id="s-dur">–</div>
-      <div class="stat-sub" id="s-updated">loading…</div>
+      <div class="stat-label">Updated</div>
+      <div class="stat-value" style="font-size:14px;padding-top:6px" id="s-updated">–</div>
+      <div class="stat-sub" id="s-dur"></div>
     </div>
   </div>
 
@@ -242,10 +242,7 @@
         <div class="tf" data-days="30">30d</div>
       </div>
     </div>
-    <div class="dur-legend">
-      <div class="dur-legend-item"><div class="dur-dot-win"></div> Avg. duration on win</div>
-      <div class="dur-legend-item"><div class="dur-dot-loss"></div> Avg. duration on loss</div>
-    </div>
+
     <div id="classstats-body"><div class="loading">Loading…</div></div>
   </div>
 
@@ -283,11 +280,12 @@
 let DATA = null;
 const PAGE_SIZE = 50;
 let lbPage = 1;
-let lbSortKey = 'winrate';
+let lbSortKey = 'wilson';
 let lbSortDir = -1;
 let lbSearch = '';
 let csSortKey = 'fights';
 let csSortDir = -1;
+let drillSort = {};
 
 const REALM_HIB=[39,40,41,42,43,44,45,46,47,48,49,50,55,56,58];
 const REALM_MID=[21,22,23,24,25,26,27,28,29,30,31,32,34,59];
@@ -309,9 +307,8 @@ function renderSummary(){
   document.getElementById('s-today-sub').textContent=(diff>=0?'+':'')+diff+' vs. yesterday';
   document.getElementById('s-players').textContent=s.active_players||'0';
   document.getElementById('s-total').textContent=fmtNum(s.total_fights);
-  document.getElementById('s-dur').textContent=s.avg_duration?s.avg_duration+'s':'–';
   const upd=new Date(DATA.generated_at);
-  document.getElementById('s-updated').textContent='updated '+upd.toLocaleTimeString();
+  document.getElementById('s-updated').textContent=upd.toLocaleTimeString();
   document.getElementById('footer-updated').textContent='Data updated: '+upd.toLocaleString();
 }
 
@@ -349,13 +346,12 @@ function renderLeaderboard(){
   }
 
   const cols=[
-    {key:null,   label:'#',          cls:''},
-    {key:null,   label:'Player',     cls:''},
-    {key:'fights',    label:'Fights',     cls:'r sortable'},
-    {key:'winrate',   label:'Win Rate',   cls:'r sortable'},
-    {key:'wins',      label:'W / L',      cls:'r sortable'},
-    {key:'avg_dur_win', label:'Dur. (win)', cls:'r sortable'},
-    {key:'avg_dur_loss',label:'Dur. (loss)',cls:'r sortable'},
+    {key:null,      label:'#',          cls:''},
+    {key:null,      label:'Player',     cls:''},
+    {key:'fights',  label:'Fights',     cls:'r sortable'},
+    {key:'wilson',  label:'Score',      cls:'r sortable'},
+    {key:'winrate', label:'Win Rate',   cls:'r sortable'},
+    {key:'wins',    label:'W / L',      cls:'r sortable'},
   ];
 
   let thead='<thead><tr>';
@@ -383,13 +379,12 @@ function renderLeaderboard(){
         </div>
       </div></td>
       <td class="r"><span class="fights-num">${p.fights}</span></td>
+      <td class="r"><span class="wr-num ${wrCss(p.wilson)}" title="Wilson Score">${p.wilson}%</span></td>
       <td class="r"><div class="winrate-bar">
         <span class="wr-num ${wrCss(wr)}">${wr}%</span>
         <div class="bar-bg"><div class="bar-fill ${barCss(wr)}" style="width:${wr}%"></div></div>
       </div></td>
       <td class="r"><span class="wl-cell"><span class="w-count">${p.wins}W</span> / <span class="l-count">${p.losses}L</span></span></td>
-      <td class="r"><span class="dur-win">${fmtDur(p.avg_dur_win)}</span></td>
-      <td class="r"><span class="dur-loss">${fmtDur(p.avg_dur_loss)}</span></td>
     </tr>`;
   });
   tbody+='</tbody>';
@@ -442,11 +437,9 @@ function renderClassStats(){
   });
 
   const cols=[
-    {key:null,          label:'Class',      cls:''},
-    {key:'fights',      label:'Fights',     cls:'r sortable'},
-    {key:'winrate',     label:'Win rate',   cls:'r sortable'},
-    {key:'avg_dur_win', label:'Dur. (win)', cls:'r sortable'},
-    {key:'avg_dur_loss',label:'Dur. (loss)',cls:'r sortable'},
+    {key:null,      label:'Class',    cls:''},
+    {key:'fights',  label:'Fights',   cls:'r sortable'},
+    {key:'winrate', label:'Win rate', cls:'r sortable'},
   ];
 
   let thead='<thead><tr>';
@@ -478,40 +471,53 @@ function renderClassStats(){
         <span class="wr-num ${wrCss(wr)}">${wr}%</span>
         <div class="bar-bg"><div class="bar-fill ${barCss(wr)}" style="width:${wr}%"></div></div>
       </div></td>
-      <td class="r"><span class="dur-win">${fmtDur(c.avg_dur_win)}</span></td>
-      <td class="r"><span class="dur-loss">${fmtDur(c.avg_dur_loss)}</span></td>
     </tr>`;
 
     // Drill-Down Zeile
+    const ds=drillSort[c.class_id]||{key:'wilson',dir:-1};
+    const sortedP=[...players].sort((a,b)=>{
+      let va=a[ds.key],vb=b[ds.key];
+      if(va===null||va===undefined)va=-1;
+      if(vb===null||vb===undefined)vb=-1;
+      return(va-vb)*ds.dir;
+    });
+    const drillCols=[
+      {key:'name',    label:'Player',   cls:''},
+      {key:'fights',  label:'Fights',   cls:'r sortable'},
+      {key:'wilson',  label:'Score',    cls:'r sortable'},
+      {key:'winrate', label:'Win rate', cls:'r sortable'},
+      {key:'wins',    label:'W / L',    cls:'r sortable'},
+    ];
+    let drillHead='<thead><tr>';
+    drillCols.forEach(dc=>{
+      let ex='';
+      if(dc.key===ds.key)ex=ds.dir===-1?' sort-desc':' sort-asc';
+      const cl=dc.key!=='name'?`onclick="sortDrill(${c.class_id},'${dc.key}')"`:'' ;
+      drillHead+=`<th class="${dc.cls}${ex}" ${cl}>${dc.label}</th>`;
+    });
+    drillHead+='</tr></thead>';
+
     let drillRows='';
-    players.forEach((p,i)=>{
+    sortedP.forEach((p,i)=>{
       const wr2=p.winrate;
       drillRows+=`<tr>
-        <td><span class="rank-num" style="margin-right:8px">${i+1}</span>
-          <span style="font-weight:600">${p.name}</span>
+        <td><span style="font-weight:600">${p.name}</span>
           <span class="rr-badge" style="margin-left:6px">${p.rr}</span>
         </td>
         <td class="r"><span class="fights-num">${p.fights}</span></td>
+        <td class="r"><span class="wr-num ${wrCss(p.wilson)}">${p.wilson}%</span></td>
         <td class="r"><div class="winrate-bar">
           <span class="wr-num ${wrCss(wr2)}">${wr2}%</span>
           <div class="bar-bg"><div class="bar-fill ${barCss(wr2)}" style="width:${wr2}%"></div></div>
         </div></td>
         <td class="r"><span class="wl-cell"><span class="w-count">${p.wins}W</span> / <span class="l-count">${p.losses}L</span></span></td>
-        <td class="r"><span class="dur-win">${fmtDur(p.avg_dur_win)}</span></td>
       </tr>`;
     });
 
     tbody+=`<tr class="drill-row">
-      <td colspan="5">
+      <td colspan="3">
         <div class="drill-panel" id="drill-${c.class_id}">
-          <table>
-            <thead><tr>
-              <th>Player</th><th class="r">Fights</th>
-              <th class="r">Win rate</th><th class="r">W / L</th>
-              <th class="r">Dur. (win)</th>
-            </tr></thead>
-            <tbody>${drillRows}</tbody>
-          </table>
+          <table>${drillHead}<tbody>${drillRows}</tbody></table>
         </div>
       </td>
     </tr>`;
@@ -526,6 +532,18 @@ function toggleDrill(classId){
   if(!panel)return;
   panel.classList.toggle('open');
   icon.classList.toggle('open');
+}
+
+function sortDrill(classId,key){
+  const ds=drillSort[classId]||{key:'winrate',dir:-1};
+  drillSort[classId]={key:key, dir:ds.key===key?ds.dir*-1:-1};
+  renderClassStats();
+  // Panel nach re-render wieder öffnen
+  setTimeout(()=>{
+    const panel=document.getElementById('drill-'+classId);
+    const icon=document.getElementById('ei-'+classId);
+    if(panel){panel.classList.add('open');icon.classList.add('open');}
+  },10);
 }
 
 function sortCs(key){

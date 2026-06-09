@@ -66,6 +66,17 @@ def rp_to_rr(rp):
     return label
 
 
+def wilson_score(wins, fights):
+    """Wilson Score Interval (untere Grenze, 95% Konfidenz)."""
+    if fights == 0:
+        return 0.0
+    z = 1.96  # 95% Konfidenz
+    p = wins / fights
+    n = fights
+    score = (p + z*z/(2*n) - z * ((p*(1-p)+z*z/(4*n))/n)**0.5) / (1 + z*z/n)
+    return round(score * 100, 2)
+
+
 def compute_stats(con, since_dt):
     cur = con.cursor()
     since_str = since_dt.isoformat()
@@ -86,9 +97,6 @@ def compute_stats(con, since_dt):
     fights_yesterday = cur.execute(
         "SELECT count(*) FROM fights WHERE date(started_at) = date('now','-1 day')"
     ).fetchone()[0]
-    avg_duration = cur.execute(
-        "SELECT avg(duration) FROM fights WHERE started_at >= ?", (since_str,)
-    ).fetchone()[0] or 0
 
     # 1v1 aktive Spieler (letzte 24h) statt Klassen
     active_players = cur.execute("""
@@ -103,8 +111,6 @@ def compute_stats(con, since_dt):
         SELECT p.class_id,
                count(DISTINCT f.id) as fights,
                sum(t.won) as wins,
-               avg(CASE WHEN t.won=1 THEN f.duration END) as avg_dur_win,
-               avg(CASE WHEN t.won=0 THEN f.duration END) as avg_dur_loss
         FROM fight_players p
         JOIN fights f ON f.id = p.fight_id
         JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
@@ -115,7 +121,7 @@ def compute_stats(con, since_dt):
 
     class_stats = []
     for row in class_rows:
-        cid, fights, wins, awd, ald = row
+        cid, fights, wins = row
         wins = wins or 0
         class_stats.append({
             "class_id":     cid,
@@ -125,8 +131,6 @@ def compute_stats(con, since_dt):
             "fights":       fights,
             "wins":         wins,
             "winrate":      round(wins / fights * 100) if fights > 0 else 0,
-            "avg_dur_win":  round(awd) if awd else None,
-            "avg_dur_loss": round(ald) if ald else None,
         })
 
     # ── Matchup Matrix (seitenunabhängig) ──
@@ -192,8 +196,6 @@ def compute_stats(con, since_dt):
             max(p.realm_pts) as realm_pts,
             count(DISTINCT f.id) as fights,
             sum(t.won) as wins,
-            avg(CASE WHEN t.won=1 THEN f.duration END) as avg_dur_win,
-            avg(CASE WHEN t.won=0 THEN f.duration END) as avg_dur_loss
         FROM fight_players p
         JOIN fights f ON f.id = p.fight_id
         JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
@@ -205,7 +207,7 @@ def compute_stats(con, since_dt):
 
     leaderboard = []
     for row in lb_rows:
-        name, cid, rp, fights, wins, awd, ald = row
+        name, cid, rp, fights, wins = row
         wins = wins or 0
         losses = fights - wins
         leaderboard.append({
@@ -219,16 +221,13 @@ def compute_stats(con, since_dt):
             "wins":         wins,
             "losses":       losses,
             "winrate":      round(wins / fights * 100) if fights > 0 else 0,
-            "avg_dur_win":  round(awd) if awd else None,
-            "avg_dur_loss": round(ald) if ald else None,
+            "wilson":       wilson_score(wins, fights),
         })
 
     # ── Class Drill-Down ──
     cp_rows = cur.execute("""
         SELECT p.class_id, p.name, max(p.realm_pts) as rp,
                count(DISTINCT f.id) as fights, sum(t.won) as wins,
-               avg(CASE WHEN t.won=1 THEN f.duration END) as awd,
-               avg(CASE WHEN t.won=0 THEN f.duration END) as ald
         FROM fight_players p
         JOIN fights f ON f.id = p.fight_id
         JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
@@ -238,7 +237,7 @@ def compute_stats(con, since_dt):
     """, (since_str,)).fetchall()
 
     class_players = {}
-    for cid, name, rp, fights, wins, awd, ald in cp_rows:
+    for cid, name, rp, fights, wins in cp_rows:
         wins = wins or 0
         if cid not in class_players:
             class_players[cid] = []
@@ -246,8 +245,7 @@ def compute_stats(con, since_dt):
             "name": name, "rr": rp_to_rr(rp),
             "fights": fights, "wins": wins, "losses": fights - wins,
             "winrate": round(wins / fights * 100) if fights > 0 else 0,
-            "avg_dur_win": round(awd) if awd else None,
-            "avg_dur_loss": round(ald) if ald else None,
+            "wilson":  wilson_score(wins, fights),
         })
 
     return {
@@ -257,7 +255,6 @@ def compute_stats(con, since_dt):
             "fights_yesterday": fights_yesterday,
             "total_fights":     total_all,
             "active_players":   active_players,
-            "avg_duration":     round(avg_duration),
         },
         "class_stats":     class_stats,
         "class_players":   class_players,
