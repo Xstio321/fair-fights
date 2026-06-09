@@ -303,6 +303,37 @@ const REALM_HIB=[39,40,41,42,43,44,45,46,47,48,49,50,55,56,58];
 const REALM_MID=[21,22,23,24,25,26,27,28,29,30,31,32,34,59];
 const REALM_ALB=[1,2,3,4,5,6,7,8,9,10,11,12,13,19,33,63];
 
+
+// ── Class Icons ──
+const CLASS_ICONS = {
+  1:'Paladin',2:'Armsman',3:'Scout',4:'Minstrel',5:'Theurgist',
+  6:'Cleric',7:'Wizard',8:'Sorcerer',9:'Infiltrator',10:'Friar',
+  11:'Mercenary',12:'Necromancer',13:'Cabalist',19:'Reaver',
+  33:'Heretic',63:'Occultist',
+  21:'Thane',22:'Warrior',23:'Shadowblade',24:'Skald',25:'Hunter',
+  26:'Healer',27:'Spiritmaster',28:'Shaman',29:'Runemaster',
+  30:'Bonedancer',31:'Berserker',32:'Savage',34:'Valkyrie',59:'Warlock',
+  39:'Bainshee',40:'Eldritch',41:'Enchanter',42:'Mentalist',
+  43:'Blademaster',44:'Hero',45:'Champion',46:'Warden',47:'Druid',
+  48:'Bard',49:'Nightshade',50:'Ranger',55:'Animist',56:'Valewalker',58:'Vampiir',
+};
+
+// CSS filter für Realm-Farben (gelbe Icons → Realm-Farbe)
+// Albion: rot (#c44a4a), Hibernia: grün (#7ab648), Midgard: blau (#4a8fc4)
+const REALM_FILTER = {
+  1: 'brightness(0) saturate(100%) invert(35%) sepia(50%) saturate(800%) hue-rotate(320deg) brightness(90%)',  // Albion rot
+  2: 'brightness(0) saturate(100%) invert(35%) sepia(100%) saturate(400%) hue-rotate(180deg) brightness(90%)', // Midgard blau
+  3: 'brightness(0) saturate(100%) invert(60%) sepia(80%) saturate(400%) hue-rotate(60deg) brightness(90%)',   // Hibernia grün
+};
+
+function classIconHtml(classId, size=30) {
+  const name = CLASS_ICONS[classId];
+  const realm = REALM_HIB.includes(classId)?3:REALM_MID.includes(classId)?2:REALM_ALB.includes(classId)?1:0;
+  const filter = REALM_FILTER[realm] || '';
+  if(!name) return `<div class="class-icon av-${realmCss(classId)}" style="width:${size}px;height:${size}px">${initials(name||'?')}</div>`;
+  return `<img src="icons/${name}_class_icon.webp" style="width:${size}px;height:${size}px;object-fit:contain;filter:${filter}" alt="${name}">`;
+}
+
 function realmCss(c){return REALM_HIB.includes(c)?'hib':REALM_MID.includes(c)?'mid':REALM_ALB.includes(c)?'alb':'neu'}
 function realmName(c){return REALM_HIB.includes(c)?'Hibernia':REALM_MID.includes(c)?'Midgard':REALM_ALB.includes(c)?'Albion':''}
 function initials(n){return n.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase()}
@@ -384,7 +415,7 @@ function renderLeaderboard(){
     tbody+=`<tr>
       <td><span class="${rankCls}">${rank}</span></td>
       <td><div class="class-cell">
-        <div class="class-icon av-${rlm}">${initials(p.class_name)}</div>
+        ${classIconHtml(p.class_id)}
         <div>
           <div class="player-name">${p.name}</div>
           <div class="player-sub"><span class="realm-${rlm}">${realmName(p.class_id)}</span> · ${p.class_name} · <span class="rr-badge">${p.rr}</span></div>
@@ -472,7 +503,7 @@ function renderClassStats(){
     // Hauptzeile (klickbar)
     tbody+=`<tr class="cs-row" onclick="toggleDrill(${c.class_id})">
       <td><div class="class-cell">
-        <div class="class-icon av-${rlm}">${initials(c.class_name)}</div>
+        ${classIconHtml(c.class_id)}
         <div>
           <div class="class-name">${c.class_name}<span class="expand-icon" id="ei-${c.class_id}">▶</span></div>
           <div class="realm-badge realm-${rlm}">${realmName(c.class_id)}</div>
