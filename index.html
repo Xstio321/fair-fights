@@ -159,6 +159,13 @@
   .day-bar:hover{opacity:0.8}
   .day-count{font-size:10px;color:var(--text3);font-family:'Cinzel',serif;margin-top:2px}
   .day-peak{color:var(--hib)}
+  .realm-filter-btn{background:transparent;border:0.5px solid var(--border2);border-radius:6px;padding:4px 8px;cursor:pointer;transition:all 0.15s;opacity:0.5;display:flex;align-items:center;gap:6px}
+  .realm-filter-btn:hover{opacity:0.8;border-color:var(--border2)}
+  .realm-filter-btn.active-alb{opacity:1;border-color:var(--alb);background:var(--alb3)}
+  .realm-filter-btn.active-mid{opacity:1;border-color:var(--mid);background:var(--mid3)}
+  .realm-filter-btn.active-hib{opacity:1;border-color:var(--hib);background:var(--hib3)}
+  .realm-filter-btn img{width:22px;height:22px;object-fit:contain}
+  .realm-filter-label{font-size:10px;font-family:'Cinzel',serif;letter-spacing:0.06em}
   .loading{text-align:center;padding:3rem;color:var(--text3);font-family:'Cinzel',serif;font-size:13px;letter-spacing:0.1em}
   .error-msg{background:rgba(196,74,74,0.1);border:0.5px solid var(--alb2);border-radius:var(--radius);padding:12px 16px;color:var(--alb);font-size:13px;font-family:'Cinzel',serif;margin-bottom:1rem}
   footer{margin-top:3rem;padding-top:1.5rem;border-top:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
@@ -251,7 +258,22 @@
 
   <!-- CLASS MATCHUPS -->
   <div id="matchups" class="panel">
-    <div class="controls">
+    <div class="controls" style="flex-direction:column;align-items:flex-start;gap:10px">
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="realm-filter-btn" id="rf-alb" onclick="setRealmFilter('alb')">
+          <img src="icons/albion.webp" alt="Albion">
+          <span class="realm-filter-label" style="color:var(--alb)">Albion</span>
+        </button>
+        <button class="realm-filter-btn" id="rf-hib" onclick="setRealmFilter('hib')">
+          <img src="icons/hibernia.webp" alt="Hibernia">
+          <span class="realm-filter-label" style="color:var(--hib)">Hibernia</span>
+        </button>
+        <button class="realm-filter-btn" id="rf-mid" onclick="setRealmFilter('mid')">
+          <img src="icons/midgard.webp" alt="Midgard">
+          <span class="realm-filter-label" style="color:var(--mid)">Midgard</span>
+        </button>
+        <span style="font-size:10px;color:var(--text3);font-family:'Cinzel',serif">— row class filter</span>
+      </div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
         <div class="time-filters" id="tf-matchups-time">
           <div class="tf" data-matchup="time-1">24h</div>
@@ -266,8 +288,9 @@
           <div class="tf" data-matchup="count-1000">Last 1000</div>
         </div>
       </div>
+      </div>
     </div>
-    <p class="matrix-note">Win rate of row class against column class</p>
+    <p class="matrix-note">Win rate of row class against column class · Click realm icon to filter row classes</p>
     <div id="matchups-body"><div class="loading">Loading…</div></div>
     <div class="matchup-legend">
       <div class="legend-item"><div class="legend-dot" style="background:rgba(122,182,72,0.3);border:0.5px solid var(--hib2)"></div> ≥60% advantage</div>
@@ -296,6 +319,7 @@ let lbSortDir = -1;
 let lbSearch = '';
 let csSortKey = 'fights';
 let matchupFilter = 'count-100';
+let matchupRealmFilter = null; // null = alle, 'alb'/'mid'/'hib'
 let csSortDir = -1;
 let drillSort = {};
 
@@ -589,6 +613,19 @@ function sortDrill(classId,key){
   },10);
 }
 
+function setRealmFilter(realm){
+  if(matchupRealmFilter === realm){
+    // Toggle off
+    matchupRealmFilter = null;
+    document.querySelectorAll('.realm-filter-btn').forEach(b=>b.className='realm-filter-btn');
+  } else {
+    matchupRealmFilter = realm;
+    document.querySelectorAll('.realm-filter-btn').forEach(b=>b.className='realm-filter-btn');
+    document.getElementById('rf-'+realm).classList.add('active-'+realm);
+  }
+  renderMatchups();
+}
+
 function sortCs(key){
   if(csSortKey===key){csSortDir*=-1;}else{csSortKey=key;csSortDir=-1;}
   renderClassStats();
@@ -621,7 +658,18 @@ function renderMatchups(){
   const nameMapTmp={};
   matchups.forEach(m=>{nameMapTmp[m.class_a]=m.class_a_name;nameMapTmp[m.class_b]=m.class_b_name;});
 
-  const classes=[...classSet].sort((a,b)=>{
+  // Realm-Filter: nur Klassen des gewählten Realms als Zeilen
+  const REALM_MAP = {
+    alb:[1,2,3,4,5,6,7,8,9,10,11,12,13,19,33,63],
+    mid:[21,22,23,24,25,26,27,28,29,30,31,32,34,59],
+    hib:[39,40,41,42,43,44,45,46,47,48,49,50,55,56,58],
+  };
+  const rowClasses = matchupRealmFilter
+    ? [...classSet].filter(c => REALM_MAP[matchupRealmFilter]?.includes(c))
+    : [...classSet];
+  const colClasses = [...classSet];
+
+  const classes=rowClasses.sort((a,b)=>{
     const ra=REALM_ORDER[a]??3, rb=REALM_ORDER[b]??3;
     if(ra!==rb) return ra-rb;
     return (nameMapTmp[a]||'').localeCompare(nameMapTmp[b]||'');
@@ -637,12 +685,12 @@ function renderMatchups(){
 
   let html=`<div class="matrix-wrap"><table class="matrix-table"><thead><tr>
     <th style="text-align:left;min-width:110px">vs. →</th>`;
-  classes.forEach(c=>{html+=`<th>${nameMap[c]||c}</th>`;});
+  colClasses.forEach(c=>{html+=`<th>${nameMap[c]||c}</th>`;});
   html+='</tr></thead><tbody>';
   classes.forEach(rowC=>{
     const rlm=realmCss(rowC);
     html+=`<tr><td class="row-header" style="color:var(--${rlm})">${nameMap[rowC]||rowC}</td>`;
-    classes.forEach(colC=>{
+    colClasses.forEach(colC=>{
       if(rowC===colC){html+=`<td class="cell-self">–</td>`;return;}
       const d=lookup[`${rowC}_${colC}`];
       if(!d){html+=`<td class="cell-na">–</td>`;return;}
