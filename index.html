@@ -21,7 +21,7 @@
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--bg);color:var(--text);font-family:'Crimson Pro',Georgia,serif;font-size:16px;line-height:1.6;min-height:100vh}
   body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(122,182,72,0.07) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 80% 100%,rgba(74,143,196,0.05) 0%,transparent 50%);pointer-events:none;z-index:0}
-  .wrap{max-width:900px;margin:0 auto;padding:2rem 1.5rem 4rem;position:relative;z-index:1}
+  .wrap{max-width:960px;margin:0 auto;padding:2rem 1.5rem 4rem;position:relative;z-index:1}
   header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:0.5px solid var(--border2)}
   .logo-lockup{display:flex;align-items:center;gap:14px}
   .logo-shield{width:42px;height:42px;background:linear-gradient(135deg,var(--bg3) 0%,var(--bg4) 100%);border:1px solid var(--border2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--hib)}
@@ -48,8 +48,12 @@
   .panel{display:none}
   .panel.active{display:block}
   table{width:100%;border-collapse:collapse}
-  thead th{font-size:10px;font-weight:400;color:var(--text3);text-align:left;padding:8px 10px;border-bottom:0.5px solid var(--border2);letter-spacing:0.1em;text-transform:uppercase;font-family:'Cinzel',serif}
+  thead th{font-size:10px;font-weight:400;color:var(--text3);text-align:left;padding:8px 10px;border-bottom:0.5px solid var(--border2);letter-spacing:0.1em;text-transform:uppercase;font-family:'Cinzel',serif;white-space:nowrap}
   th.r,td.r{text-align:right}
+  th.sortable{cursor:pointer;user-select:none}
+  th.sortable:hover{color:var(--text2)}
+  th.sort-asc::after{content:' ↑'}
+  th.sort-desc::after{content:' ↓'}
   tbody td{padding:10px;font-size:15px;color:var(--text);border-bottom:0.5px solid var(--border);transition:background 0.1s}
   tbody tr:last-child td{border-bottom:none}
   tbody tr:hover td{background:var(--bg2)}
@@ -59,8 +63,11 @@
   .av-mid{background:var(--mid3);color:var(--mid);border-color:var(--mid2)}
   .av-alb{background:var(--alb3);color:var(--alb);border-color:var(--alb2)}
   .class-name{font-size:15px;color:var(--text)}
+  .player-name{font-size:15px;color:var(--text);font-weight:600}
+  .player-sub{font-size:11px;color:var(--text3)}
   .realm-badge{font-size:11px}
   .realm-hib{color:var(--hib)}.realm-mid{color:var(--mid)}.realm-alb{color:var(--alb)}
+  .rr-badge{font-size:12px;color:var(--amber);font-family:'Cinzel',serif}
   .winrate-bar{display:flex;align-items:center;gap:8px;justify-content:flex-end}
   .bar-bg{width:60px;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden;flex-shrink:0}
   .bar-fill{height:100%;border-radius:2px}
@@ -70,6 +77,12 @@
   .dur-win{color:var(--green);font-size:13px;font-family:'Cinzel',serif}
   .dur-loss{color:var(--red);font-size:13px;font-family:'Cinzel',serif}
   .fights-num{color:var(--text2);font-size:14px;font-family:'Cinzel',serif}
+  .wl-cell{font-size:13px;font-family:'Cinzel',serif}
+  .w-count{color:var(--green)}.l-count{color:var(--red)}
+  .rank-num{font-size:13px;color:var(--text3);font-family:'Cinzel',serif;min-width:24px}
+  .rank-1{color:var(--amber);font-weight:600}
+  .rank-2{color:var(--text2);font-weight:600}
+  .rank-3{color:#a07040;font-weight:600}
   .dur-legend{display:flex;gap:16px;margin-bottom:1rem;flex-wrap:wrap}
   .dur-legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);font-family:'Cinzel',serif}
   .dur-dot-win{width:8px;height:8px;border-radius:50%;background:var(--green)}
@@ -92,12 +105,6 @@
   .activity-card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:1.25rem}
   .activity-card-title{font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:1rem}
   .activity-card-full{grid-column:1/-1}
-  .zone-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-  .zone-row:last-child{margin-bottom:0}
-  .zone-name{font-size:13px;color:var(--text);min-width:130px;font-family:'Cinzel',serif}
-  .zone-bar-bg{flex:1;height:5px;background:var(--bg4);border-radius:3px;overflow:hidden}
-  .zone-bar-fill{height:100%;border-radius:3px;background:var(--amber)}
-  .zone-count{font-size:12px;color:var(--text3);min-width:36px;text-align:right;font-family:'Cinzel',serif}
   .matchup-pair{display:flex;align-items:center;gap:8px;margin-bottom:10px}
   .matchup-pair:last-child{margin-bottom:0}
   .pair-classes{display:flex;align-items:center;gap:6px;flex:1}
@@ -165,13 +172,27 @@
   </div>
 
   <div class="tabs">
-    <div class="tab active" onclick="switchTab('classstats',this)">Class Stats</div>
+    <div class="tab active" onclick="switchTab('leaderboard',this)">Leaderboard</div>
+    <div class="tab" onclick="switchTab('classstats',this)">Class Stats</div>
     <div class="tab" onclick="switchTab('matchups',this)">Class Matchups</div>
     <div class="tab" onclick="switchTab('activity',this)">Activity</div>
   </div>
 
+  <!-- LEADERBOARD -->
+  <div id="leaderboard" class="panel active">
+    <div class="controls">
+      <div class="time-filters" id="tf-leaderboard">
+        <div class="tf active" data-days="1">24h</div>
+        <div class="tf" data-days="3">3d</div>
+        <div class="tf" data-days="7">7d</div>
+        <div class="tf" data-days="30">30d</div>
+      </div>
+    </div>
+    <div id="leaderboard-body"><div class="loading">Loading leaderboard…</div></div>
+  </div>
+
   <!-- CLASS STATS -->
-  <div id="classstats" class="panel active">
+  <div id="classstats" class="panel">
     <div class="controls">
       <div class="time-filters" id="tf-classstats">
         <div class="tf active" data-days="1">24h</div>
@@ -197,13 +218,12 @@
         <div class="tf" data-days="30">30d</div>
       </div>
     </div>
-    <p class="matrix-note">Win rate of row class against column class · Min. 5 fights required</p>
+    <p class="matrix-note">Win rate of row class against column class</p>
     <div id="matchups-body"><div class="loading">Loading matchup data…</div></div>
     <div class="matchup-legend">
       <div class="legend-item"><div class="legend-dot" style="background:rgba(122,182,72,0.3);border:0.5px solid var(--hib2)"></div> ≥60% advantage</div>
       <div class="legend-item"><div class="legend-dot" style="background:rgba(201,168,76,0.3);border:0.5px solid var(--gold2)"></div> 45–59% even</div>
       <div class="legend-item"><div class="legend-dot" style="background:rgba(196,74,74,0.3);border:0.5px solid var(--alb2)"></div> &lt;45% disadvantage</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--bg3);border:0.5px solid var(--border2)"></div> &lt;5 fights</div>
     </div>
   </div>
 
@@ -227,227 +247,234 @@
 </div>
 
 <script>
-// ── State ──────────────────────────────────────
 let DATA = null;
-let activeDays = { classstats: 1, matchups: 1, activity: 1 };
+let lbSortKey = 'winrate';
+let lbSortDir = -1; // -1 = desc, 1 = asc
 
-const REALM_CLASS = { hib: [39,40,41,42,43,44,45,46,47,48,49,50,55,56,58], mid: [21,22,23,24,25,26,27,28,29,30,31,32,34,59], alb: [1,2,3,4,5,6,7,8,9,10,11,12,13,19,33,63] };
-function realmCss(classId) {
-  if (REALM_CLASS.hib.includes(classId)) return 'hib';
-  if (REALM_CLASS.mid.includes(classId)) return 'mid';
-  if (REALM_CLASS.alb.includes(classId)) return 'alb';
+const REALM_HIB = [39,40,41,42,43,44,45,46,47,48,49,50,55,56,58];
+const REALM_MID = [21,22,23,24,25,26,27,28,29,30,31,32,34,59];
+const REALM_ALB = [1,2,3,4,5,6,7,8,9,10,11,12,13,19,33,63];
+
+function realmCss(cid) {
+  if (REALM_HIB.includes(cid)) return 'hib';
+  if (REALM_MID.includes(cid)) return 'mid';
+  if (REALM_ALB.includes(cid)) return 'alb';
   return 'neu';
 }
-function realmName(classId) {
-  if (REALM_CLASS.hib.includes(classId)) return 'Hibernia';
-  if (REALM_CLASS.mid.includes(classId)) return 'Midgard';
-  if (REALM_CLASS.alb.includes(classId)) return 'Albion';
+function realmName(cid) {
+  if (REALM_HIB.includes(cid)) return 'Hibernia';
+  if (REALM_MID.includes(cid)) return 'Midgard';
+  if (REALM_ALB.includes(cid)) return 'Albion';
   return '';
 }
-function initials(name) {
-  return name.split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase();
-}
-function fmtDur(s) { return s ? s + 's' : '–'; }
+function initials(name) { return name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase(); }
+function fmtDur(s) { return s ? s+'s' : '–'; }
 function fmtNum(n) { return n ? n.toLocaleString() : '0'; }
+function wrClass(wr) { return wr>=55?'wr-green':wr>=45?'wr-amber':'wr-red'; }
+function barClass(wr) { return wr>=55?'bar-green':wr>=45?'bar-amber':'bar-red'; }
 
-// ── Filter fights by days ──────────────────────
-function filterByDays(items, days, dateKey='started_at') {
-  // data.json ist bereits auf 30d limitiert; wir filtern clientseitig weiter
-  // Dafür brauchen wir das generated_at als Referenz
-  const cutoff = new Date(DATA.generated_at);
-  cutoff.setDate(cutoff.getDate() - days);
-  return items; // server-seitig schon gefiltert; TODO: bei Bedarf per API erweitern
-}
-
-// ── Render Summary ────────────────────────────
+// ── Summary ──
 function renderSummary() {
   const s = DATA.summary;
   document.getElementById('s-today').textContent = fmtNum(s.fights_today);
   const diff = s.fights_today - s.fights_yesterday;
-  const sign = diff >= 0 ? '+' : '';
-  document.getElementById('s-today-sub').textContent = `${sign}${diff} vs. yesterday`;
+  document.getElementById('s-today-sub').textContent = (diff>=0?'+':'')+diff+' vs. yesterday';
   document.getElementById('s-classes').textContent = s.active_classes;
   document.getElementById('s-total').textContent = fmtNum(s.total_fights);
-  document.getElementById('s-dur').textContent = s.avg_duration ? s.avg_duration + 's' : '–';
-
+  document.getElementById('s-dur').textContent = s.avg_duration ? s.avg_duration+'s' : '–';
   const upd = new Date(DATA.generated_at);
-  document.getElementById('s-updated').textContent = 'updated ' + upd.toLocaleTimeString();
-  document.getElementById('footer-updated').textContent =
-    'Data updated: ' + upd.toLocaleString();
+  document.getElementById('s-updated').textContent = 'updated '+upd.toLocaleTimeString();
+  document.getElementById('footer-updated').textContent = 'Data updated: '+upd.toLocaleString();
 }
 
-// ── Render Class Stats ────────────────────────
-function renderClassStats() {
-  const stats = DATA.class_stats;
-  if (!stats || stats.length === 0) {
-    document.getElementById('classstats-body').innerHTML =
-      '<div class="loading">No fight data yet.</div>';
+// ── Leaderboard ──
+function renderLeaderboard() {
+  const lb = DATA.leaderboard;
+  if (!lb || lb.length === 0) {
+    document.getElementById('leaderboard-body').innerHTML = '<div class="loading">No fight data yet (min. 1 fight required).</div>';
     return;
   }
 
-  let html = `<table><thead><tr>
-    <th>Class</th>
-    <th class="r">Fights</th>
-    <th class="r">Win rate</th>
-    <th class="r">Dur. (win)</th>
-    <th class="r">Dur. (loss)</th>
-  </tr></thead><tbody>`;
+  // Sortieren
+  const sorted = [...lb].sort((a,b) => {
+    let va = a[lbSortKey], vb = b[lbSortKey];
+    if (va === null || va === undefined) va = -1;
+    if (vb === null || vb === undefined) vb = -1;
+    return (va - vb) * lbSortDir;
+  });
 
+  const cols = [
+    { key: null,          label: '#',           cls: '' },
+    { key: null,          label: 'Player',       cls: '' },
+    { key: 'fights',      label: 'Fights',       cls: 'r sortable' },
+    { key: 'winrate',     label: 'Win Rate',     cls: 'r sortable' },
+    { key: 'wins',        label: 'W / L',        cls: 'r sortable' },
+    { key: 'avg_dur_win', label: 'Dur. (win)',   cls: 'r sortable' },
+    { key: 'avg_dur_loss',label: 'Dur. (loss)',  cls: 'r sortable' },
+  ];
+
+  let thead = '<thead><tr>';
+  cols.forEach(c => {
+    let extra = '';
+    if (c.key === lbSortKey) extra = lbSortDir === -1 ? ' sort-desc' : ' sort-asc';
+    const click = c.key ? `onclick="sortLb('${c.key}')"` : '';
+    thead += `<th class="${c.cls}${extra}" ${click}>${c.label}</th>`;
+  });
+  thead += '</tr></thead>';
+
+  let tbody = '<tbody>';
+  sorted.forEach((p, i) => {
+    const rlm = realmCss(p.class_id);
+    const wr = p.winrate;
+    const rankCls = i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-num';
+    tbody += `<tr>
+      <td><span class="${rankCls}">${i+1}</span></td>
+      <td>
+        <div class="class-cell">
+          <div class="class-icon av-${rlm}">${initials(p.class_name)}</div>
+          <div>
+            <div class="player-name">${p.name}</div>
+            <div class="player-sub"><span class="realm-${rlm}">${realmName(p.class_id)}</span> · ${p.class_name} · <span class="rr-badge">${p.rr}</span></div>
+          </div>
+        </div>
+      </td>
+      <td class="r"><span class="fights-num">${p.fights}</span></td>
+      <td class="r">
+        <div class="winrate-bar">
+          <span class="wr-num ${wrClass(wr)}">${wr}%</span>
+          <div class="bar-bg"><div class="bar-fill ${barClass(wr)}" style="width:${wr}%"></div></div>
+        </div>
+      </td>
+      <td class="r"><span class="wl-cell"><span class="w-count">${p.wins}W</span> / <span class="l-count">${p.losses}L</span></span></td>
+      <td class="r"><span class="dur-win">${fmtDur(p.avg_dur_win)}</span></td>
+      <td class="r"><span class="dur-loss">${fmtDur(p.avg_dur_loss)}</span></td>
+    </tr>`;
+  });
+  tbody += '</tbody>';
+
+  document.getElementById('leaderboard-body').innerHTML = `<table>${thead}${tbody}</table>`;
+}
+
+function sortLb(key) {
+  if (lbSortKey === key) { lbSortDir *= -1; }
+  else { lbSortKey = key; lbSortDir = -1; }
+  renderLeaderboard();
+}
+
+// ── Class Stats ──
+function renderClassStats() {
+  const stats = DATA.class_stats;
+  if (!stats || stats.length === 0) {
+    document.getElementById('classstats-body').innerHTML = '<div class="loading">No fight data yet.</div>';
+    return;
+  }
+  let html = `<table><thead><tr>
+    <th>Class</th><th class="r">Fights</th><th class="r">Win rate</th>
+    <th class="r">Dur. (win)</th><th class="r">Dur. (loss)</th>
+  </tr></thead><tbody>`;
   stats.forEach(c => {
     const rlm = realmCss(c.class_id);
     const wr = c.winrate;
-    const wrClass = wr >= 55 ? 'wr-green' : wr >= 45 ? 'wr-amber' : 'wr-red';
-    const barClass = wr >= 55 ? 'bar-green' : wr >= 45 ? 'bar-amber' : 'bar-red';
     html += `<tr>
       <td><div class="class-cell">
         <div class="class-icon av-${rlm}">${initials(c.class_name)}</div>
-        <div>
-          <div class="class-name">${c.class_name}</div>
-          <div class="realm-badge realm-${rlm}">${realmName(c.class_id)}</div>
-        </div>
+        <div><div class="class-name">${c.class_name}</div>
+        <div class="realm-badge realm-${rlm}">${realmName(c.class_id)}</div></div>
       </div></td>
       <td class="r"><span class="fights-num">${c.fights}</span></td>
       <td class="r"><div class="winrate-bar">
-        <span class="wr-num ${wrClass}">${wr}%</span>
-        <div class="bar-bg"><div class="bar-fill ${barClass}" style="width:${wr}%"></div></div>
+        <span class="wr-num ${wrClass(wr)}">${wr}%</span>
+        <div class="bar-bg"><div class="bar-fill ${barClass(wr)}" style="width:${wr}%"></div></div>
       </div></td>
       <td class="r"><span class="dur-win">${fmtDur(c.avg_dur_win)}</span></td>
       <td class="r"><span class="dur-loss">${fmtDur(c.avg_dur_loss)}</span></td>
     </tr>`;
   });
-
-  html += '</tbody></table>';
-  document.getElementById('classstats-body').innerHTML = html;
+  document.getElementById('classstats-body').innerHTML = html + '</tbody></table>';
 }
 
-// ── Render Matchup Matrix ─────────────────────
+// ── Matchup Matrix ──
 function renderMatchups() {
   const matchups = DATA.matchups;
   if (!matchups || matchups.length === 0) {
-    document.getElementById('matchups-body').innerHTML =
-      '<div class="loading">Not enough data yet (min. 5 fights per matchup).</div>';
+    document.getElementById('matchups-body').innerHTML = '<div class="loading">Not enough fight data yet.</div>';
     return;
   }
-
-  // Klassen sammeln die in Matchups vorkommen
   const classSet = new Set();
   matchups.forEach(m => { classSet.add(m.class_a); classSet.add(m.class_b); });
   const classes = [...classSet].sort((a,b) => {
-    // Sortieren nach Anzahl Fights
-    const fa = matchups.filter(m => m.class_a === a || m.class_b === a).reduce((s,m) => s+m.fights, 0);
-    const fb = matchups.filter(m => m.class_a === b || m.class_b === b).reduce((s,m) => s+m.fights, 0);
-    return fb - fa;
-  }).slice(0, 10); // max 10 Klassen in der Matrix
+    const fa = matchups.filter(m=>m.class_a===a||m.class_b===a).reduce((s,m)=>s+m.fights,0);
+    const fb = matchups.filter(m=>m.class_a===b||m.class_b===b).reduce((s,m)=>s+m.fights,0);
+    return fb-fa;
+  }).slice(0,12);
 
-  // Lookup bauen
   const lookup = {};
   matchups.forEach(m => {
-    lookup[`${m.class_a}_${m.class_b}`] = { fights: m.fights, wr: m.winrate_a };
-    lookup[`${m.class_b}_${m.class_a}`] = { fights: m.fights, wr: 100 - m.winrate_a };
+    lookup[`${m.class_a}_${m.class_b}`] = {fights:m.fights, wr:m.winrate_a};
+    lookup[`${m.class_b}_${m.class_a}`] = {fights:m.fights, wr:100-m.winrate_a};
   });
-
-  // Klassenname-Lookup aus DATA
   const nameMap = {};
-  DATA.class_stats.forEach(c => nameMap[c.class_id] = c.class_name);
-  matchups.forEach(m => {
-    nameMap[m.class_a] = m.class_a_name;
-    nameMap[m.class_b] = m.class_b_name;
-  });
+  matchups.forEach(m => { nameMap[m.class_a]=m.class_a_name; nameMap[m.class_b]=m.class_b_name; });
 
   let html = `<div class="matrix-wrap"><table class="matrix-table"><thead><tr>
     <th style="text-align:left;min-width:110px">vs. →</th>`;
-  classes.forEach(c => {
-    html += `<th>${nameMap[c] || c}</th>`;
-  });
+  classes.forEach(c => { html += `<th>${nameMap[c]||c}</th>`; });
   html += '</tr></thead><tbody>';
-
   classes.forEach(rowC => {
     const rlm = realmCss(rowC);
-    html += `<tr><td class="row-header" style="color:var(--${rlm})">${nameMap[rowC] || rowC}</td>`;
+    html += `<tr><td class="row-header" style="color:var(--${rlm})">${nameMap[rowC]||rowC}</td>`;
     classes.forEach(colC => {
-      if (rowC === colC) {
-        html += `<td class="cell-self">–</td>`;
-      } else {
-        const key = `${rowC}_${colC}`;
-        const d = lookup[key];
-        if (!d) {
-          html += `<td class="cell-na">–<br><span style="font-size:10px">&lt;5</span></td>`;
-        } else {
-          const cellClass = d.wr >= 60 ? 'cell-high' : d.wr >= 45 ? 'cell-mid' : 'cell-low';
-          html += `<td class="${cellClass}">${d.wr}%<br><span style="font-size:10px;font-weight:400;color:var(--text3)">(${d.fights})</span></td>`;
-        }
-      }
+      if (rowC===colC) { html += `<td class="cell-self">–</td>`; return; }
+      const d = lookup[`${rowC}_${colC}`];
+      if (!d) { html += `<td class="cell-na">–</td>`; return; }
+      const cc = d.wr>=60?'cell-high':d.wr>=45?'cell-mid':'cell-low';
+      html += `<td class="${cc}">${d.wr}%<br><span style="font-size:10px;font-weight:400;color:var(--text3)">(${d.fights})</span></td>`;
     });
     html += '</tr>';
   });
-
   html += '</tbody></table></div>';
   document.getElementById('matchups-body').innerHTML = html;
 }
 
-// ── Render Activity ───────────────────────────
+// ── Activity ──
 function renderActivity() {
-  const zones = DATA.zones || [];
   const common = DATA.common_matchups || [];
-  const daily = DATA.daily_fights || [];
+  const daily  = DATA.daily_fights   || [];
+  const maxPair = Math.max(...common.map(p=>p.count), 1);
+  const maxDay  = Math.max(...daily.map(d=>d.count), 1);
 
-  const maxZone = Math.max(...zones.map(z => z.count), 1);
-  const maxPair = Math.max(...common.map(p => p.count), 1);
-  const maxDay  = Math.max(...daily.map(d => d.count), 1);
-
-  // Zones
-  let zonesHtml = zones.slice(0,6).map(z => `
-    <div class="zone-row">
-      <div class="zone-name">${z.name}</div>
-      <div class="zone-bar-bg"><div class="zone-bar-fill" style="width:${Math.round(z.count/maxZone*100)}%"></div></div>
-      <div class="zone-count">${z.count}</div>
-    </div>`).join('') || '<div style="color:var(--text3);font-size:13px">No zone data yet.</div>';
-
-  // Common matchups
   let pairsHtml = common.slice(0,6).map(p => {
-    const rlmA = realmCss(p.class_a);
-    const rlmB = realmCss(p.class_b);
+    const ra = realmCss(p.class_a), rb = realmCss(p.class_b);
     return `<div class="matchup-pair">
       <div class="pair-classes">
-        <span class="pair-badge av-${rlmA}">${p.class_a_name}</span>
+        <span class="pair-badge av-${ra}">${p.class_a_name}</span>
         <span class="pair-vs">vs</span>
-        <span class="pair-badge av-${rlmB}">${p.class_b_name}</span>
+        <span class="pair-badge av-${rb}">${p.class_b_name}</span>
       </div>
       <div class="pair-bar-bg"><div class="pair-bar-fill" style="width:${Math.round(p.count/maxPair*100)}%"></div></div>
       <div class="pair-count">${p.count}</div>
     </div>`;
   }).join('') || '<div style="color:var(--text3);font-size:13px">No data yet.</div>';
 
-  // Daily chart
   const days = daily.slice(-7);
+  while (days.length < 7) days.unshift({day:'',count:0});
   let dayHtml = days.map(d => {
-    const isPeak = d.count === maxDay;
-    const h = Math.max(4, Math.round((d.count / maxDay) * 76));
-    const label = new Date(d.day).toLocaleDateString('en', {weekday:'short'});
+    const isPeak = d.count === maxDay && d.count > 0;
+    const h = Math.max(4, Math.round((d.count/maxDay)*76));
+    const label = d.day ? new Date(d.day).toLocaleDateString('en',{weekday:'short'}) : '–';
     return `<div class="day-col">
       <div class="day-bar-wrap">
-        <div class="day-bar" style="height:${h}px;background:${isPeak ? 'var(--hib)' : 'var(--bg4)'};border:0.5px solid ${isPeak ? 'var(--hib2)' : 'var(--border2)'}"></div>
+        <div class="day-bar" style="height:${h}px;background:${isPeak?'var(--hib)':'var(--bg4)'};border:0.5px solid ${isPeak?'var(--hib2)':'var(--border2)'}"></div>
       </div>
-      <div class="day-count ${isPeak ? 'day-peak' : ''}">${d.count}</div>
+      <div class="day-count ${isPeak?'day-peak':''}">${d.count||0}</div>
       <div class="day-label">${label}</div>
     </div>`;
   }).join('');
 
-  // Pad to 7 days if less
-  while (days.length < 7) {
-    dayHtml = `<div class="day-col"><div class="day-bar-wrap"><div class="day-bar" style="height:4px;background:var(--bg4);border:0.5px solid var(--border2)"></div></div><div class="day-count">0</div><div class="day-label">–</div></div>` + dayHtml;
-    days.unshift({});
-  }
-
   document.getElementById('activity-body').innerHTML = `
     <div class="activity-grid">
-      <div class="activity-card">
-        <div class="activity-card-title">Most active zones</div>
-        ${zonesHtml}
-      </div>
-      <div class="activity-card">
-        <div class="activity-card-title">Most common matchups</div>
-        ${pairsHtml}
+      <div class="activity-card activity-card-full">
+        <div class="activity-card-title">Most common matchups</div>${pairsHtml}
       </div>
       <div class="activity-card activity-card-full">
         <div class="activity-card-title">Fights per day – last 7 days</div>
@@ -456,47 +483,46 @@ function renderActivity() {
     </div>`;
 }
 
-// ── Tab switching ─────────────────────────────
+// ── Tab switching ──
 function switchTab(id, el) {
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   el.classList.add('active');
 }
 
-// ── Time filter ───────────────────────────────
+// ── Time filters ──
 document.querySelectorAll('.time-filters').forEach(group => {
   group.querySelectorAll('.tf').forEach(btn => {
     btn.addEventListener('click', () => {
-      group.querySelectorAll('.tf').forEach(b => b.classList.remove('active'));
+      group.querySelectorAll('.tf').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
-      // TODO: clientseitiges Filtern nach days
     });
   });
 });
 
-// ── Load data ─────────────────────────────────
+// ── Load data ──
 async function loadData() {
   try {
-    const r = await fetch('data.json?t=' + Date.now());
-    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const r = await fetch('data.json?t='+Date.now());
+    if (!r.ok) throw new Error('HTTP '+r.status);
     DATA = await r.json();
     renderSummary();
+    renderLeaderboard();
     renderClassStats();
     renderMatchups();
     renderActivity();
   } catch(e) {
     console.error(e);
-    ['classstats-body','matchups-body','activity-body'].forEach(id => {
-      document.getElementById(id).innerHTML =
-        `<div class="error-msg">⚠ Could not load fight data. Make sure data.json exists and the fetcher has run at least once.</div>`;
+    ['leaderboard-body','classstats-body','matchups-body','activity-body'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = `<div class="error-msg">⚠ Could not load fight data. Make sure data.json exists and the fetcher has run at least once.</div>`;
     });
   }
 }
 
 loadData();
-// Auto-refresh alle 5 Minuten
-setInterval(loadData, 5 * 60 * 1000);
+setInterval(loadData, 5*60*1000);
 </script>
 </body>
 </html>
