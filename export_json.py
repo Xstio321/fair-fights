@@ -268,48 +268,6 @@ def compute_stats(con, since_dt):
             "wilson":  wilson_score(wins, fights),
         })
 
-    # ── Top 5 Damage per Fight ──
-    top_dmg = cur.execute("""
-        SELECT p.name, p.class_id, p.dmg_done, f.id
-        FROM fight_players p
-        JOIN fights f ON f.id = p.fight_id
-        WHERE f.started_at >= ? AND p.dmg_done > 0
-        ORDER BY p.dmg_done DESC
-        LIMIT 5
-    """, (since_str,)).fetchall()
-
-    top_damage = []
-    for name, cid, dmg, fid in top_dmg:
-        top_damage.append({
-            "name":       name,
-            "class_id":   cid,
-            "class_name": CLASSES.get(cid, f"Class {cid}"),
-            "realm":      CLASS_REALM.get(cid, 0),
-            "value":      dmg,
-            "fight_id":   fid,
-        })
-
-    # ── Top 5 Healing per Fight ──
-    top_heal = cur.execute("""
-        SELECT p.name, p.class_id, p.heal_done, f.id
-        FROM fight_players p
-        JOIN fights f ON f.id = p.fight_id
-        WHERE f.started_at >= ? AND p.heal_done > 0
-        ORDER BY p.heal_done DESC
-        LIMIT 5
-    """, (since_str,)).fetchall()
-
-    top_healing = []
-    for name, cid, heal, fid in top_heal:
-        top_healing.append({
-            "name":       name,
-            "class_id":   cid,
-            "class_name": CLASSES.get(cid, f"Class {cid}"),
-            "realm":      CLASS_REALM.get(cid, 0),
-            "value":      heal,
-            "fight_id":   fid,
-        })
-
     return {
         "generated_at":    datetime.now(timezone.utc).isoformat(),
         "summary": {
@@ -327,8 +285,6 @@ def compute_stats(con, since_dt):
         "common_matchups": common_out,
         "daily_fights":    [{"day": r[0], "count": r[1]} for r in daily],
         "leaderboard":     leaderboard,
-        "top_damage":      top_damage,
-        "top_healing":     top_healing,
     }
 
 
