@@ -169,14 +169,28 @@ def compute_stats(con, since_dt):
     rows_time = cur.execute(MATCHUP_SQL + " WHERE f.started_at >= ?", (since_str,)).fetchall()
     matchups = build_matchups_from_rows(rows_time)
 
-    # Nach letzten N Fights
+    # Nach letzten N Fights PRO Klassen-Kombination
     def matchups_last_n(n):
+        # Alle Fights holen mit Zeitstempel
         rows = cur.execute(MATCHUP_SQL + """
-            WHERE f.id IN (
-                SELECT id FROM fights ORDER BY started_at DESC LIMIT ?
-            )
-        """, (n,)).fetchall()
-        return build_matchups_from_rows(rows)
+            ORDER BY f.started_at DESC
+        """).fetchall()
+
+        from collections import defaultdict
+        # Pro Klassen-Paar die letzten N Fights sammeln
+        pair_fights = defaultdict(list)
+        for winner_class, loser_class in rows:
+            ca = min(winner_class, loser_class)
+            cb = max(winner_class, loser_class)
+            pair_fights[(ca, cb)].append((winner_class, loser_class))
+
+        # Pro Paar nur die letzten N nehmen
+        limited = []
+        for pair, fights in pair_fights.items():
+            for f in fights[:n]:
+                limited.append(f)
+
+        return build_matchups_from_rows(limited)
 
     matchups_100  = matchups_last_n(100)
     matchups_500  = matchups_last_n(500)
