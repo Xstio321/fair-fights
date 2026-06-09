@@ -45,6 +45,9 @@
   .tf{padding:5px 13px;font-size:11px;border:0.5px solid var(--border2);border-radius:20px;cursor:pointer;color:var(--text3);background:transparent;transition:all 0.15s;font-family:'Cinzel',serif;letter-spacing:0.06em;user-select:none}
   .tf:hover{color:var(--text2)}
   .tf.active{background:var(--hib);color:#0d0f0e;border-color:var(--hib);font-weight:600}
+  .tf.active-alb{background:var(--alb)!important;color:#0d0f0e!important;border-color:var(--alb)!important;font-weight:600}
+  .tf.active-mid{background:var(--mid)!important;color:#0d0f0e!important;border-color:var(--mid)!important;font-weight:600}
+  .tf.active-hib{background:var(--hib)!important;color:#0d0f0e!important;border-color:var(--hib)!important;font-weight:600}
   .panel{display:none}.panel.active{display:block}
   table{width:100%;border-collapse:collapse}
   thead th{font-size:10px;font-weight:400;color:var(--text3);text-align:left;padding:8px 10px;border-bottom:0.5px solid var(--border2);letter-spacing:0.1em;text-transform:uppercase;font-family:'Cinzel',serif;white-space:nowrap}
@@ -124,8 +127,8 @@
   .matrix-note{font-size:12px;color:var(--text3);margin-bottom:12px;letter-spacing:0.04em}
   .matrix-wrap{overflow-x:auto}
   .matrix-table{width:100%;border-collapse:collapse;font-size:12px}
-  .matrix-table th{font-size:10px;padding:7px 8px;font-weight:400;color:var(--text3);background:var(--bg2);letter-spacing:0.08em;text-transform:uppercase;font-family:'Cinzel',serif;border:0.5px solid var(--border)}
-  .matrix-table td{padding:6px 8px;text-align:center;border:0.5px solid var(--border);font-family:'Cinzel',serif;font-size:12px;transition:background 0.1s}
+  .matrix-table th{font-size:10px;padding:7px 8px;font-weight:400;color:var(--text3);background:var(--bg2);letter-spacing:0.08em;text-transform:uppercase;font-family:'Cinzel',serif;border:0.5px solid var(--border);height:40px;vertical-align:middle}
+  .matrix-table td{padding:6px 8px;text-align:center;border:0.5px solid var(--border);font-family:'Cinzel',serif;font-size:12px;transition:background 0.1s;height:40px;vertical-align:middle}
   .row-header{font-size:11px;font-weight:600;color:var(--text2);background:var(--bg2);text-align:left;padding:6px 12px;white-space:nowrap;font-family:'Cinzel',serif;position:sticky;left:0;z-index:1}
   .matrix-table thead th:first-child{position:sticky;left:0;z-index:2}
   .matrix-table th{position:sticky;top:0;z-index:1}
@@ -596,11 +599,11 @@ function sortDrill(classId,key){
 function setRealmFilter(realm){
   if(matchupRealmFilter === realm){
     matchupRealmFilter = null;
-    document.querySelectorAll('#tf-matchups-realm .tf').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('#tf-matchups-realm .tf').forEach(b=>b.classList.remove('active','active-alb','active-mid','active-hib'));
   } else {
     matchupRealmFilter = realm;
-    document.querySelectorAll('#tf-matchups-realm .tf').forEach(b=>b.classList.remove('active'));
-    document.querySelector(`#tf-matchups-realm .tf[data-realm="${realm}"]`).classList.add('active');
+    document.querySelectorAll('#tf-matchups-realm .tf').forEach(b=>b.classList.remove('active','active-alb','active-mid','active-hib'));
+    document.querySelector(`#tf-matchups-realm .tf[data-realm="${realm}"]`).classList.add(`active-${realm}`);
   }
   renderMatchups();
 }
