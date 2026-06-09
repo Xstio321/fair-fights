@@ -696,7 +696,6 @@ function renderMatchups(){
 // ── Activity ──
 // Zone Liniendiagramm State
 let zoneChartHidden = new Set();
-let zoneChartHiddenYest = new Set();
 
 // Farben für Zonen
 const ZONE_COLORS = [
@@ -743,28 +742,41 @@ function renderActivity(){
   }).join('');
 
   // ── Zone Liniendiagramm ──
-  function buildZoneChart(zoneData, hiddenSet, toggleFn){
-    if(!zoneData.length) return '<div style="color:var(--text3);font-size:13px;padding:1rem">No data yet.</div>';
-    const allHours = [...Array(24).keys()]; // 0-23
-    const W=700,H=200,PL=35,PR=15,PT=10,PB=30;
+  // Alle RvR Zonen (immer vollständige Liste)
+  const ALL_RVR_ZONES = [
+    {zone_id:163,name:"Ellan Vannin"},
+    {zone_id:167,name:"Odin's Gate"},
+    {zone_id:168,name:"Jamtland Mountains"},
+    {zone_id:169,name:"Yggdra Forest"},
+    {zone_id:170,name:"Uppland"},
+    {zone_id:171,name:"Emain Macha"},
+    {zone_id:172,name:"Breifine"},
+    {zone_id:173,name:"Cruachan Gorge"},
+    {zone_id:174,name:"Mount Collory"},
+    {zone_id:175,name:"Snowdonia"},
+    {zone_id:176,name:"Forest Sauvage"},
+    {zone_id:177,name:"Pennine Mountains"},
+    {zone_id:178,name:"Hadrian's Wall"},
+  ];
+
+  function buildZoneChart(zoneData, hiddenSet, toggleFn, sharedMaxVal){
+    const W=640,H=200,PL=35,PR=15,PT=10,PB=30;
     const iW=W-PL-PR, iH=H-PT-PB;
-    const maxVal = Math.max(...zoneData.flatMap(z=>z.data.map(d=>d.count)),1);
+    const dataByZone = Object.fromEntries(zoneData.map(z=>[z.zone_id, z.data]));
+    const maxVal = sharedMaxVal || Math.max(...zoneData.flatMap(z=>z.data.map(d=>d.count)),1);
     const xPos = h => PL + (h/23)*iW;
     const yPos = v => PT + iH - (v/maxVal)*iH;
 
-    let linesHtml='', legendHtml='';
-    zoneData.forEach((z,i)=>{
+    let linesHtml='';
+    ALL_RVR_ZONES.forEach((zone,i)=>{
+      if(hiddenSet.has(zone.zone_id)) return;
+      const data = dataByZone[zone.zone_id] || [];
+      if(data.length < 1) return;
       const color = ZONE_COLORS[i%ZONE_COLORS.length];
-      const inactive = hiddenSet.has(z.zone_id) ? ' inactive' : '';
-      legendHtml += `<div class="legend-btn${inactive}" style="border-color:${color};color:${color}" onclick="${toggleFn}(${z.zone_id})">
-        <div style="width:10px;height:2px;background:${color};border-radius:1px"></div>${z.name}
-      </div>`;
-      if(hiddenSet.has(z.zone_id)) return;
-      if(z.data.length < 1) return;
-      const pts = z.data.map(d=>`${xPos(d.hour).toFixed(1)},${yPos(d.count).toFixed(1)}`).join(' ');
+      const pts = data.map(d=>`${xPos(d.hour).toFixed(1)},${yPos(d.count).toFixed(1)}`).join(' ');
       linesHtml += `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>`;
-      z.data.forEach(d=>{
-        linesHtml += `<circle cx="${xPos(d.hour).toFixed(1)}" cy="${yPos(d.count).toFixed(1)}" r="3" fill="${color}"><title>${z.name}: ${d.count} fights</title></circle>`;
+      data.forEach(d=>{
+        linesHtml += `<circle cx="${xPos(d.hour).toFixed(1)}" cy="${yPos(d.count).toFixed(1)}" r="3" fill="${color}"><title>${zone.name}: ${d.count} fights</title></circle>`;
       });
     });
 
@@ -780,26 +792,39 @@ function renderActivity(){
       yLabels += `<line x1="${PL}" y1="${y.toFixed(1)}" x2="${PL+iW}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="0.5"/>`;
     }
 
-    return `<div class="chart-legend">${legendHtml}</div>
-      <div class="chart-svg-wrap">
-        <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;min-width:400px">
+    return `<div class="chart-svg-wrap">
+        <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;min-width:300px">
           ${yLabels}${xLabels}${linesHtml}
         </svg>
       </div>`;
   }
 
+  function buildSharedLegend(hiddenSet, toggleFn){
+    return ALL_RVR_ZONES.map((zone,i)=>{
+      const color = ZONE_COLORS[i%ZONE_COLORS.length];
+      const inactive = hiddenSet.has(zone.zone_id) ? ' inactive' : '';
+      return `<div class="legend-btn${inactive}" style="border-color:${color};color:${color}" onclick="${toggleFn}(${zone.zone_id})">
+        <div style="width:10px;height:2px;background:${color};border-radius:1px"></div>${zone.name}
+      </div>`;
+    }).join('');
+  }
+
   let zoneChartHtml = '<div style="color:var(--text3);font-size:13px">No zone data yet.</div>';
   if(zones.length > 0 || zonesYest.length > 0){
     // Alle Stunden sammeln
-        zoneChartHtml = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        // Gemeinsamen Max-Wert berechnen für gleiche Y-Achse
+    const allVals = [...zones.flatMap(z=>z.data.map(d=>d.count)), ...zonesYest.flatMap(z=>z.data.map(d=>d.count))];
+    const sharedMax = Math.max(...allVals, 1);
+    zoneChartHtml = `
+      <div class="chart-legend">${buildSharedLegend(zoneChartHidden, 'toggleZone')}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
         <div>
-          <div style="font-size:11px;color:var(--text2);font-family:'Cinzel',serif;margin-bottom:8px">Today</div>
-          ${buildZoneChart(zones, zoneChartHidden, 'toggleZone')}
+          <div style="font-size:11px;color:var(--text2);font-family:'Cinzel',serif;margin-bottom:8px;letter-spacing:0.06em">Yesterday</div>
+          ${buildZoneChart(zonesYest, zoneChartHidden, 'toggleZone', sharedMax)}
         </div>
         <div>
-          <div style="font-size:11px;color:var(--text2);font-family:'Cinzel',serif;margin-bottom:8px">Yesterday</div>
-          ${buildZoneChart(zonesYest, zoneChartHiddenYest, 'toggleZoneYest')}
+          <div style="font-size:11px;color:var(--text2);font-family:'Cinzel',serif;margin-bottom:8px;letter-spacing:0.06em">Today</div>
+          ${buildZoneChart(zones, zoneChartHidden, 'toggleZone', sharedMax)}
         </div>
       </div>`;
   }
@@ -825,11 +850,7 @@ function toggleZone(zoneId){
   else zoneChartHidden.add(zoneId);
   renderActivity();
 }
-function toggleZoneYest(zoneId){
-  if(zoneChartHiddenYest.has(zoneId)) zoneChartHiddenYest.delete(zoneId);
-  else zoneChartHiddenYest.add(zoneId);
-  renderActivity();
-}
+
 
 // ── Tab switching ──
 function switchTab(id,el){
