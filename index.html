@@ -159,6 +159,18 @@
   .day-bar:hover{opacity:0.8}
   .day-count{font-size:10px;color:var(--text3);font-family:'Cinzel',serif;margin-top:2px}
   .day-peak{color:var(--hib)}
+  .top5-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:1.5rem}
+  .top5-card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:1.25rem}
+  .top5-title{font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:1rem}
+  .top5-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .top5-row:last-child{margin-bottom:0}
+  .top5-rank{font-size:12px;color:var(--text3);font-family:'Cinzel',serif;min-width:16px}
+  .top5-rank-1{color:var(--amber)}.top5-rank-2{color:var(--text2)}.top5-rank-3{color:#a07040}
+  .top5-name{font-size:13px;color:var(--text);font-weight:600;flex:1}
+  .top5-class{font-size:11px;color:var(--text3)}
+  .top5-value{font-size:13px;font-family:'Cinzel',serif;color:var(--hib);font-weight:600;white-space:nowrap}
+  .top5-heal-value{color:var(--mid)}
+  @media(max-width:600px){.top5-grid{grid-template-columns:1fr}}
   .loading{text-align:center;padding:3rem;color:var(--text3);font-family:'Cinzel',serif;font-size:13px;letter-spacing:0.1em}
   .error-msg{background:rgba(196,74,74,0.1);border:0.5px solid var(--alb2);border-radius:var(--radius);padding:12px 16px;color:var(--alb);font-size:13px;font-family:'Cinzel',serif;margin-bottom:1rem}
   footer{margin-top:3rem;padding-top:1.5rem;border-top:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
@@ -252,11 +264,19 @@
   <!-- CLASS MATCHUPS -->
   <div id="matchups" class="panel">
     <div class="controls">
-      <div class="time-filters" id="tf-matchups">
-        <div class="tf active" data-days="1">24h</div>
-        <div class="tf" data-days="3">3d</div>
-        <div class="tf" data-days="7">7d</div>
-        <div class="tf" data-days="30">30d</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+        <div class="time-filters" id="tf-matchups-time">
+          <div class="tf" data-matchup="time-1">24h</div>
+          <div class="tf" data-matchup="time-3">3d</div>
+          <div class="tf" data-matchup="time-7">7d</div>
+          <div class="tf" data-matchup="time-30">30d</div>
+        </div>
+        <div style="font-size:10px;color:var(--text3);font-family:'Cinzel',serif">or</div>
+        <div class="time-filters" id="tf-matchups-count">
+          <div class="tf active" data-matchup="count-100">Last 100</div>
+          <div class="tf" data-matchup="count-500">Last 500</div>
+          <div class="tf" data-matchup="count-1000">Last 1000</div>
+        </div>
       </div>
     </div>
     <p class="matrix-note">Win rate of row class against column class</p>
@@ -287,6 +307,7 @@ let lbSortKey = 'wilson';
 let lbSortDir = -1;
 let lbSearch = '';
 let csSortKey = 'fights';
+let matchupFilter = 'count-100';
 let csSortDir = -1;
 let drillSort = {};
 
@@ -329,6 +350,45 @@ function getFilteredLb(){
     return(va-vb)*lbSortDir;
   });
   return lb;
+}
+
+function renderTop5(){
+  const dmg  = DATA.top_damage  || [];
+  const heal = DATA.top_healing || [];
+
+  function top5Card(items, title, valueClass){
+    if(!items.length) return `<div class="top5-card"><div class="top5-title">${title}</div><div style="color:var(--text3);font-size:13px">No data yet.</div></div>`;
+    const rows = items.map((p,i)=>{
+      const rlm = realmCss(p.class_id);
+      const rk = i===0?'top5-rank-1':i===1?'top5-rank-2':i===2?'top5-rank-3':'';
+      return `<div class="top5-row">
+        <span class="top5-rank ${rk}">${i+1}</span>
+        <div class="class-icon av-${rlm}" style="width:24px;height:24px;font-size:9px">${initials(p.class_name)}</div>
+        <div style="flex:1;min-width:0">
+          <div class="top5-name">${p.name}</div>
+          <div class="top5-class">${p.class_name}</div>
+        </div>
+        <span class="top5-value ${valueClass}">${p.value.toLocaleString()}</span>
+      </div>`;
+    }).join('');
+    return `<div class="top5-card"><div class="top5-title">${title}</div>${rows}</div>`;
+  }
+
+  const html = `<div class="top5-grid">
+    ${top5Card(dmg,  '⚔ Top Damage in 1 Fight', '')}
+    ${top5Card(heal, '✦ Top Healing in 1 Fight', 'top5-heal-value')}
+  </div>`;
+
+  // In leaderboard panel vor der tabelle einfügen
+  const existing = document.getElementById('leaderboard-top5');
+  if(existing) existing.outerHTML = `<div id="leaderboard-top5">${html}</div>`;
+  else {
+    const body = document.getElementById('leaderboard-body');
+    const div = document.createElement('div');
+    div.id = 'leaderboard-top5';
+    div.innerHTML = html;
+    body.parentNode.insertBefore(div, body);
+  }
 }
 
 function renderLeaderboard(){
@@ -556,7 +616,14 @@ function sortCs(key){
 
 // ── Matchup Matrix ──
 function renderMatchups(){
-  const matchups=DATA.matchups;
+  let matchups;
+  if(matchupFilter==='count-100')       matchups=DATA.matchups_100||[];
+  else if(matchupFilter==='count-500')  matchups=DATA.matchups_500||[];
+  else if(matchupFilter==='count-1000') matchups=DATA.matchups_1000||[];
+  else if(matchupFilter==='time-1'){
+    matchups=DATA.matchups||[];
+    // TODO: client-side time filter
+  } else matchups=DATA.matchups||[];
   if(!matchups||matchups.length===0){
     document.getElementById('matchups-body').innerHTML='<div class="loading">Not enough fight data yet.</div>';
     return;
@@ -667,8 +734,18 @@ function switchTab(id,el){
 document.querySelectorAll('.time-filters').forEach(group=>{
   group.querySelectorAll('.tf').forEach(btn=>{
     btn.addEventListener('click',()=>{
-      group.querySelectorAll('.tf').forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
+      const matchup = btn.dataset.matchup;
+      if(matchup){
+        // Matchup Filter: beide Gruppen deaktivieren, dann nur diesen aktivieren
+        document.querySelectorAll('#tf-matchups-time .tf, #tf-matchups-count .tf')
+          .forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        matchupFilter = matchup;
+        renderMatchups();
+      } else {
+        group.querySelectorAll('.tf').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+      }
     });
   });
 });
@@ -680,6 +757,7 @@ async function loadData(){
     if(!r.ok)throw new Error('HTTP '+r.status);
     DATA=await r.json();
     renderSummary();
+    renderTop5();
     renderLeaderboard();
     renderClassStats();
     renderMatchups();

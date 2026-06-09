@@ -134,43 +134,53 @@ def compute_stats(con, since_dt):
         })
 
     # ── Matchup Matrix ──
-    # Jeden Fight einmal laden: Gewinner-Klasse + Verlierer-Klasse
-    # key = (min_class_id, max_class_id) damit Reihenfolge egal ist
-    fight_rows = cur.execute("""
-        SELECT
-            pw.class_id as winner_class,
-            pl.class_id as loser_class
+    def build_matchups_from_rows(rows):
+        from collections import defaultdict
+        data = defaultdict(lambda: {"total": 0, "wins_a": 0})
+        for winner_class, loser_class in rows:
+            ca = min(winner_class, loser_class)
+            cb = max(winner_class, loser_class)
+            data[(ca, cb)]["total"] += 1
+            if winner_class == ca:
+                data[(ca, cb)]["wins_a"] += 1
+        result = []
+        for (ca, cb), d in data.items():
+            total = d["total"]
+            if total < MIN_FIGHTS_MATCHUP:
+                continue
+            result.append({
+                "class_a": ca, "class_a_name": CLASSES.get(ca, f"Class {ca}"),
+                "class_b": cb, "class_b_name": CLASSES.get(cb, f"Class {cb}"),
+                "fights": total,
+                "winrate_a": round(d["wins_a"] / total * 100) if total > 0 else 0,
+            })
+        return result
+
+    MATCHUP_SQL = """
+        SELECT pw.class_id, pl.class_id
         FROM fights f
         JOIN fight_players pw ON pw.fight_id = f.id
         JOIN fight_teams tw ON tw.fight_id = f.id AND tw.side = pw.side AND tw.won = 1
         JOIN fight_players pl ON pl.fight_id = f.id
         JOIN fight_teams tl ON tl.fight_id = f.id AND tl.side = pl.side AND tl.won = 0
-        WHERE f.started_at >= ?
-    """, (since_str,)).fetchall()
+    """
 
-    from collections import defaultdict
-    # key: (class_a, class_b) wobei class_a < class_b
-    # value: {"total": N, "wins_a": N}
-    matchup_data = defaultdict(lambda: {"total": 0, "wins_a": 0})
+    # Nach Zeitfenster (30d)
+    rows_time = cur.execute(MATCHUP_SQL + " WHERE f.started_at >= ?", (since_str,)).fetchall()
+    matchups = build_matchups_from_rows(rows_time)
 
-    for winner_class, loser_class in fight_rows:
-        ca = min(winner_class, loser_class)
-        cb = max(winner_class, loser_class)
-        matchup_data[(ca, cb)]["total"] += 1
-        if winner_class == ca:
-            matchup_data[(ca, cb)]["wins_a"] += 1
+    # Nach letzten N Fights
+    def matchups_last_n(n):
+        rows = cur.execute(MATCHUP_SQL + """
+            WHERE f.id IN (
+                SELECT id FROM fights ORDER BY started_at DESC LIMIT ?
+            )
+        """, (n,)).fetchall()
+        return build_matchups_from_rows(rows)
 
-    matchups = []
-    for (ca, cb), d in matchup_data.items():
-        total = d["total"]
-        if total < MIN_FIGHTS_MATCHUP:
-            continue
-        matchups.append({
-            "class_a": ca, "class_a_name": CLASSES.get(ca, f"Class {ca}"),
-            "class_b": cb, "class_b_name": CLASSES.get(cb, f"Class {cb}"),
-            "fights": total,
-            "winrate_a": round(d["wins_a"] / total * 100) if total > 0 else 0,
-        })
+    matchups_100  = matchups_last_n(100)
+    matchups_500  = matchups_last_n(500)
+    matchups_1000 = matchups_last_n(1000)
 
     # ── Häufigste Matchups ──
     common_matchups = sorted(matchups, key=lambda x: x["fights"], reverse=True)[:8]
@@ -297,6 +307,9 @@ def compute_stats(con, since_dt):
         "class_stats":     class_stats,
         "class_players":   class_players,
         "matchups":        matchups,
+        "matchups_100":    matchups_100,
+        "matchups_500":    matchups_500,
+        "matchups_1000":   matchups_1000,
         "common_matchups": common_out,
         "daily_fights":    [{"day": r[0], "count": r[1]} for r in daily],
         "leaderboard":     leaderboard,
