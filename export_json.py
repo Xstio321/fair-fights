@@ -106,29 +106,31 @@ def compute_stats(con, since_dt):
         GROUP BY day ORDER BY day ASC
     """, ((datetime.now(timezone.utc) - timedelta(days=7)).isoformat(),)).fetchall()
 
-    # ── Zone Zeitreihe (heute + gestern, stündlich) ──
-    zone_timeseries_rows = cur.execute("""
-        SELECT
-            zone_id,
-            strftime('%Y-%m-%d %H:00', started_at) as hour,
-            count(*) as cnt
-        FROM fights
-        WHERE started_at >= ? AND zone_id IS NOT NULL
-        GROUP BY zone_id, hour
-        ORDER BY hour ASC
-    """, (two_days_ago,)).fetchall()
-
-    # Gruppieren nach Zone
+    # ── Zone Zeitreihe (heute + gestern getrennt, stündlich) ──
     from collections import defaultdict
-    zone_ts = defaultdict(list)
-    for zone_id, hour, cnt in zone_timeseries_rows:
-        if zone_id in ZONE_NAMES:
-            zone_ts[zone_id].append({"hour": hour, "count": cnt})
 
-    zone_timeseries = [
-        {"zone_id": zid, "name": ZONE_NAMES[zid], "data": data}
-        for zid, data in sorted(zone_ts.items(), key=lambda x: -sum(d["count"] for d in x[1]))
-    ]
+    def fetch_zone_ts(date_filter):
+        rows = cur.execute("""
+            SELECT
+                zone_id,
+                CAST(strftime('%H', started_at) AS INTEGER) as hour,
+                count(*) as cnt
+            FROM fights
+            WHERE date(started_at) = ? AND zone_id IS NOT NULL
+            GROUP BY zone_id, hour
+            ORDER BY hour ASC
+        """, (date_filter,)).fetchall()
+        ts = defaultdict(list)
+        for zone_id, hour, cnt in rows:
+            if zone_id in ZONE_NAMES:
+                ts[zone_id].append({"hour": hour, "count": cnt})
+        return [
+            {"zone_id": zid, "name": ZONE_NAMES[zid], "data": data}
+            for zid, data in sorted(ts.items(), key=lambda x: -sum(d["count"] for d in x[1]))
+        ]
+
+    zone_today     = fetch_zone_ts("date('now')")
+    zone_yesterday = fetch_zone_ts("date('now','-1 day')")
 
     # ── Summary ──
     total_all = cur.execute("SELECT count(*) FROM fights").fetchone()[0]
@@ -325,7 +327,8 @@ def compute_stats(con, since_dt):
         "matchups_1000":   matchups_1000,
         "common_matchups": common_out,
         "daily_fights":    [{"day": r[0], "count": r[1]} for r in daily],
-        "zone_timeseries": zone_timeseries,
+        "zone_today":      zone_today,
+        "zone_yesterday":  zone_yesterday,
         "leaderboard":     leaderboard,
     }
 

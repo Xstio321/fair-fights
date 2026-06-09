@@ -696,6 +696,7 @@ function renderMatchups(){
 // ── Activity ──
 // Zone Liniendiagramm State
 let zoneChartHidden = new Set();
+let zoneChartHiddenYest = new Set();
 
 // Farben für Zonen
 const ZONE_COLORS = [
@@ -706,7 +707,8 @@ const ZONE_COLORS = [
 function renderActivity(){
   const common = DATA.common_matchups || [];
   const daily  = DATA.daily_fights   || [];
-  const zones  = DATA.zone_timeseries || [];
+  const zones      = DATA.zone_today     || [];
+  const zonesYest  = DATA.zone_yesterday || [];
   const maxPair = Math.max(...common.map(p=>p.count), 1);
   const maxDay  = Math.max(...daily.map(d=>d.count), 1);
 
@@ -741,84 +743,64 @@ function renderActivity(){
   }).join('');
 
   // ── Zone Liniendiagramm ──
-  let zoneChartHtml = '<div style="color:var(--text3);font-size:13px">No zone data yet.</div>';
-  if(zones.length > 0){
-    // Alle Stunden sammeln
-    const allHours = [...new Set(zones.flatMap(z=>z.data.map(d=>d.hour)))].sort();
-    const W = 800, H = 220, PL = 40, PR = 20, PT = 10, PB = 40;
-    const iW = W-PL-PR, iH = H-PT-PB;
-
-    // Max Wert für Y-Achse
-    const maxVal = Math.max(...zones.flatMap(z=>z.data.map(d=>d.count)), 1);
-
-    // X-Positionen
-    const xPos = h => PL + (allHours.indexOf(h) / Math.max(allHours.length-1,1)) * iW;
+  function buildZoneChart(zoneData, hiddenSet, toggleFn){
+    if(!zoneData.length) return '<div style="color:var(--text3);font-size:13px;padding:1rem">No data yet.</div>';
+    const allHours = [...Array(24).keys()]; // 0-23
+    const W=700,H=200,PL=35,PR=15,PT=10,PB=30;
+    const iW=W-PL-PR, iH=H-PT-PB;
+    const maxVal = Math.max(...zoneData.flatMap(z=>z.data.map(d=>d.count)),1);
+    const xPos = h => PL + (h/23)*iW;
     const yPos = v => PT + iH - (v/maxVal)*iH;
 
-    // Linien
-    let linesHtml = '';
-    zones.forEach((z,i)=>{
-      if(zoneChartHidden.has(z.zone_id)) return;
-      const color = ZONE_COLORS[i % ZONE_COLORS.length];
+    let linesHtml='', legendHtml='';
+    zoneData.forEach((z,i)=>{
+      const color = ZONE_COLORS[i%ZONE_COLORS.length];
+      const inactive = hiddenSet.has(z.zone_id) ? ' inactive' : '';
+      legendHtml += `<div class="legend-btn${inactive}" style="border-color:${color};color:${color}" onclick="${toggleFn}(${z.zone_id})">
+        <div style="width:10px;height:2px;background:${color};border-radius:1px"></div>${z.name}
+      </div>`;
+      if(hiddenSet.has(z.zone_id)) return;
+      if(z.data.length < 1) return;
       const pts = z.data.map(d=>`${xPos(d.hour).toFixed(1)},${yPos(d.count).toFixed(1)}`).join(' ');
-      if(z.data.length < 2) return;
       linesHtml += `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>`;
-      // Punkte
       z.data.forEach(d=>{
-        linesHtml += `<circle cx="${xPos(d.hour).toFixed(1)}" cy="${yPos(d.count).toFixed(1)}" r="3" fill="${color}">
-          <title>${z.name}: ${d.count} fights at ${d.hour}</title>
-        </circle>`;
+        linesHtml += `<circle cx="${xPos(d.hour).toFixed(1)}" cy="${yPos(d.count).toFixed(1)}" r="3" fill="${color}"><title>${z.name}: ${d.count} fights</title></circle>`;
       });
     });
 
-    // X-Achse Labels (alle 4 Stunden)
-    let xLabels = '';
-    allHours.forEach((h,i)=>{
-      if(i % 4 !== 0) return;
-      const x = xPos(h);
-      const label = h.slice(11,16); // HH:MM
-      xLabels += `<text x="${x.toFixed(1)}" y="${H-8}" text-anchor="middle" font-size="9" fill="var(--text3)" font-family="Cinzel,serif">${label}</text>`;
+    let xLabels='', yLabels='';
+    [0,4,8,12,16,20,23].forEach(h=>{
+      const x=xPos(h);
+      xLabels += `<text x="${x.toFixed(1)}" y="${H-6}" text-anchor="middle" font-size="9" fill="var(--text3)" font-family="Cinzel,serif">${String(h).padStart(2,'0')}:00</text>`;
       xLabels += `<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${PT+iH}" stroke="var(--border)" stroke-width="0.5"/>`;
     });
-
-    // Y-Achse Labels
-    let yLabels = '';
-    for(let v=0; v<=maxVal; v+=Math.ceil(maxVal/4)){
-      const y = yPos(v);
-      yLabels += `<text x="${PL-5}" y="${y.toFixed(1)}" text-anchor="end" dominant-baseline="middle" font-size="9" fill="var(--text3)" font-family="Cinzel,serif">${v}</text>`;
+    for(let v=0;v<=maxVal;v+=Math.ceil(maxVal/4)){
+      const y=yPos(v);
+      yLabels += `<text x="${PL-4}" y="${y.toFixed(1)}" text-anchor="end" dominant-baseline="middle" font-size="9" fill="var(--text3)" font-family="Cinzel,serif">${v}</text>`;
       yLabels += `<line x1="${PL}" y1="${y.toFixed(1)}" x2="${PL+iW}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="0.5"/>`;
     }
 
-    // Datum-Trenner
-    let dateSep = '';
-    let lastDate = '';
-    allHours.forEach(h=>{
-      const date = h.slice(0,10);
-      if(date !== lastDate){
-        lastDate = date;
-        const x = xPos(h);
-        const label = new Date(date).toLocaleDateString('en',{weekday:'short',month:'short',day:'numeric'});
-        dateSep += `<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${PT+iH}" stroke="var(--border2)" stroke-width="1" stroke-dasharray="4,2"/>`;
-        dateSep += `<text x="${(x+4).toFixed(1)}" y="${PT+12}" font-size="9" fill="var(--text2)" font-family="Cinzel,serif">${label}</text>`;
-      }
-    });
-
-    // Legend Buttons
-    let legendHtml = zones.map((z,i)=>{
-      const color = ZONE_COLORS[i % ZONE_COLORS.length];
-      const inactive = zoneChartHidden.has(z.zone_id) ? ' inactive' : '';
-      return `<div class="legend-btn${inactive}" style="border-color:${color};color:${color}" onclick="toggleZone(${z.zone_id})">
-        <div style="width:10px;height:2px;background:${color};border-radius:1px"></div>
-        ${z.name}
-      </div>`;
-    }).join('');
-
-    zoneChartHtml = `
-      <div class="chart-legend">${legendHtml}</div>
+    return `<div class="chart-legend">${legendHtml}</div>
       <div class="chart-svg-wrap">
-        <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;min-width:500px">
-          ${yLabels}${dateSep}${xLabels}${linesHtml}
+        <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;min-width:400px">
+          ${yLabels}${xLabels}${linesHtml}
         </svg>
+      </div>`;
+  }
+
+  let zoneChartHtml = '<div style="color:var(--text3);font-size:13px">No zone data yet.</div>';
+  if(zones.length > 0 || zonesYest.length > 0){
+    // Alle Stunden sammeln
+        zoneChartHtml = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <div style="font-size:11px;color:var(--text2);font-family:'Cinzel',serif;margin-bottom:8px">Today</div>
+          ${buildZoneChart(zones, zoneChartHidden, 'toggleZone')}
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text2);font-family:'Cinzel',serif;margin-bottom:8px">Yesterday</div>
+          ${buildZoneChart(zonesYest, zoneChartHiddenYest, 'toggleZoneYest')}
+        </div>
       </div>`;
   }
 
@@ -841,6 +823,11 @@ function renderActivity(){
 function toggleZone(zoneId){
   if(zoneChartHidden.has(zoneId)) zoneChartHidden.delete(zoneId);
   else zoneChartHidden.add(zoneId);
+  renderActivity();
+}
+function toggleZoneYest(zoneId){
+  if(zoneChartHiddenYest.has(zoneId)) zoneChartHiddenYest.delete(zoneId);
+  else zoneChartHiddenYest.add(zoneId);
   renderActivity();
 }
 
