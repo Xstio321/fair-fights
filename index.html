@@ -495,7 +495,7 @@ function renderLeaderboard(){
     {key:null,           label:'#',          cls:''},
     {key:null,           label:'Player',     cls:''},
     {key:'fights',       label:'Fights',     cls:'r sortable'},
-    {key:'wilson',       label:'Score',      cls:'r sortable'},
+    {key:'wilson',       label:'Wilson Score', cls:'r sortable'},
     {key:'winrate',      label:'Win Rate',   cls:'r sortable'},
     {key:'wins',         label:'W / L',      cls:'r sortable'},
     {key:'avg_win_rr',   label:'Avg RR (W)', cls:'r'},
@@ -527,7 +527,7 @@ function renderLeaderboard(){
         </div>
       </div></td>
       <td class="r"><span class="fights-num">${p.fights}</span></td>
-      <td class="r"><span class="wr-num ${wrCss(p.wilson??0)}" title="Wilson Score (stat. korrigierte Winrate)">${p.wilson!=null?p.wilson+"%":"–"}</span></td>
+      <td class="r"><span class="wr-num ${wrCss(p.wilson??0)}" title="Wilson Score – statistically adjusted win rate">${p.wilson!=null?p.wilson:"–"}</span></td>
       <td class="r"><div class="winrate-bar">
         <span class="wr-num ${wrCss(wr)}">${wr}%</span>
         <div class="bar-bg"><div class="bar-fill ${barCss(wr)}" style="width:${wr}%"></div></div>
@@ -721,7 +721,7 @@ function renderClassStats(){
     const drillCols=[
       {key:'name',    label:'Player',   cls:''},
       {key:'fights',  label:'Fights',   cls:'r sortable'},
-      {key:'wilson',  label:'Score',    cls:'r sortable'},
+      {key:'wilson',  label:'Wilson Score', cls:'r sortable'},
       {key:'winrate', label:'Win rate', cls:'r sortable'},
       {key:'wins',    label:'W / L',    cls:'r sortable'},
     ];
@@ -742,7 +742,7 @@ function renderClassStats(){
           <span class="rr-badge" style="margin-left:6px">${p.rr}</span>
         </td>
         <td class="r"><span class="fights-num">${p.fights}</span></td>
-        <td class="r"><span class="wr-num ${wrCss(p.wilson??0)}">${p.wilson!=null?p.wilson+"%":"–"}</span></td>
+        <td class="r"><span class="wr-num ${wrCss(p.wilson??0)}" title="Wilson Score">${p.wilson!=null?p.wilson:"–"}</span></td>
         <td class="r"><div class="winrate-bar">
           <span class="wr-num ${wrCss(wr2)}">${wr2}%</span>
           <div class="bar-bg"><div class="bar-fill ${barCss(wr2)}" style="width:${wr2}%"></div></div>
