@@ -646,15 +646,12 @@ function sortLb(key){
 
 // ── Class Stats ──
 function renderClassStats(){
-  const stats=DATA.class_stats;
-  if(!stats||stats.length===0){
-    document.getElementById('classstats-body').innerHTML='<div class="loading">No data yet.</div>';
-    return;
-  }
-  // Zeitfilter anhand last_fight
-  const cutoff = new Date(Date.now() - lbDays * 24 * 60 * 60 * 1000).toISOString();
-  const filtered = stats.filter(c => c.last_fight && c.last_fight >= cutoff);
-  if(!filtered.length){
+  let stats;
+  if(lbDays===1)       stats=DATA.class_stats_1d||[];
+  else if(lbDays===3)  stats=DATA.class_stats_3d||[];
+  else if(lbDays===7)  stats=DATA.class_stats_7d||[];
+  else                 stats=DATA.class_stats||[];
+  if(!stats.length){
     document.getElementById('classstats-body').innerHTML='<div class="loading">No data for this time period.</div>';
     return;
   }

@@ -175,34 +175,40 @@ def compute_stats(con, since_dt):
         WHERE f.started_at >= datetime('now','-1 day')
     """).fetchone()[0]
 
-    # ── Class Stats ──
-    class_rows = cur.execute("""
-        SELECT p.class_id,
-               count(DISTINCT f.id) as fights,
-               sum(t.won) as wins,
-               max(f.started_at) as last_fight
-        FROM fight_players p
-        JOIN fights f ON f.id = p.fight_id
-        JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
-        WHERE f.started_at >= ?
-        GROUP BY p.class_id
-        ORDER BY fights DESC
-    """, (since_str,)).fetchall()
+    # ── Class Stats (Hilfsfunktion für verschiedene Zeitfenster) ──
+    def build_class_stats(days):
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+        rows = cur.execute("""
+            SELECT p.class_id,
+                   count(DISTINCT f.id) as fights,
+                   sum(t.won) as wins,
+                   max(f.started_at) as last_fight
+            FROM fight_players p
+            JOIN fights f ON f.id = p.fight_id
+            JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
+            WHERE f.started_at >= ?
+            GROUP BY p.class_id
+            ORDER BY fights DESC
+        """, (cutoff,)).fetchall()
+        result = []
+        for cid, fights, wins, last_fight in rows:
+            wins = wins or 0
+            result.append({
+                "class_id":   cid,
+                "class_name": CLASSES.get(cid, f"Class {cid}"),
+                "realm":      CLASS_REALM.get(cid, 0),
+                "realm_name": REALM_NAMES.get(CLASS_REALM.get(cid, 0), ""),
+                "fights":     fights,
+                "wins":       wins,
+                "winrate":    round(wins / fights * 100) if fights > 0 else 0,
+                "last_fight": last_fight,
+            })
+        return result
 
-    class_stats = []
-    for row in class_rows:
-        cid, fights, wins, last_fight = row
-        wins = wins or 0
-        class_stats.append({
-            "class_id":     cid,
-            "class_name":   CLASSES.get(cid, f"Class {cid}"),
-            "realm":        CLASS_REALM.get(cid, 0),
-            "realm_name":   REALM_NAMES.get(CLASS_REALM.get(cid, 0), ""),
-            "fights":       fights,
-            "wins":         wins,
-            "winrate":      round(wins / fights * 100) if fights > 0 else 0,
-            "last_fight":   last_fight,
-        })
+    class_stats    = build_class_stats(30)
+    class_stats_1d = build_class_stats(1)
+    class_stats_3d = build_class_stats(3)
+    class_stats_7d = build_class_stats(7)
 
     # ── Matchup Matrix ──
     def build_matchups_from_rows(rows):
@@ -525,7 +531,10 @@ def compute_stats(con, since_dt):
             "total_fights":     total_all,
             "active_players":   active_players,
         },
-        "class_stats":     class_stats,
+        "class_stats":    class_stats,
+        "class_stats_1d": class_stats_1d,
+        "class_stats_3d": class_stats_3d,
+        "class_stats_7d": class_stats_7d,
         "class_players":   class_players,
         "matchups":        matchups,
         "matchups_100":    matchups_100,
