@@ -223,7 +223,11 @@
 
   <!-- LEADERBOARD -->
   <div id="leaderboard" class="panel active">
-    <div class="controls">
+    <div class="controls" style="gap:8px;flex-wrap:nowrap">
+      <div class="search-wrap" style="max-width:150px;flex-shrink:0">
+        <span class="search-icon">🔍</span>
+        <input class="search-input" id="lb-search" type="text" placeholder="Search…">
+      </div>
       <div class="time-filters" id="tf-leaderboard">
         <div class="tf active" data-days="1">24h</div>
         <div class="tf" data-days="3">3d</div>
