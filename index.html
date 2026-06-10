@@ -678,7 +678,7 @@ function renderClassStats(){
     document.getElementById('classstats-body').innerHTML='<div class="loading">No data for this time period.</div>';
     return;
   }
-  const sorted=[...filtered].sort((a,b)=>{
+  const sorted=[...stats].sort((a,b)=>{
     let va=a[csSortKey],vb=b[csSortKey];
     if(va===null||va===undefined)va=-1;
     if(vb===null||vb===undefined)vb=-1;
