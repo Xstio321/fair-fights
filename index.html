@@ -363,10 +363,11 @@ function renderSummary(){
 
 // ── Leaderboard ──
 function getFilteredLb(){
-  let lb=[...DATA.leaderboard];
-  // Zeitfilter anhand last_fight
-  const cutoff = new Date(Date.now() - lbDays * 24 * 60 * 60 * 1000).toISOString();
-  lb = lb.filter(p => p.last_fight && p.last_fight >= cutoff);
+  let lb;
+  if(lbDays===1)       lb=[...DATA.leaderboard_1d||[]];
+  else if(lbDays===3)  lb=[...DATA.leaderboard_3d||[]];
+  else if(lbDays===7)  lb=[...DATA.leaderboard_7d||[]];
+  else                 lb=[...DATA.leaderboard||[]];
   if(lbSearch){
     const q=lbSearch.toLowerCase();
     lb=lb.filter(p=>p.name.toLowerCase().includes(q)||p.class_name.toLowerCase().includes(q));
