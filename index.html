@@ -414,7 +414,7 @@ function renderUnderdogCard(){
     ? busyZones.map((z,i)=>`
       <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:0.5px solid var(--border)">
         <span style="font-size:12px;color:var(--text3);font-family:'Cinzel',serif;min-width:18px">${i+1}</span>
-        <span style="font-size:14px;color:var(--text);flex:1;font-family:'Cinzel',serif;letter-spacing:0.03em">${z.name}</span>
+        <span style="font-size:14px;color:var(--text);flex:1;font-family:'Cinzel',serif;letter-spacing:0.03em;font-weight:600">${z.name}</span>
         <div style="width:60px;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden">
           <div style="height:100%;width:${Math.round(z.count/maxBusy*100)}%;background:var(--amber);border-radius:2px"></div>
         </div>
@@ -428,7 +428,7 @@ function renderUnderdogCard(){
       <div class="underdog-list">${rows}</div>
     </div>
     <div class="underdog-card">
-      <div class="underdog-title">📍 Most active zones – last hour</div>
+      <div class="underdog-title">Most active zones – last hour</div>
       ${busyHtml}
     </div>
   </div>`;
@@ -473,7 +473,7 @@ function renderLeaderboard(){
   const lb=getFilteredLb();
   const totalPages=Math.max(1,Math.ceil(lb.length/lbPageSize));
   if(lbPage>totalPages)lbPage=1;
-  const start=(lbPage-1)*PAGE_SIZE;
+  const start=(lbPage-1)*lbPageSize;
   const page=lb.slice(start,start+lbPageSize);
 
   if(lb.length===0){
