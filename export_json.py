@@ -321,7 +321,8 @@ def compute_stats(con, since_dt):
             f.zone_id,
             strftime('%H', f.started_at) as hour,
             t.won,
-            opp.class_id as opp_class_id
+            opp.class_id as opp_class_id,
+            opp.realm_pts as opp_rp
         FROM fight_players p
         JOIN fights f ON f.id = p.fight_id
         JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
@@ -332,10 +333,11 @@ def compute_stats(con, since_dt):
     from collections import defaultdict, Counter
     player_profiles = defaultdict(lambda: {
         "zones": Counter(), "hours": Counter(),
-        "won_vs": Counter(), "lost_vs": Counter()
+        "won_vs": Counter(), "lost_vs": Counter(),
+        "won_vs_rp": defaultdict(list), "lost_vs_rp": defaultdict(list),
     })
 
-    for name, cid, zone_id, hour, won, opp_cid in profile_rows:
+    for name, cid, zone_id, hour, won, opp_cid, opp_rp in profile_rows:
         pp = player_profiles[name]
         if zone_id and zone_id in ZONE_NAMES:
             pp["zones"][ZONE_NAMES[zone_id]] += 1
@@ -343,17 +345,31 @@ def compute_stats(con, since_dt):
             pp["hours"][int(hour)] += 1
         if won:
             pp["won_vs"][opp_cid] += 1
+            if opp_rp: pp["won_vs_rp"][opp_cid].append(opp_rp)
         else:
             pp["lost_vs"][opp_cid] += 1
+            if opp_rp: pp["lost_vs_rp"][opp_cid].append(opp_rp)
 
     player_profile_data = {}
     for name, pp in player_profiles.items():
         top_zones = [{"name": z, "count": c} for z, c in pp["zones"].most_common(5)]
         top_hours = [{"hour": h, "count": c} for h, c in sorted(pp["hours"].items(), key=lambda x: -x[1])[:5]]
-        won_vs = [{"class_id": cid, "class_name": CLASSES.get(cid, f"Class {cid}"), "count": c}
-                  for cid, c in pp["won_vs"].most_common(5)]
-        lost_vs = [{"class_id": cid, "class_name": CLASSES.get(cid, f"Class {cid}"), "count": c}
-                   for cid, c in pp["lost_vs"].most_common(5)]
+        won_vs = []
+        for cid, c in pp["won_vs"].most_common(5):
+            rp_list = pp["won_vs_rp"].get(cid, [])
+            avg_rp = int(sum(rp_list)/len(rp_list)) if rp_list else None
+            won_vs.append({
+                "class_id": cid, "class_name": CLASSES.get(cid, f"Class {cid}"),
+                "count": c, "avg_rr": rp_to_rr(avg_rp) if avg_rp else None
+            })
+        lost_vs = []
+        for cid, c in pp["lost_vs"].most_common(5):
+            rp_list = pp["lost_vs_rp"].get(cid, [])
+            avg_rp = int(sum(rp_list)/len(rp_list)) if rp_list else None
+            lost_vs.append({
+                "class_id": cid, "class_name": CLASSES.get(cid, f"Class {cid}"),
+                "count": c, "avg_rr": rp_to_rr(avg_rp) if avg_rp else None
+            })
         player_profile_data[name] = {
             "top_zones": top_zones,
             "top_hours": top_hours,

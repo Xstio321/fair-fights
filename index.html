@@ -556,7 +556,10 @@ function buildPlayerProfile(name){
   // Won vs
   let wonHtml = pp.won_vs.length
     ? pp.won_vs.map(v=>`<div class="profile-item">
-        <span class="profile-item-name">${v.class_name}</span>
+        <div style="flex:1">
+          <span class="profile-item-name">${v.class_name}</span>
+          ${v.avg_rr?`<span style="font-size:10px;color:var(--text3);margin-left:4px">avg ${v.avg_rr}</span>`:''}
+        </div>
         <span class="profile-item-count" style="color:var(--green)">${v.count}W</span>
       </div>`).join('')
     : '<div style="color:var(--text3);font-size:11px">No data</div>';
@@ -564,7 +567,10 @@ function buildPlayerProfile(name){
   // Lost vs
   let lostHtml = pp.lost_vs.length
     ? pp.lost_vs.map(v=>`<div class="profile-item">
-        <span class="profile-item-name">${v.class_name}</span>
+        <div style="flex:1">
+          <span class="profile-item-name">${v.class_name}</span>
+          ${v.avg_rr?`<span style="font-size:10px;color:var(--text3);margin-left:4px">avg ${v.avg_rr}</span>`:''}
+        </div>
         <span class="profile-item-count" style="color:var(--red)">${v.count}L</span>
       </div>`).join('')
     : '<div style="color:var(--text3);font-size:11px">No data</div>';
