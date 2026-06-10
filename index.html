@@ -232,10 +232,10 @@
   <div id="classstats" class="panel">
     <div class="controls">
       <div class="time-filters" id="tf-classstats">
-        <div class="tf active" data-days="1">24h</div>
-        <div class="tf" data-days="3">3d</div>
-        <div class="tf" data-days="7">7d</div>
-        <div class="tf" data-days="30">30d</div>
+        <div class="tf active" data-csdays="1">24h</div>
+        <div class="tf" data-csdays="3">3d</div>
+        <div class="tf" data-csdays="7">7d</div>
+        <div class="tf" data-csdays="30">30d</div>
       </div>
     </div>
 
@@ -318,6 +318,7 @@ let lbDays = 1;
 let lbProfileOpen = null;
 let lbSortDir = -1;
 let lbSearch = '';
+let csDays = 1;
 let csSortKey = 'fights';
 let matchupFilter = 'count-100';
 let matchupRealmFilter = null;
@@ -670,9 +671,9 @@ function sortLb(key){
 // ── Class Stats ──
 function renderClassStats(){
   let stats;
-  if(lbDays===1)       stats=DATA.class_stats_1d||[];
-  else if(lbDays===3)  stats=DATA.class_stats_3d||[];
-  else if(lbDays===7)  stats=DATA.class_stats_7d||[];
+  if(csDays===1)       stats=DATA.class_stats_1d||[];
+  else if(csDays===3)  stats=DATA.class_stats_3d||[];
+  else if(csDays===7)  stats=DATA.class_stats_7d||[];
   else                 stats=DATA.class_stats||[];
   if(!stats.length){
     document.getElementById('classstats-body').innerHTML='<div class="loading">No data for this time period.</div>';
@@ -1168,6 +1169,16 @@ document.getElementById('activity').addEventListener('click', e=>{
     activityDays = parseInt(btn.dataset.adays);
     renderActivity();
   }
+});
+
+// Class Stats eigener Listener
+document.getElementById('tf-classstats').addEventListener('click', e=>{
+  const btn = e.target.closest('[data-csdays]');
+  if (!btn) return;
+  document.querySelectorAll('#tf-classstats .tf').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  csDays = parseInt(btn.dataset.csdays);
+  renderClassStats();
 });
 
 document.querySelectorAll('.time-filters').forEach(group=>{
