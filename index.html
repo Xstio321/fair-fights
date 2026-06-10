@@ -1082,10 +1082,10 @@ function renderActivity(){
       </div>
       <div class="activity-card activity-card-full" style="padding:0.75rem 1.25rem;background:transparent;border:none;border-top:0.5px solid var(--border2)">
         <div class="time-filters" id="tf-activity">
-          <div class="tf" data-adays="1">24h</div>
-          <div class="tf" data-adays="3">3d</div>
-          <div class="tf" data-adays="7">7d</div>
-          <div class="tf active" data-adays="30">30d</div>
+          <div class="tf ${activityDays===1?'active':''}" data-adays="1">24h</div>
+          <div class="tf ${activityDays===3?'active':''}" data-adays="3">3d</div>
+          <div class="tf ${activityDays===7?'active':''}" data-adays="7">7d</div>
+          <div class="tf ${activityDays===30?'active':''}" data-adays="30">30d</div>
         </div>
       </div>
       <div class="activity-card">
