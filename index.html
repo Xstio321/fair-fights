@@ -210,7 +210,7 @@
     <div class="stat-card">
       <div class="stat-label">Updated</div>
       <div class="stat-value" style="font-size:14px;padding-top:6px" id="s-updated">–</div>
-      <div class="stat-sub" id="s-dur">UTC</div>
+      <div class="stat-sub" id="s-dur"></div>
     </div>
   </div>
 
@@ -223,6 +223,7 @@
 
   <!-- LEADERBOARD -->
   <div id="leaderboard" class="panel active">
+
     <div id="leaderboard-body"><div class="loading">Loading leaderboard…</div></div>
     <div id="leaderboard-pagination"></div>
   </div>
@@ -244,11 +245,22 @@
   <!-- CLASS MATCHUPS -->
   <div id="matchups" class="panel">
     <div class="controls" style="flex-direction:column;align-items:flex-start;gap:10px">
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <div class="time-filters" id="tf-matchups-realm">
-          <div class="tf" data-realm="alb" style="color:var(--alb)">Albion</div>
-          <div class="tf" data-realm="mid" style="color:var(--mid)">Midgard</div>
-          <div class="tf" data-realm="hib" style="color:var(--hib)">Hibernia</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+        <div style="display:flex;gap:6px;align-items:center">
+          <span style="font-size:10px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.06em">Rows:</span>
+          <div class="time-filters" id="tf-matchups-realm">
+            <div class="tf" data-realm="alb" style="color:var(--alb)">Albion</div>
+            <div class="tf" data-realm="mid" style="color:var(--mid)">Midgard</div>
+            <div class="tf" data-realm="hib" style="color:var(--hib)">Hibernia</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span style="font-size:10px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.06em">Cols:</span>
+          <div class="time-filters" id="tf-matchups-col-realm">
+            <div class="tf" data-colrealm="alb" style="color:var(--alb)">Albion</div>
+            <div class="tf" data-colrealm="mid" style="color:var(--mid)">Midgard</div>
+            <div class="tf" data-colrealm="hib" style="color:var(--hib)">Hibernia</div>
+          </div>
         </div>
       </div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
@@ -296,6 +308,7 @@ let lbSearch = '';
 let csSortKey = 'fights';
 let matchupFilter = 'count-100';
 let matchupRealmFilter = null;
+let matchupColRealmFilter = null;
 let csSortDir = -1;
 let drillSort = {};
 
@@ -341,26 +354,6 @@ function fmtDur(s){return s?s+'s':'–'}
 function fmtNum(n){return n?n.toLocaleString():'0'}
 function wrCss(w){return w>=55?'wr-green':w>=45?'wr-amber':'wr-red'}
 function barCss(w){return w>=55?'bar-green':w>=45?'bar-amber':'bar-red'}
-function fmtUtcTime(value){
-  const d = new Date(value);
-  if(Number.isNaN(d.getTime())) return '–';
-  return d.toLocaleTimeString('en-GB',{timeZone:'UTC',hour:'2-digit',minute:'2-digit',hour12:false}) + ' UTC';
-}
-function fmtUtcDateTime(value){
-  const d = new Date(value);
-  if(Number.isNaN(d.getTime())) return '–';
-  return d.toLocaleString('en-GB',{timeZone:'UTC',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}) + ' UTC';
-}
-function fmtUtcWeekday(value){
-  const d = new Date(value);
-  if(Number.isNaN(d.getTime())) return '–';
-  return d.toLocaleDateString('en',{timeZone:'UTC',weekday:'short'});
-}
-function fmtUtcHour(hour){
-  const h = Number(hour);
-  if(!Number.isFinite(h)) return '–';
-  return String(((h % 24) + 24) % 24).padStart(2,'0') + ':00 UTC';
-}
 
 // ── Summary ──
 function renderSummary(){
@@ -371,8 +364,8 @@ function renderSummary(){
   document.getElementById('s-players').textContent=s.active_players||'0';
   document.getElementById('s-total').textContent=fmtNum(s.total_fights);
   const upd=new Date(DATA.generated_at);
-  document.getElementById('s-updated').textContent=fmtUtcTime(upd);
-  document.getElementById('footer-updated').textContent='Data updated: '+fmtUtcDateTime(upd);
+  document.getElementById('s-updated').textContent=upd.toLocaleTimeString();
+  document.getElementById('footer-updated').textContent='Data updated: '+upd.toLocaleString();
 }
 
 // ── Leaderboard ──
@@ -419,15 +412,15 @@ function renderUnderdogCard(){
   const maxBusy = Math.max(...busyZones.map(z=>z.count), 1);
   const busyHtml = busyZones.length
     ? busyZones.map((z,i)=>`
-      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--border)">
-        <span style="font-size:13px;color:var(--text3);font-family:Cinzel,serif;min-width:20px">${i+1}</span>
-        <span style="font-size:16px;color:var(--text);flex:1;font-family:Cinzel,serif">${z.name}</span>
-        <div style="width:70px;height:5px;background:var(--bg4);border-radius:2px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:0.5px solid var(--border)">
+        <span style="font-size:12px;color:var(--text3);font-family:'Cinzel',serif;min-width:18px">${i+1}</span>
+        <span style="font-size:14px;color:var(--text);flex:1;font-family:'Cinzel',serif;letter-spacing:0.03em">${z.name}</span>
+        <div style="width:60px;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden">
           <div style="height:100%;width:${Math.round(z.count/maxBusy*100)}%;background:var(--amber);border-radius:2px"></div>
         </div>
-        <span style="font-size:14px;color:var(--amber);font-family:Cinzel,serif;min-width:28px;text-align:right;font-weight:600">${z.count}</span>
+        <span style="font-size:13px;color:var(--amber);font-family:'Cinzel',serif;min-width:24px;text-align:right;font-weight:600">${z.count}</span>
       </div>`).join('')
-    : '<div style="color:var(--text3);font-size:14px;padding:12px 0;font-family:Cinzel,serif">No fights in the last hour</div>';
+    : '<div style="color:var(--text3);font-size:13px;padding:10px 0;font-family:'Cinzel',serif">No fights in the last hour</div>';
 
   const html = `<div id="underdog-wrap" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.25rem">
     <div class="underdog-card" id="underdog-card">
@@ -440,9 +433,9 @@ function renderUnderdogCard(){
     </div>
   </div>`;
   const searchHtml = `<div class="controls" style="gap:8px;flex-wrap:wrap;margin-bottom:1rem">
-    <div class="search-wrap" style="max-width:260px;min-width:180px;flex:1">
+    <div class="search-wrap" style="max-width:160px;flex-shrink:0">
       <span class="search-icon">🔍</span>
-      <input class="search-input" id="lb-search" type="text" placeholder="Search player…" value="${lbSearch.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}">
+      <input class="search-input" id="lb-search" type="text" placeholder="Search…">
     </div>
     <div class="time-filters" id="tf-leaderboard">
       <div class="tf ${lbDays===1?'active':''}" data-days="1">24h</div>
@@ -462,7 +455,7 @@ function renderUnderdogCard(){
     // Search nach underdog einfügen falls noch nicht vorhanden
     if(!document.getElementById('lb-search-wrap')){
       document.getElementById('underdog-wrap').insertAdjacentHTML('afterend', `<div id="lb-search-wrap">${searchHtml}</div>`);
-      bindLeaderboardControls();
+      document.getElementById('lb-search').addEventListener('input',e=>{lbSearch=e.target.value;lbPage=1;renderLeaderboard();});
     }
   } else {
     const body = document.getElementById('leaderboard-body');
@@ -470,38 +463,6 @@ function renderUnderdogCard(){
     body.insertAdjacentHTML('beforebegin', `<div id="lb-search-wrap">${searchHtml}</div>`);
     document.getElementById('lb-search').addEventListener('input',e=>{lbSearch=e.target.value;lbPage=1;renderLeaderboard();});
   }
-}
-
-function bindLeaderboardControls(){
-  const search = document.getElementById('lb-search');
-  if(search){
-    search.oninput = e => {
-      lbSearch = e.target.value;
-      lbPage = 1;
-      renderLeaderboard();
-    };
-  }
-
-  document.querySelectorAll('#tf-leaderboard .tf').forEach(btn=>{
-    btn.onclick = () => {
-      lbDays = parseInt(btn.dataset.days);
-      lbPage = 1;
-      document.querySelectorAll('#tf-leaderboard .tf').forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
-      renderLeaderboard();
-      renderClassStats();
-    };
-  });
-
-  document.querySelectorAll('#tf-lb-size .tf').forEach(btn=>{
-    btn.onclick = () => {
-      lbPageSize = parseInt(btn.dataset.lbsize);
-      lbPage = 1;
-      document.querySelectorAll('#tf-lb-size .tf').forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
-      renderLeaderboard();
-    };
-  });
 }
 
 function renderLeaderboard(){
@@ -607,24 +568,21 @@ function buildPlayerProfile(name){
       </div>`).join('')
     : '<div style="color:var(--text3);font-size:11px">No data</div>';
 
-  // Peak Stunden als horizontales Balkendiagramm
-  // Wichtig: data.json liefert bewusst nur pp.top_hours (Top-N), nicht alle 24 Stunden.
-  // Deshalb werden hier keine künstlichen 0-Stunden ergänzt.
-  const topHours = (pp.top_hours || []).filter(h => h && Number.isFinite(Number(h.hour)) && Number.isFinite(Number(h.count)));
-  const maxH = Math.max(...topHours.map(h=>Number(h.count)), 1);
-  let hoursHtml = topHours.length
-    ? '<div class="profile-hour" style="display:flex;flex-direction:column;gap:5px">'
-    : '<div style="color:var(--text3);font-size:11px">No data</div>';
-  topHours.forEach(h=>{
-    const cnt = Number(h.count) || 0;
-    const width = Math.max(8, Math.round((cnt / maxH) * 100));
-    hoursHtml += `<div title="${fmtUtcHour(h.hour)} – ${cnt} fights" style="display:flex;align-items:center;gap:6px;width:100%">
-      <span style="font-size:10px;color:var(--text3);font-family:Cinzel,serif;min-width:48px">${String(Number(h.hour)).padStart(2,'0')}:00</span>
-      <div style="height:7px;width:${width}%;border-radius:4px;background:var(--hib);min-width:8px"></div>
-      <span style="font-size:10px;color:var(--text3);font-family:Cinzel,serif;min-width:18px;text-align:right">${cnt}</span>
-    </div>`;
+  // Peak Stunden als Balkendiagramm
+  const maxH = Math.max(...(pp.top_hours||[]).map(h=>h.count), 1);
+  const hourMap = Object.fromEntries((pp.top_hours||[]).map(h=>[h.hour, h.count]));
+  let hoursHtml = '<div style="display:flex;align-items:flex-end;gap:2px;height:36px">';
+  for(let h=0;h<24;h++){
+    const cnt = hourMap[h]||0;
+    const ht = cnt>0 ? Math.max(3, Math.round((cnt/maxH)*34)) : 2;
+    const color = cnt>0?'var(--hib)':'var(--bg4)';
+    hoursHtml += `<div title="${String(h).padStart(2,'0')}:00 – ${cnt} fights" style="flex:1;height:${ht}px;border-radius:1px 1px 0 0;background:${color}"></div>`;
+  }
+  hoursHtml += '</div><div style="display:flex;justify-content:space-between;margin-top:3px">';
+  [0,6,12,18,23].forEach(h=>{
+    hoursHtml += `<span style="font-size:8px;color:var(--text3);font-family:'Cinzel',serif">${String(h).padStart(2,'0')}</span>`;
   });
-  if(topHours.length) hoursHtml += '<div style="font-size:9px;color:var(--text3);font-family:Cinzel,serif;margin-top:2px">UTC · top active hours</div></div>';
+  hoursHtml += '</div>';
 
   // Won vs
   let wonHtml = pp.won_vs.length
@@ -654,7 +612,7 @@ function buildPlayerProfile(name){
       ${zonesHtml}
     </div>
     <div>
-      <div class="profile-section-title">🕐 Peak hours · UTC</div>
+      <div class="profile-section-title">🕐 Peak hours</div>
       ${hoursHtml}
     </div>
     <div>
@@ -825,6 +783,18 @@ function sortDrill(classId,key){
   },10);
 }
 
+function setColRealmFilter(realm){
+  if(matchupColRealmFilter === realm){
+    matchupColRealmFilter = null;
+    document.querySelectorAll('#tf-matchups-col-realm .tf').forEach(b=>b.classList.remove('active','active-alb','active-mid','active-hib'));
+  } else {
+    matchupColRealmFilter = realm;
+    document.querySelectorAll('#tf-matchups-col-realm .tf').forEach(b=>b.classList.remove('active','active-alb','active-mid','active-hib'));
+    document.querySelector(`#tf-matchups-col-realm .tf[data-colrealm="${realm}"]`).classList.add(`active-${realm}`);
+  }
+  renderMatchups();
+}
+
 function setRealmFilter(realm){
   if(matchupRealmFilter === realm){
     matchupRealmFilter = null;
@@ -876,7 +846,11 @@ function renderMatchups(){
     ? [...classSet].filter(c=>REALM_MAP_FILTER[matchupRealmFilter]?.includes(c))
     : [...classSet];
 
-  const allClasses=[...classSet].sort((a,b)=>{
+  // Spalten auch nach Realm filterbar (separater State)
+  const colClassSet = matchupColRealmFilter
+    ? new Set([...classSet].filter(c=>REALM_MAP_FILTER[matchupColRealmFilter]?.includes(c)))
+    : classSet;
+  const allClasses=[...colClassSet].sort((a,b)=>{
     const ra=REALM_ORDER[a]??3, rb=REALM_ORDER[b]??3;
     if(ra!==rb) return ra-rb;
     return (nameMapTmp[a]||'').localeCompare(nameMapTmp[b]||'');
@@ -955,7 +929,7 @@ function renderActivity(){
   let dayHtml = days.map(d=>{
     const isPeak = d.count===maxDay && d.count>0;
     const h = Math.max(4, Math.round((d.count/maxDay)*76));
-    const label = d.day ? fmtUtcWeekday(d.day) : '–';
+    const label = d.day ? new Date(d.day).toLocaleDateString('en',{weekday:'short'}) : '–';
     return `<div class="day-col">
       <div class="day-bar-wrap">
         <div class="day-bar" style="height:${h}px;background:${isPeak?'var(--hib)':'var(--bg4)'};border:0.5px solid ${isPeak?'var(--hib2)':'var(--border2)'}"></div>
@@ -1122,7 +1096,7 @@ function renderActivity(){
         ${topClassesHtml}
       </div>
       <div class="activity-card activity-card-full">
-        <div class="activity-card-title">Fights per day – last 7 days · UTC</div>
+        <div class="activity-card-title">Fights per day – last 7 days</div>
         <div class="day-grid">${dayHtml}</div>
       </div>
     </div>`;
@@ -1180,6 +1154,8 @@ document.querySelectorAll('.time-filters').forEach(group=>{
         renderClassStats();
         return;
       }
+      const colrealm = btn.dataset.colrealm;
+      if(colrealm){ setColRealmFilter(colrealm); return; }
       const realm = btn.dataset.realm;
       if(realm){ setRealmFilter(realm); return; }
       const matchup = btn.dataset.matchup;
