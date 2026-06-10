@@ -390,7 +390,8 @@ def compute_stats(con, since_dt):
                 "label":      f"1v{opponents}",
             }
 
-    top_underdog = sorted(seen_underdog.values(), key=lambda x: -x['opponents'])[:5]
+    # Sortieren: erst nach Gegneranzahl, dann nach Spielername für stabile Reihenfolge
+    top_underdog = sorted(seen_underdog.values(), key=lambda x: (-x['opponents'], x['name']))[:5]
 
     return {
         "generated_at":    datetime.now(timezone.utc).isoformat(),

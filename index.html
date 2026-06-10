@@ -412,19 +412,22 @@ function renderUnderdogCard(){
     const rankCls = i===0?'underdog-rank-1':i===1?'underdog-rank-2':i===2?'underdog-rank-3':'underdog-rank';
     return `<div class="underdog-row">
       <span class="${rankCls}">${i+1}</span>
-      ${classIconHtml(p.class_id, 24)}
-      <div style="flex:1">
+      ${classIconHtml(p.class_id, 22)}
+      <div style="flex:1;min-width:0">
         <div class="underdog-name">${p.name}</div>
-        <div class="underdog-sub"><span class="realm-${rlm}">${realmName(p.class_id)}</span> · ${p.class_name} · <span class="rr-badge">${p.rr}</span></div>
+        <div class="underdog-sub">${p.class_name} · <span class="rr-badge">${p.rr}</span></div>
       </div>
       <span class="underdog-badge">${p.label}</span>
     </div>`;
   }).join('');
 
-  const existing = document.getElementById('underdog-card');
-  const html = `<div class="underdog-card" id="underdog-card">
-    <div class="underdog-title">⚔ Top Underdog Wins</div>
-    <div class="underdog-list">${rows}</div>
+  const existing = document.getElementById('underdog-wrap');
+  const html = `<div id="underdog-wrap" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.25rem">
+    <div class="underdog-card" id="underdog-card">
+      <div class="underdog-title">⚔ Top Underdog Wins</div>
+      <div class="underdog-list">${rows}</div>
+    </div>
+    <div></div>
   </div>`;
   if(existing) existing.outerHTML = html;
   else {
