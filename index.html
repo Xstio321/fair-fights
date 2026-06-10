@@ -1102,17 +1102,23 @@ function switchTab(id,el){
 }
 
 // ── Time filters ──
+// Activity filter via event delegation
+document.getElementById('activity').addEventListener('click', e=>{
+  const btn = e.target.closest('.tf[data-adays]');
+  if(btn){
+    document.querySelectorAll('#tf-activity .tf').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    activityDays = parseInt(btn.dataset.adays);
+    renderActivity();
+  }
+});
+
 document.querySelectorAll('.time-filters').forEach(group=>{
   group.querySelectorAll('.tf').forEach(btn=>{
     btn.addEventListener('click',()=>{
       const adays = btn.dataset.adays;
-      if(adays){
-        group.querySelectorAll('.tf').forEach(b=>b.classList.remove('active'));
-        btn.classList.add('active');
-        activityDays = parseInt(adays);
-        renderActivity();
-        return;
-      }
+      if(adays) return; // handled by delegation above
+      
       const lbsize = btn.dataset.lbsize;
       if(lbsize){
         group.querySelectorAll('.tf').forEach(b=>b.classList.remove('active'));
