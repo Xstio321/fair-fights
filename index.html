@@ -290,6 +290,26 @@
 
 <script>
 let DATA = null;
+let PROFILES = null;
+let PROFILES_LOADING = false;
+
+async function loadProfiles() {
+  if (PROFILES) return PROFILES;
+  if (PROFILES_LOADING) {
+    // Warten bis geladen
+    await new Promise(r => { const i = setInterval(()=>{ if(PROFILES){ clearInterval(i); r(); }}, 50); });
+    return PROFILES;
+  }
+  PROFILES_LOADING = true;
+  try {
+    const r = await fetch('profiles.json?t=' + Date.now());
+    PROFILES = await r.json();
+  } catch(e) {
+    PROFILES = {};
+  }
+  PROFILES_LOADING = false;
+  return PROFILES;
+}
 const PAGE_SIZE = 50;
 let lbPage = 1;
 let lbPageSize = 30;
@@ -551,7 +571,7 @@ function renderPagination(totalPages, total){
 }
 
 function buildPlayerProfile(name){
-  const pp = DATA.player_profiles && DATA.player_profiles[name];
+  const pp = PROFILES && PROFILES[name];
   if(!pp) return '<div style="padding:12px;color:var(--text3);font-size:12px;font-family:Cinzel,serif">No profile data yet.</div>';
 
   // Top Zonen
@@ -620,19 +640,22 @@ function buildPlayerProfile(name){
   </div>`;
 }
 
-function toggleProfile(name){
+async function toggleProfile(name){
   if(lbProfileOpen === name){
     lbProfileOpen = null;
-  } else {
-    lbProfileOpen = name;
+    renderLeaderboard();
+    return;
   }
+  lbProfileOpen = name;
   renderLeaderboard();
-  // Nach re-render scrollen
+  // Profiles laden falls noch nicht gecacht
+  if (!PROFILES) {
+    await loadProfiles();
+    renderLeaderboard(); // nochmal rendern mit Profil-Daten
+  }
   setTimeout(()=>{
-    if(lbProfileOpen){
-      const open = document.querySelector('.player-profile.open');
-      if(open) open.scrollIntoView({behavior:'smooth',block:'nearest'});
-    }
+    const open = document.querySelector('.player-profile.open');
+    if(open) open.scrollIntoView({behavior:'smooth',block:'nearest'});
   }, 50);
 }
 

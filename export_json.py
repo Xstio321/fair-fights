@@ -571,14 +571,20 @@ def export(push=True):
     stats = compute_stats(con, since)
     con.close()
 
+    # player_profiles separat in profiles.json speichern
+    profiles = stats.pop("player_profiles", {})
+    with open("profiles.json", "w") as f:
+        json.dump(profiles, f, separators=(",", ":"))
+
     with open(JSON_PATH, "w") as f:
         json.dump(stats, f, separators=(",", ":"))
 
     print(f"  ✓ data.json geschrieben ({len(json.dumps(stats))} bytes)")
+    print(f"  ✓ profiles.json geschrieben ({len(json.dumps(profiles))} bytes)")
 
     if push:
         try:
-            subprocess.run(["git", "add", JSON_PATH], check=True)
+            subprocess.run(["git", "add", JSON_PATH, "profiles.json"], check=True)
             subprocess.run(["git", "commit", "-m", "update fight data"], check=True)
             subprocess.run(["git", "push"], check=True)
             print("  ✓ GitHub Push erfolgreich")
