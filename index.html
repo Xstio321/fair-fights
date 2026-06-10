@@ -127,9 +127,9 @@
   .matrix-note{font-size:12px;color:var(--text3);margin-bottom:12px;letter-spacing:0.04em}
   .matrix-wrap{overflow-x:auto}
   .matrix-table{width:100%;border-collapse:collapse;font-size:12px}
-  .matrix-table th{font-size:10px;padding:7px 8px;font-weight:400;color:var(--text3);background:var(--bg2);letter-spacing:0.08em;text-transform:uppercase;font-family:'Cinzel',serif;border:0.5px solid var(--border);height:40px;vertical-align:middle}
-  .matrix-table td{padding:6px 8px;text-align:center;border:0.5px solid var(--border);font-family:'Cinzel',serif;font-size:12px;transition:background 0.1s;height:40px;vertical-align:middle}
-  .row-header{font-size:11px;font-weight:600;color:var(--text2);background:var(--bg2);text-align:left;padding:6px 12px;white-space:nowrap;font-family:'Cinzel',serif;position:sticky;left:0;z-index:1}
+  .matrix-table th{font-size:9px;padding:4px 6px;font-weight:400;color:var(--text3);background:var(--bg2);letter-spacing:0.06em;text-transform:uppercase;font-family:'Cinzel',serif;border:0.5px solid var(--border);height:36px;vertical-align:middle;white-space:nowrap}
+  .matrix-table td{padding:4px 6px;text-align:center;border:0.5px solid var(--border);font-family:'Cinzel',serif;font-size:11px;transition:background 0.1s;height:36px;vertical-align:middle;white-space:nowrap}
+  .row-header{font-size:10px;font-weight:600;color:var(--text2);background:var(--bg2);text-align:left;padding:4px 10px;white-space:nowrap;font-family:'Cinzel',serif;position:sticky;left:0;z-index:1}
   .matrix-table thead th:first-child{position:sticky;left:0;z-index:2}
   .matrix-table th{position:sticky;top:0;z-index:1}
   .matrix-wrap{max-height:600px;overflow:auto}
@@ -254,6 +254,11 @@
         <div class="tf" data-days="7">7d</div>
         <div class="tf" data-days="30">30d</div>
       </div>
+      <div class="time-filters" id="tf-lb-size">
+        <div class="tf" data-lbsize="10">10</div>
+        <div class="tf active" data-lbsize="30">30</div>
+        <div class="tf" data-lbsize="50">50</div>
+      </div>
     </div>
     <div id="leaderboard-body"><div class="loading">Loading leaderboard…</div></div>
     <div id="leaderboard-pagination"></div>
@@ -295,6 +300,7 @@
           <div class="tf active" data-matchup="count-100">Last 100</div>
           <div class="tf" data-matchup="count-500">Last 500</div>
           <div class="tf" data-matchup="count-1000">Last 1000</div>
+          <div class="tf" data-matchup="all">All time</div>
         </div>
       </div>
     </div>
@@ -305,14 +311,6 @@
 
   <!-- ACTIVITY -->
   <div id="activity" class="panel">
-    <div class="controls" style="margin-bottom:1.25rem">
-      <div class="time-filters" id="tf-activity">
-        <div class="tf" data-adays="1">24h</div>
-        <div class="tf" data-adays="3">3d</div>
-        <div class="tf" data-adays="7">7d</div>
-        <div class="tf active" data-adays="30">30d</div>
-      </div>
-    </div>
     <div id="activity-body"><div class="loading">Loading…</div></div>
   </div>
 
@@ -326,6 +324,7 @@
 let DATA = null;
 const PAGE_SIZE = 50;
 let lbPage = 1;
+let lbPageSize = 30;
 let lbSortKey = 'wilson';
 let lbProfileOpen = null;
 let lbSortDir = -1;
@@ -428,12 +427,30 @@ function renderUnderdogCard(){
   }).join('');
 
   const existing = document.getElementById('underdog-wrap');
+  // Busy zones last hour
+  const busyZones = DATA.busy_zones || [];
+  const maxBusy = Math.max(...busyZones.map(z=>z.count), 1);
+  const busyHtml = busyZones.length
+    ? busyZones.map((z,i)=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid var(--border)">
+        <span style="font-size:11px;color:var(--text3);font-family:Cinzel,serif;min-width:16px">${i+1}</span>
+        <span style="font-size:13px;color:var(--text);flex:1">${z.name}</span>
+        <div style="width:60px;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden">
+          <div style="height:100%;width:${Math.round(z.count/maxBusy*100)}%;background:var(--amber);border-radius:2px"></div>
+        </div>
+        <span style="font-size:11px;color:var(--text3);font-family:Cinzel,serif;min-width:24px;text-align:right">${z.count}</span>
+      </div>`).join('')
+    : '<div style="color:var(--text3);font-size:12px;padding:8px 0">No fights in the last hour</div>';
+
   const html = `<div id="underdog-wrap" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.25rem">
     <div class="underdog-card" id="underdog-card">
       <div class="underdog-title">⚔ Top Underdog Wins</div>
       <div class="underdog-list">${rows}</div>
     </div>
-    <div></div>
+    <div class="underdog-card">
+      <div class="underdog-title">📍 Most active zones – last hour</div>
+      ${busyHtml}
+    </div>
   </div>`;
   const searchHtml = `<div style="margin-bottom:1rem">
     <div class="search-wrap" style="max-width:100%">
@@ -463,10 +480,10 @@ function renderLeaderboard(){
     return;
   }
   const lb=getFilteredLb();
-  const totalPages=Math.max(1,Math.ceil(lb.length/PAGE_SIZE));
+  const totalPages=Math.max(1,Math.ceil(lb.length/lbPageSize));
   if(lbPage>totalPages)lbPage=1;
   const start=(lbPage-1)*PAGE_SIZE;
-  const page=lb.slice(start,start+PAGE_SIZE);
+  const page=lb.slice(start,start+lbPageSize);
 
   if(lb.length===0){
     document.getElementById('leaderboard-body').innerHTML='<div class="loading">No players found.</div>';
@@ -789,10 +806,8 @@ function renderMatchups(){
   if(matchupFilter==='count-100')       matchups=DATA.matchups_100||[];
   else if(matchupFilter==='count-500')  matchups=DATA.matchups_500||[];
   else if(matchupFilter==='count-1000') matchups=DATA.matchups_1000||[];
-  else if(matchupFilter==='time-1'){
-    matchups=DATA.matchups||[];
-    // TODO: client-side time filter
-  } else matchups=DATA.matchups||[];
+  else if(matchupFilter==='all')        matchups=DATA.matchups_all||[];
+  else matchups=DATA.matchups||[];
   if(!matchups||matchups.length===0){
     document.getElementById('matchups-body').innerHTML='<div class="loading">Not enough fight data yet.</div>';
     return;
@@ -1049,6 +1064,14 @@ function renderActivity(){
         <div class="activity-card-title">Zone activity – today & yesterday</div>
         ${zoneChartHtml}
       </div>
+      <div class="activity-card activity-card-full" style="padding:0.75rem 1.25rem;background:transparent;border:none;border-top:0.5px solid var(--border2)">
+        <div class="time-filters" id="tf-activity">
+          <div class="tf" data-adays="1">24h</div>
+          <div class="tf" data-adays="3">3d</div>
+          <div class="tf" data-adays="7">7d</div>
+          <div class="tf active" data-adays="30">30d</div>
+        </div>
+      </div>
       <div class="activity-card">
         <div class="activity-card-title">Most common matchups</div>${pairsHtml}
       </div>
@@ -1088,6 +1111,15 @@ document.querySelectorAll('.time-filters').forEach(group=>{
         btn.classList.add('active');
         activityDays = parseInt(adays);
         renderActivity();
+        return;
+      }
+      const lbsize = btn.dataset.lbsize;
+      if(lbsize){
+        group.querySelectorAll('.tf').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        lbPageSize = parseInt(lbsize);
+        lbPage = 1;
+        renderLeaderboard();
         return;
       }
       const realm = btn.dataset.realm;

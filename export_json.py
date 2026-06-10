@@ -134,6 +134,21 @@ def compute_stats(con, since_dt):
     zone_today     = fetch_zone_ts(today_str)
     zone_yesterday = fetch_zone_ts(yesterday_str)
 
+    # Top 5 busiest zones last hour
+    one_hour_ago = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+    busy_zones_rows = cur.execute("""
+        SELECT zone_id, count(*) as cnt
+        FROM fights
+        WHERE started_at >= ? AND zone_id IS NOT NULL
+        GROUP BY zone_id
+        ORDER BY cnt DESC
+        LIMIT 5
+    """, (one_hour_ago,)).fetchall()
+    busy_zones = [
+        {"zone_id": r[0], "name": ZONE_NAMES.get(r[0], f"Zone {r[0]}"), "count": r[1]}
+        for r in busy_zones_rows if r[0] in ZONE_NAMES
+    ]
+
     # ── Summary ──
     total_all = cur.execute("SELECT count(*) FROM fights").fetchone()[0]
     fights_today = cur.execute(
@@ -240,6 +255,10 @@ def compute_stats(con, since_dt):
     matchups_100  = matchups_last_n(100)
     matchups_500  = matchups_last_n(500)
     matchups_1000 = matchups_last_n(1000)
+
+    # Alltime Matchups
+    rows_all = cur.execute(MATCHUP_SQL).fetchall()
+    matchups_all = build_matchups_from_rows(rows_all)
 
     # ── Häufigste Matchups (für verschiedene Zeitfenster) ──
     def build_common_matchups(days):
@@ -497,12 +516,14 @@ def compute_stats(con, since_dt):
         "matchups_100":    matchups_100,
         "matchups_500":    matchups_500,
         "matchups_1000":   matchups_1000,
+        "matchups_all":    matchups_all,
         "common_matchups":    common_out,
         "common_matchups_1d": common_1d,
         "common_matchups_3d": common_3d,
         "common_matchups_7d": common_7d,
         "daily_fights":    [{"day": r[0], "count": r[1]} for r in daily],
         "zone_today":      zone_today,
+        "busy_zones":      busy_zones,
         "top_classes_by_realm":    top_classes_by_realm,
         "top_classes_by_realm_1d": top_classes_by_realm_1d,
         "top_classes_by_realm_3d": top_classes_by_realm_3d,
@@ -518,14 +539,7 @@ def export(push=True):
     con = sqlite3.connect(DB_PATH)
     since = datetime.now(timezone.utc) - timedelta(days=DAYS_KEEP)
 
-    deleted = con.execute(
-        "DELETE FROM fights WHERE started_at < ?", (since.isoformat(),)
-    ).rowcount
-    con.execute("DELETE FROM fight_teams WHERE fight_id NOT IN (SELECT id FROM fights)")
-    con.execute("DELETE FROM fight_players WHERE fight_id NOT IN (SELECT id FROM fights)")
-    con.commit()
-    if deleted:
-        print(f"  🗑  {deleted} alte Fights gelöscht (>30 Tage)")
+    # Fights werden nie gelöscht - alltime Daten bleiben erhalten
 
     stats = compute_stats(con, since)
     con.close()
