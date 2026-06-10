@@ -475,12 +475,14 @@ function renderLeaderboard(){
   }
 
   const cols=[
-    {key:null,      label:'#',          cls:''},
-    {key:null,      label:'Player',     cls:''},
-    {key:'fights',  label:'Fights',     cls:'r sortable'},
-    {key:'wilson',  label:'Score',      cls:'r sortable'},
-    {key:'winrate', label:'Win Rate',   cls:'r sortable'},
-    {key:'wins',    label:'W / L',      cls:'r sortable'},
+    {key:null,           label:'#',          cls:''},
+    {key:null,           label:'Player',     cls:''},
+    {key:'fights',       label:'Fights',     cls:'r sortable'},
+    {key:'wilson',       label:'Score',      cls:'r sortable'},
+    {key:'winrate',      label:'Win Rate',   cls:'r sortable'},
+    {key:'wins',         label:'W / L',      cls:'r sortable'},
+    {key:'avg_win_rr',   label:'Avg RR (W)', cls:'r'},
+    {key:'avg_loss_rr',  label:'Avg RR (L)', cls:'r'},
   ];
 
   let thead='<thead><tr>';
@@ -514,8 +516,10 @@ function renderLeaderboard(){
         <div class="bar-bg"><div class="bar-fill ${barCss(wr)}" style="width:${wr}%"></div></div>
       </div></td>
       <td class="r"><span class="wl-cell"><span class="w-count">${p.wins}W</span> / <span class="l-count">${p.losses}L</span></span></td>
+      <td class="r"><span class="rr-badge" style="color:var(--green)">${p.avg_win_rr||'–'}</span></td>
+      <td class="r"><span class="rr-badge" style="color:var(--red)">${p.avg_loss_rr||'–'}</span></td>
     </tr>
-    <tr><td colspan="6" style="padding:0;border:none">
+    <tr><td colspan="8" style="padding:0;border:none">
       <div class="player-profile${lbProfileOpen===p.name?' open':''}" id="profile-${rank}">
         ${lbProfileOpen===p.name?buildPlayerProfile(p.name):''}
       </div>

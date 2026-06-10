@@ -277,11 +277,34 @@ def compute_stats(con, since_dt):
         ORDER BY wins * 1.0 / fights DESC
     """, (since_str, MIN_FIGHTS_LEADERBOARD)).fetchall()
 
+    # Avg RR der Gegner bei Wins und Losses pro Spieler
+    opp_rp_rows = cur.execute("""
+        SELECT
+            p.name,
+            t.won,
+            avg(opp.realm_pts) as avg_opp_rp
+        FROM fight_players p
+        JOIN fights f ON f.id = p.fight_id
+        JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
+        JOIN fight_players opp ON opp.fight_id = f.id AND opp.side != p.side
+        WHERE f.started_at >= ? AND opp.realm_pts IS NOT NULL
+        GROUP BY p.name, t.won
+    """, (since_str,)).fetchall()
+
+    opp_rp_map = {}
+    for name, won, avg_rp in opp_rp_rows:
+        if name not in opp_rp_map:
+            opp_rp_map[name] = {}
+        opp_rp_map[name][won] = int(avg_rp) if avg_rp else None
+
     leaderboard = []
     for row in lb_rows:
         name, cid, rp, fights, wins = row
         wins = wins or 0
         losses = fights - wins
+        orpm = opp_rp_map.get(name, {})
+        avg_win_rp  = orpm.get(1)
+        avg_loss_rp = orpm.get(0)
         leaderboard.append({
             "name":         name,
             "class_id":     cid,
@@ -294,6 +317,8 @@ def compute_stats(con, since_dt):
             "losses":       losses,
             "winrate":      round(wins / fights * 100) if fights > 0 else 0,
             "wilson":       wilson_score(wins, fights),
+            "avg_win_rr":   rp_to_rr(avg_win_rp)  if avg_win_rp  else None,
+            "avg_loss_rr":  rp_to_rr(avg_loss_rp) if avg_loss_rp else None,
         })
 
     # ── Class Drill-Down ──
