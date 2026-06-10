@@ -179,8 +179,8 @@
   .profile-hour-bar{width:14px;border-radius:2px 2px 0 0;background:var(--hib);opacity:0.7}
   .underdog-card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:1.25rem}
   .underdog-title{font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:0.75rem}
-  .underdog-list{display:flex;flex-direction:column;gap:6px}
-  .underdog-row{display:flex;align-items:center;gap:10px}
+  .underdog-list{display:flex;flex-direction:column;gap:0}
+  .underdog-row{display:flex;align-items:center;gap:10px;min-height:36px}
   .underdog-rank{font-size:12px;color:var(--text3);font-family:'Cinzel',serif;min-width:20px}
   .underdog-rank-1{color:var(--amber);font-weight:600}
   .underdog-rank-2{color:var(--text2);font-weight:600}
@@ -410,14 +410,16 @@ function renderUnderdogCard(){
   const rows = list.map((p,i)=>{
     const rlm = realmCss(p.class_id);
     const rankCls = i===0?'underdog-rank-1':i===1?'underdog-rank-2':i===2?'underdog-rank-3':'underdog-rank';
-    return `<div class="underdog-row">
-      <span class="${rankCls}">${i+1}</span>
-      ${classIconHtml(p.class_id, 22)}
+    return `<div class="underdog-row" style="padding:6px 0;border-bottom:0.5px solid var(--border)">
+      <span class="${rankCls}" style="min-width:20px;text-align:center;flex-shrink:0">${i+1}</span>
+      <div style="width:26px;height:26px;flex-shrink:0;display:flex;align-items:center;justify-content:center">
+        ${classIconHtml(p.class_id, 22)}
+      </div>
       <div style="flex:1;min-width:0">
         <div class="underdog-name">${p.name}</div>
         <div class="underdog-sub">${p.class_name} · <span class="rr-badge">${p.rr}</span></div>
       </div>
-      <span class="underdog-badge">${p.label}</span>
+      <span class="underdog-badge" style="flex-shrink:0">${p.label}</span>
     </div>`;
   }).join('');
 
