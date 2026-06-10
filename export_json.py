@@ -241,17 +241,24 @@ def compute_stats(con, since_dt):
     matchups_500  = matchups_last_n(500)
     matchups_1000 = matchups_last_n(1000)
 
-    # ── Häufigste Matchups ──
-    common_matchups = sorted(matchups, key=lambda x: x["fights"], reverse=True)[:8]
-    common_out = []
-    for m in common_matchups:
-        common_out.append({
+    # ── Häufigste Matchups (für verschiedene Zeitfenster) ──
+    def build_common_matchups(days):
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+        rows = cur.execute(MATCHUP_SQL + " WHERE f.started_at >= ? ORDER BY f.started_at DESC", (cutoff,)).fetchall()
+        data = build_matchups_from_rows(rows)
+        top = sorted(data, key=lambda x: x["fights"], reverse=True)[:8]
+        return [{
             "class_a": m["class_a"], "class_a_name": m["class_a_name"],
             "realm_a": CLASS_REALM.get(m["class_a"], 0),
             "class_b": m["class_b"], "class_b_name": m["class_b_name"],
             "realm_b": CLASS_REALM.get(m["class_b"], 0),
             "count": m["fights"],
-        })
+        } for m in top]
+
+    common_out = build_common_matchups(30)
+    common_1d  = build_common_matchups(1)
+    common_3d  = build_common_matchups(3)
+    common_7d  = build_common_matchups(7)
 
     # ── Leaderboard ──
     lb_rows = cur.execute("""
@@ -427,32 +434,29 @@ def compute_stats(con, since_dt):
         key=lambda x: (-x['opponents'], rr_to_sort_key(x['rr']))
     )[:5]
 
-    # ── Top 3 Klassen pro Realm ──
-    top_classes_rows = cur.execute("""
-        SELECT p.class_id, count(DISTINCT p.name) as players
-        FROM fight_players p
-        JOIN fights f ON f.id = p.fight_id
-        WHERE f.started_at >= ?
-        GROUP BY p.class_id
-        ORDER BY players DESC
-    """, (since_str,)).fetchall()
+    # ── Top 3 Klassen pro Realm (für verschiedene Zeitfenster) ──
+    def build_top_classes(days):
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+        rows = cur.execute("""
+            SELECT p.class_id, count(DISTINCT p.name) as players
+            FROM fight_players p
+            JOIN fights f ON f.id = p.fight_id
+            WHERE f.started_at >= ?
+            GROUP BY p.class_id
+            ORDER BY players DESC
+        """, (cutoff,)).fetchall()
+        from collections import defaultdict
+        rc = defaultdict(list)
+        for cid, players in rows:
+            realm = CLASS_REALM.get(cid, 0)
+            if realm > 0:
+                rc[realm].append({"class_id": cid, "class_name": CLASSES.get(cid, f"Class {cid}"), "players": players})
+        return {"albion": rc[1][:3], "midgard": rc[2][:3], "hibernia": rc[3][:3]}
 
-    from collections import defaultdict
-    realm_classes = defaultdict(list)
-    for cid, players in top_classes_rows:
-        realm = CLASS_REALM.get(cid, 0)
-        if realm > 0:
-            realm_classes[realm].append({
-                "class_id":   cid,
-                "class_name": CLASSES.get(cid, f"Class {cid}"),
-                "players":    players,
-            })
-
-    top_classes_by_realm = {
-        "albion":   realm_classes[1][:3],
-        "midgard":  realm_classes[2][:3],
-        "hibernia": realm_classes[3][:3],
-    }
+    top_classes_by_realm    = build_top_classes(30)
+    top_classes_by_realm_1d = build_top_classes(1)
+    top_classes_by_realm_3d = build_top_classes(3)
+    top_classes_by_realm_7d = build_top_classes(7)
 
     return {
         "generated_at":    datetime.now(timezone.utc).isoformat(),
@@ -468,10 +472,16 @@ def compute_stats(con, since_dt):
         "matchups_100":    matchups_100,
         "matchups_500":    matchups_500,
         "matchups_1000":   matchups_1000,
-        "common_matchups": common_out,
+        "common_matchups":    common_out,
+        "common_matchups_1d": common_1d,
+        "common_matchups_3d": common_3d,
+        "common_matchups_7d": common_7d,
         "daily_fights":    [{"day": r[0], "count": r[1]} for r in daily],
         "zone_today":      zone_today,
-        "top_classes_by_realm": top_classes_by_realm,
+        "top_classes_by_realm":    top_classes_by_realm,
+        "top_classes_by_realm_1d": top_classes_by_realm_1d,
+        "top_classes_by_realm_3d": top_classes_by_realm_3d,
+        "top_classes_by_realm_7d": top_classes_by_realm_7d,
         "zone_yesterday":  zone_yesterday,
         "leaderboard":     leaderboard,
         "top_underdog":    top_underdog,

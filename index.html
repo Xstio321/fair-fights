@@ -305,6 +305,14 @@
 
   <!-- ACTIVITY -->
   <div id="activity" class="panel">
+    <div class="controls" style="margin-bottom:1.25rem">
+      <div class="time-filters" id="tf-activity">
+        <div class="tf" data-adays="1">24h</div>
+        <div class="tf" data-adays="3">3d</div>
+        <div class="tf" data-adays="7">7d</div>
+        <div class="tf active" data-adays="30">30d</div>
+      </div>
+    </div>
     <div id="activity-body"><div class="loading">Loading…</div></div>
   </div>
 
@@ -849,6 +857,7 @@ function renderMatchups(){
 // ── Activity ──
 // Zone Liniendiagramm State
 let zoneChartHidden = new Set();
+let activityDays = 30;
 
 // Farben für Zonen
 const ZONE_COLORS = [
@@ -857,7 +866,8 @@ const ZONE_COLORS = [
 ];
 
 function renderActivity(){
-  const common = DATA.common_matchups || [];
+  const common = activityDays===1?DATA.common_matchups_1d:activityDays===3?DATA.common_matchups_3d:activityDays===7?DATA.common_matchups_7d:DATA.common_matchups||[];
+  const tcr = activityDays===1?DATA.top_classes_by_realm_1d:activityDays===3?DATA.top_classes_by_realm_3d:activityDays===7?DATA.top_classes_by_realm_7d:DATA.top_classes_by_realm||{};
   const daily  = DATA.daily_fights   || [];
   const zones      = DATA.zone_today     || [];
   const zonesYest  = DATA.zone_yesterday || [];
@@ -1002,7 +1012,7 @@ function renderActivity(){
   }
 
   // ── Top 3 Klassen pro Realm ──
-  const tcr = DATA.top_classes_by_realm || {};
+
   function realmClassList(classes, realm, color){
     if(!classes||!classes.length) return '<div style="color:var(--text3);font-size:12px">No data</div>';
     return classes.map((c,i)=>`
@@ -1068,6 +1078,14 @@ function switchTab(id,el){
 document.querySelectorAll('.time-filters').forEach(group=>{
   group.querySelectorAll('.tf').forEach(btn=>{
     btn.addEventListener('click',()=>{
+      const adays = btn.dataset.adays;
+      if(adays){
+        group.querySelectorAll('.tf').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        activityDays = parseInt(adays);
+        renderActivity();
+        return;
+      }
       const realm = btn.dataset.realm;
       if(realm){ setRealmFilter(realm); return; }
       const matchup = btn.dataset.matchup;
