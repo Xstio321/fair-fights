@@ -168,6 +168,15 @@
   .legend-btn{display:flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;border:0.5px solid;cursor:pointer;font-size:11px;font-family:'Cinzel',serif;transition:all 0.15s;user-select:none}
   .legend-btn.inactive{opacity:0.3}
   .chart-svg-wrap{width:100%;overflow-x:auto}
+  .player-profile{display:none;background:var(--bg3);border-top:0.5px solid var(--border2)}
+  .player-profile.open{display:block}
+  .profile-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:14px 10px}
+  .profile-section-title{font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px}
+  .profile-item{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;font-size:12px}
+  .profile-item-name{color:var(--text2);font-family:'Cinzel',serif}
+  .profile-item-count{color:var(--text3);font-family:'Cinzel',serif;font-size:11px}
+  .profile-hour{display:flex;align-items:flex-end;gap:3px;height:40px}
+  .profile-hour-bar{width:14px;border-radius:2px 2px 0 0;background:var(--hib);opacity:0.7}
   .loading{text-align:center;padding:3rem;color:var(--text3);font-family:'Cinzel',serif;font-size:13px;letter-spacing:0.1em}
   .error-msg{background:rgba(196,74,74,0.1);border:0.5px solid var(--alb2);border-radius:var(--radius);padding:12px 16px;color:var(--alb);font-size:13px;font-family:'Cinzel',serif;margin-bottom:1rem}
   footer{margin-top:3rem;padding-top:1.5rem;border-top:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
@@ -303,6 +312,7 @@ let DATA = null;
 const PAGE_SIZE = 50;
 let lbPage = 1;
 let lbSortKey = 'wilson';
+let lbProfileOpen = null;
 let lbSortDir = -1;
 let lbSearch = '';
 let csSortKey = 'fights';
@@ -426,10 +436,10 @@ function renderLeaderboard(){
     const rankCls=rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'rank-num';
     tbody+=`<tr>
       <td><span class="${rankCls}">${rank}</span></td>
-      <td><div class="class-cell">
+      <td style="cursor:pointer" onclick="toggleProfile('${p.name.replace(/'/g,String.fromCharCode(92)+String.fromCharCode(39))}')"><div class="class-cell">
         ${classIconHtml(p.class_id)}
         <div>
-          <div class="player-name">${p.name}</div>
+          <div class="player-name">${p.name} <span class="expand-icon${lbProfileOpen===p.name?' open':''}" style="font-size:10px;color:var(--text3)">▶</span></div>
           <div class="player-sub"><span class="realm-${rlm}">${realmName(p.class_id)}</span> · ${p.class_name} · <span class="rr-badge">${p.rr}</span></div>
         </div>
       </div></td>
@@ -440,7 +450,12 @@ function renderLeaderboard(){
         <div class="bar-bg"><div class="bar-fill ${barCss(wr)}" style="width:${wr}%"></div></div>
       </div></td>
       <td class="r"><span class="wl-cell"><span class="w-count">${p.wins}W</span> / <span class="l-count">${p.losses}L</span></span></td>
-    </tr>`;
+    </tr>
+    <tr><td colspan="6" style="padding:0;border:none">
+      <div class="player-profile${lbProfileOpen===p.name?' open':''}" id="profile-${rank}">
+        ${lbProfileOpen===p.name?buildPlayerProfile(p.name):''}
+      </div>
+    </td></tr>`;
   });
   tbody+='</tbody>';
 
@@ -463,6 +478,86 @@ function renderPagination(totalPages, total){
   html+=`<span class="page-info">${total} players</span>`;
   html+=`</div>`;
   document.getElementById('leaderboard-pagination').innerHTML=html;
+}
+
+function buildPlayerProfile(name){
+  const pp = DATA.player_profiles && DATA.player_profiles[name];
+  if(!pp) return '<div style="padding:12px;color:var(--text3);font-size:12px;font-family:Cinzel,serif">No profile data yet.</div>';
+
+  // Top Zonen
+  let zonesHtml = pp.top_zones.length
+    ? pp.top_zones.map(z=>`<div class="profile-item">
+        <span class="profile-item-name">${z.name}</span>
+        <span class="profile-item-count">${z.count}</span>
+      </div>`).join('')
+    : '<div style="color:var(--text3);font-size:11px">No data</div>';
+
+  // Peak Stunden als Balkendiagramm
+  const maxH = Math.max(...pp.top_hours.map(h=>h.count), 1);
+  const hourMap = Object.fromEntries(pp.top_hours.map(h=>[h.hour, h.count]));
+  let hoursHtml = '<div class="profile-hour">';
+  for(let h=0;h<24;h++){
+    const cnt = hourMap[h]||0;
+    const ht = Math.max(2, Math.round((cnt/maxH)*36));
+    const color = cnt>0?'var(--hib)':'var(--bg4)';
+    hoursHtml += `<div title="${String(h).padStart(2,'0')}:00 – ${cnt} fights" style="width:8px;height:${ht}px;border-radius:2px 2px 0 0;background:${color};flex-shrink:0"></div>`;
+  }
+  hoursHtml += '</div><div style="display:flex;justify-content:space-between;margin-top:3px">';
+  [0,6,12,18,23].forEach(h=>{
+    hoursHtml += `<span style="font-size:8px;color:var(--text3);font-family:Cinzel,serif">${String(h).padStart(2,'0')}</span>`;
+  });
+  hoursHtml += '</div>';
+
+  // Won vs
+  let wonHtml = pp.won_vs.length
+    ? pp.won_vs.map(v=>`<div class="profile-item">
+        <span class="profile-item-name">${v.class_name}</span>
+        <span class="profile-item-count" style="color:var(--green)">${v.count}W</span>
+      </div>`).join('')
+    : '<div style="color:var(--text3);font-size:11px">No data</div>';
+
+  // Lost vs
+  let lostHtml = pp.lost_vs.length
+    ? pp.lost_vs.map(v=>`<div class="profile-item">
+        <span class="profile-item-name">${v.class_name}</span>
+        <span class="profile-item-count" style="color:var(--red)">${v.count}L</span>
+      </div>`).join('')
+    : '<div style="color:var(--text3);font-size:11px">No data</div>';
+
+  return `<div class="profile-grid">
+    <div>
+      <div class="profile-section-title">⚔ Most active zones</div>
+      ${zonesHtml}
+    </div>
+    <div>
+      <div class="profile-section-title">🕐 Peak hours</div>
+      ${hoursHtml}
+    </div>
+    <div>
+      <div class="profile-section-title">✓ Most wins vs</div>
+      ${wonHtml}
+    </div>
+    <div>
+      <div class="profile-section-title">✗ Most losses vs</div>
+      ${lostHtml}
+    </div>
+  </div>`;
+}
+
+function toggleProfile(name){
+  if(lbProfileOpen === name){
+    lbProfileOpen = null;
+  } else {
+    lbProfileOpen = name;
+  }
+  renderLeaderboard();
+  // Nach re-render scrollen
+  setTimeout(()=>{
+    if(lbProfileOpen){
+      const open = document.querySelector('.player-profile.open');
+      if(open) open.scrollIntoView({behavior:'smooth',block:'nearest'});
+    }
+  }, 50);
 }
 
 function goPage(p){lbPage=p;renderLeaderboard();}
