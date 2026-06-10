@@ -1,6 +1,6 @@
 """
-Eden DAoC - Fight Fetcher
-Holt automatisch alle neuen Fights von eden-daoc.net und speichert sie in SQLite.
+DAoC Fair Fight Fetcher
+Holt automatisch alle neuen Fights vom Server und speichert sie in SQLite.
 
 Endpoints (aus fights.js reverse-engineered):
   Fight-Liste: GET /hrald/proxy.php?fights/list
@@ -32,7 +32,7 @@ POLL_INTERVAL = 300  # Sekunden zwischen Abfragen (5 Minuten)
 
 # Session-Cookies (einmalig aus dem Browser kopieren)
 COOKIES = {
-    "eden_daoc_sid": "1c8c2ebfc130c94913f3c40acffbe580",
+    "eden_daoc_sid": "7cf9c3d7d1972760174c2cf3354b070e",
     "eden_daoc_u":   "39665",
 }
 
@@ -156,14 +156,14 @@ def race_to_realm(race_id: int) -> int:
 
 
 def determine_winner(fight: dict) -> tuple:
-    """Verlierer hat 'd':1 in seinen Stats → andere Seite hat gewonnen."""
-    for p in fight["b"].get("p", []):
-        if p.get("s", {}).get("d", 0) == 1:
-            return "a", "b"
-    for p in fight["a"].get("p", []):
-        if p.get("s", {}).get("d", 0) == 1:
-            return "b", "a"
-    return "a", "b"  # Fallback
+    """Verlierer hat deaths > 0, Gewinner hat deaths = 0."""
+    deaths_a = sum(p.get("s", {}).get("d", 0) for p in fight["a"].get("p", []))
+    deaths_b = sum(p.get("s", {}).get("d", 0) for p in fight["b"].get("p", []))
+    if deaths_b > deaths_a:
+        return "a", "b"
+    if deaths_a > deaths_b:
+        return "b", "a"
+    return "a", "b"  # Fallback (unentschieden)
 
 
 def save_fight(con: sqlite3.Connection, fight: dict) -> bool:
@@ -277,12 +277,16 @@ def run_once(session: requests.Session, con: sqlite3.Connection, only_1v1=True):
 
     log.info(f"Durchlauf fertig. {new_count} neue Fights gespeichert.")
 
+    # Automatisch exportieren und pushen
+    import subprocess
+    subprocess.run(["python", "export_json.py"], check=False)
+
 
 def run_loop(only_1v1=True):
     session = make_session()
     con     = init_db(DB_PATH)
 
-    log.info(f"Eden Fight Fetcher gestartet. Polling alle {POLL_INTERVAL}s.")
+    log.info(f"Fight Fetcher gestartet. Polling alle {POLL_INTERVAL}s.")
     while True:
         try:
             run_once(session, con, only_1v1=only_1v1)
@@ -298,7 +302,7 @@ def run_loop(only_1v1=True):
 # ──────────────────────────────────────────────
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description="Eden DAoC Fight Fetcher")
+    parser = argparse.ArgumentParser(description="DAoC Fight Fetcher")
     parser.add_argument("--once",    action="store_true", help="Nur einmal fetchen, keine Schleife")
     parser.add_argument("--all",     action="store_true", help="Alle Größen (nicht nur 1v1)")
     parser.add_argument("--init-db", action="store_true", help="Nur DB initialisieren")
