@@ -401,23 +401,23 @@ def compute_stats(con, since_dt):
 
     # ── Top 3 Klassen pro Realm ──
     top_classes_rows = cur.execute("""
-        SELECT p.class_id, count(DISTINCT f.id) as fights
+        SELECT p.class_id, count(DISTINCT p.name) as players
         FROM fight_players p
         JOIN fights f ON f.id = p.fight_id
         WHERE f.started_at >= ?
         GROUP BY p.class_id
-        ORDER BY fights DESC
+        ORDER BY players DESC
     """, (since_str,)).fetchall()
 
     from collections import defaultdict
     realm_classes = defaultdict(list)
-    for cid, fights in top_classes_rows:
+    for cid, players in top_classes_rows:
         realm = CLASS_REALM.get(cid, 0)
         if realm > 0:
             realm_classes[realm].append({
                 "class_id":   cid,
                 "class_name": CLASSES.get(cid, f"Class {cid}"),
-                "fights":     fights,
+                "players":    players,
             })
 
     top_classes_by_realm = {
