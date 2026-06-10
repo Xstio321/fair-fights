@@ -129,8 +129,10 @@ def compute_stats(con, since_dt):
             for zid, data in sorted(ts.items(), key=lambda x: -sum(d["count"] for d in x[1]))
         ]
 
-    zone_today     = fetch_zone_ts("date('now')")
-    zone_yesterday = fetch_zone_ts("date('now','-1 day')")
+    today_str     = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    yesterday_str = (datetime.now(timezone.utc) - timedelta(days=1)).strftime('%Y-%m-%d')
+    zone_today     = fetch_zone_ts(today_str)
+    zone_yesterday = fetch_zone_ts(yesterday_str)
 
     # ── Summary ──
     total_all = cur.execute("SELECT count(*) FROM fights").fetchone()[0]
@@ -311,6 +313,85 @@ def compute_stats(con, since_dt):
             "wilson":  wilson_score(wins, fights),
         })
 
+    # ── Spieler-Profile ──
+    profile_rows = cur.execute("""
+        SELECT
+            p.name,
+            p.class_id,
+            f.zone_id,
+            strftime('%H', f.started_at) as hour,
+            t.won,
+            opp.class_id as opp_class_id
+        FROM fight_players p
+        JOIN fights f ON f.id = p.fight_id
+        JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
+        JOIN fight_players opp ON opp.fight_id = f.id AND opp.side != p.side
+        WHERE f.started_at >= ?
+    """, (since_str,)).fetchall()
+
+    from collections import defaultdict, Counter
+    player_profiles = defaultdict(lambda: {
+        "zones": Counter(), "hours": Counter(),
+        "won_vs": Counter(), "lost_vs": Counter()
+    })
+
+    for name, cid, zone_id, hour, won, opp_cid in profile_rows:
+        pp = player_profiles[name]
+        if zone_id and zone_id in ZONE_NAMES:
+            pp["zones"][ZONE_NAMES[zone_id]] += 1
+        if hour:
+            pp["hours"][int(hour)] += 1
+        if won:
+            pp["won_vs"][opp_cid] += 1
+        else:
+            pp["lost_vs"][opp_cid] += 1
+
+    player_profile_data = {}
+    for name, pp in player_profiles.items():
+        top_zones = [{"name": z, "count": c} for z, c in pp["zones"].most_common(5)]
+        top_hours = [{"hour": h, "count": c} for h, c in sorted(pp["hours"].items(), key=lambda x: -x[1])[:5]]
+        won_vs = [{"class_id": cid, "class_name": CLASSES.get(cid, f"Class {cid}"), "count": c}
+                  for cid, c in pp["won_vs"].most_common(5)]
+        lost_vs = [{"class_id": cid, "class_name": CLASSES.get(cid, f"Class {cid}"), "count": c}
+                   for cid, c in pp["lost_vs"].most_common(5)]
+        player_profile_data[name] = {
+            "top_zones": top_zones,
+            "top_hours": top_hours,
+            "won_vs":    won_vs,
+            "lost_vs":   lost_vs,
+        }
+
+    # ── Top Underdog Wins (1vX) ──
+    underdog_rows = cur.execute("""
+        SELECT
+            p.name,
+            p.class_id,
+            max(p.realm_pts) as realm_pts,
+            f.size as opponents,
+            f.started_at
+        FROM fights f
+        JOIN fight_teams t ON t.fight_id = f.id AND t.won = 1
+        JOIN fight_players p ON p.fight_id = f.id AND p.side = t.side
+        WHERE f.size > 1 AND f.started_at >= ?
+        ORDER BY f.size DESC, f.started_at DESC
+    """, (since_str,)).fetchall()
+
+    # Pro Spieler den besten (höchsten) Underdog-Win nehmen
+    seen_underdog = {}
+    for name, cid, rp, opponents, started_at in underdog_rows:
+        if name not in seen_underdog or opponents > seen_underdog[name]['opponents']:
+            seen_underdog[name] = {
+                "name":       name,
+                "class_id":   cid,
+                "class_name": CLASSES.get(cid, f"Class {cid}"),
+                "realm":      CLASS_REALM.get(cid, 0),
+                "rr":         rp_to_rr(rp),
+                "opponents":  opponents,
+                "label":      f"1v{opponents}",
+            }
+
+    top_underdog = sorted(seen_underdog.values(), key=lambda x: -x['opponents'])[:5]
+
     return {
         "generated_at":    datetime.now(timezone.utc).isoformat(),
         "summary": {
@@ -330,6 +411,8 @@ def compute_stats(con, since_dt):
         "zone_today":      zone_today,
         "zone_yesterday":  zone_yesterday,
         "leaderboard":     leaderboard,
+        "top_underdog":    top_underdog,
+        "player_profiles": player_profile_data,
     }
 
 
