@@ -255,12 +255,6 @@
         <div class="tf" data-days="30">30d</div>
       </div>
     </div>
-    <div style="margin-bottom:1rem">
-      <div class="search-wrap" style="max-width:100%">
-        <span class="search-icon">🔍</span>
-        <input class="search-input" id="lb-search" type="text" placeholder="Search player…">
-      </div>
-    </div>
     <div id="leaderboard-body"><div class="loading">Loading leaderboard…</div></div>
     <div id="leaderboard-pagination"></div>
   </div>
@@ -433,10 +427,25 @@ function renderUnderdogCard(){
     </div>
     <div></div>
   </div>`;
-  if(existing) existing.outerHTML = html;
-  else {
+  const searchHtml = `<div style="margin-bottom:1rem">
+    <div class="search-wrap" style="max-width:100%">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" id="lb-search" type="text" placeholder="Search player…">
+    </div>
+  </div>`;
+
+  if(existing){
+    existing.outerHTML = html;
+    // Search nach underdog einfügen falls noch nicht vorhanden
+    if(!document.getElementById('lb-search-wrap')){
+      document.getElementById('underdog-wrap').insertAdjacentHTML('afterend', `<div id="lb-search-wrap">${searchHtml}</div>`);
+      document.getElementById('lb-search').addEventListener('input',e=>{lbSearch=e.target.value;lbPage=1;renderLeaderboard();});
+    }
+  } else {
     const body = document.getElementById('leaderboard-body');
     body.insertAdjacentHTML('beforebegin', html);
+    body.insertAdjacentHTML('beforebegin', `<div id="lb-search-wrap">${searchHtml}</div>`);
+    document.getElementById('lb-search').addEventListener('input',e=>{lbSearch=e.target.value;lbPage=1;renderLeaderboard();});
   }
 }
 
@@ -619,11 +628,7 @@ function sortLb(key){
   lbPage=1;renderLeaderboard();
 }
 
-document.getElementById('lb-search').addEventListener('input',e=>{
-  lbSearch=e.target.value;
-  lbPage=1;
-  renderLeaderboard();
-});
+
 
 // ── Class Stats ──
 function renderClassStats(){
