@@ -306,6 +306,7 @@ const PAGE_SIZE = 50;
 let lbPage = 1;
 let lbPageSize = 30;
 let lbSortKey = 'wilson';
+let lbDays = 1;
 let lbProfileOpen = null;
 let lbSortDir = -1;
 let lbSearch = '';
@@ -374,6 +375,9 @@ function renderSummary(){
 // ── Leaderboard ──
 function getFilteredLb(){
   let lb=[...DATA.leaderboard];
+  // Zeitfilter anhand last_fight
+  const cutoff = new Date(Date.now() - lbDays * 24 * 60 * 60 * 1000).toISOString();
+  lb = lb.filter(p => p.last_fight && p.last_fight >= cutoff);
   if(lbSearch){
     const q=lbSearch.toLowerCase();
     lb=lb.filter(p=>p.name.toLowerCase().includes(q)||p.class_name.toLowerCase().includes(q));
@@ -646,7 +650,14 @@ function renderClassStats(){
     document.getElementById('classstats-body').innerHTML='<div class="loading">No data yet.</div>';
     return;
   }
-  const sorted=[...stats].sort((a,b)=>{
+  // Zeitfilter anhand last_fight
+  const cutoff = new Date(Date.now() - lbDays * 24 * 60 * 60 * 1000).toISOString();
+  const filtered = stats.filter(c => c.last_fight && c.last_fight >= cutoff);
+  if(!filtered.length){
+    document.getElementById('classstats-body').innerHTML='<div class="loading">No data for this time period.</div>';
+    return;
+  }
+  const sorted=[...filtered].sort((a,b)=>{
     let va=a[csSortKey],vb=b[csSortKey];
     if(va===null||va===undefined)va=-1;
     if(vb===null||vb===undefined)vb=-1;
@@ -672,7 +683,9 @@ function renderClassStats(){
   sorted.forEach(c=>{
     const rlm=realmCss(c.class_id);
     const wr=c.winrate;
-    const players=(DATA.class_players&&DATA.class_players[c.class_id])||[];
+    // class_players auch nach Zeit filtern
+    const allPlayers=(DATA.class_players&&DATA.class_players[c.class_id])||[];
+    const players = allPlayers; // TODO: class_players haben noch keinen last_fight
 
     // Hauptzeile (klickbar)
     tbody+=`<tr class="cs-row" onclick="toggleDrill(${c.class_id})">
@@ -1106,6 +1119,16 @@ document.querySelectorAll('.time-filters').forEach(group=>{
         lbPageSize = parseInt(lbsize);
         lbPage = 1;
         renderLeaderboard();
+        return;
+      }
+      const days = btn.dataset.days;
+      if(days && group.id === 'tf-leaderboard'){
+        group.querySelectorAll('.tf').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        lbDays = parseInt(days);
+        lbPage = 1;
+        renderLeaderboard();
+        renderClassStats();
         return;
       }
       const realm = btn.dataset.realm;

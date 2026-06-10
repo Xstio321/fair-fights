@@ -170,7 +170,8 @@ def compute_stats(con, since_dt):
     class_rows = cur.execute("""
         SELECT p.class_id,
                count(DISTINCT f.id) as fights,
-               sum(t.won) as wins
+               sum(t.won) as wins,
+               max(f.started_at) as last_fight
         FROM fight_players p
         JOIN fights f ON f.id = p.fight_id
         JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
@@ -181,7 +182,7 @@ def compute_stats(con, since_dt):
 
     class_stats = []
     for row in class_rows:
-        cid, fights, wins = row
+        cid, fights, wins, last_fight = row
         wins = wins or 0
         class_stats.append({
             "class_id":     cid,
@@ -191,6 +192,7 @@ def compute_stats(con, since_dt):
             "fights":       fights,
             "wins":         wins,
             "winrate":      round(wins / fights * 100) if fights > 0 else 0,
+            "last_fight":   last_fight,
         })
 
     # ── Matchup Matrix ──
@@ -286,7 +288,8 @@ def compute_stats(con, since_dt):
             p.class_id,
             max(p.realm_pts) as realm_pts,
             count(DISTINCT f.id) as fights,
-            sum(t.won) as wins
+            sum(t.won) as wins,
+            max(f.started_at) as last_fight
         FROM fight_players p
         JOIN fights f ON f.id = p.fight_id
         JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
@@ -318,7 +321,7 @@ def compute_stats(con, since_dt):
 
     leaderboard = []
     for row in lb_rows:
-        name, cid, rp, fights, wins = row
+        name, cid, rp, fights, wins, last_fight = row
         wins = wins or 0
         losses = fights - wins
         orpm = opp_rp_map.get(name, {})
@@ -338,6 +341,7 @@ def compute_stats(con, since_dt):
             "wilson":       wilson_score(wins, fights),
             "avg_win_rr":   rp_to_rr(avg_win_rp)  if avg_win_rp  else None,
             "avg_loss_rr":  rp_to_rr(avg_loss_rp) if avg_loss_rp else None,
+            "last_fight":   last_fight,
         })
 
     # ── Class Drill-Down ──
