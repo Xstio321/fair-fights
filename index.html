@@ -1118,6 +1118,33 @@ function switchTab(id,el){
 }
 
 // ── Time filters ──
+// Leaderboard filter via event delegation (buttons sind dynamisch)
+document.getElementById('leaderboard').addEventListener('click', e=>{
+  const btn = e.target.closest('.tf');
+  if(!btn) return;
+
+  const days = btn.dataset.days;
+  if(days && btn.closest('#tf-leaderboard')){
+    btn.closest('#tf-leaderboard').querySelectorAll('.tf').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    lbDays = parseInt(days);
+    lbPage = 1;
+    renderLeaderboard();
+    renderClassStats();
+    return;
+  }
+
+  const lbsize = btn.dataset.lbsize;
+  if(lbsize){
+    btn.closest('#tf-lb-size').querySelectorAll('.tf').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    lbPageSize = parseInt(lbsize);
+    lbPage = 1;
+    renderLeaderboard();
+    return;
+  }
+});
+
 // Activity filter via event delegation
 document.getElementById('activity').addEventListener('click', e=>{
   const btn = e.target.closest('.tf[data-adays]');
@@ -1136,24 +1163,9 @@ document.querySelectorAll('.time-filters').forEach(group=>{
       if(adays) return; // handled by delegation above
       
       const lbsize = btn.dataset.lbsize;
-      if(lbsize){
-        group.querySelectorAll('.tf').forEach(b=>b.classList.remove('active'));
-        btn.classList.add('active');
-        lbPageSize = parseInt(lbsize);
-        lbPage = 1;
-        renderLeaderboard();
-        return;
-      }
+      if(lbsize && group.id !== 'tf-lb-size') return; // handled by delegation
       const days = btn.dataset.days;
-      if(days && group.id === 'tf-leaderboard'){
-        group.querySelectorAll('.tf').forEach(b=>b.classList.remove('active'));
-        btn.classList.add('active');
-        lbDays = parseInt(days);
-        lbPage = 1;
-        renderLeaderboard();
-        renderClassStats();
-        return;
-      }
+      if(days && group.id === 'tf-leaderboard') return; // handled by delegation
       const colrealm = btn.dataset.colrealm;
       if(colrealm){ setColRealmFilter(colrealm); return; }
       const realm = btn.dataset.realm;
