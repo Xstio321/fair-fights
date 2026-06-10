@@ -396,8 +396,20 @@ def compute_stats(con, since_dt):
                 "label":      f"1v{opponents}",
             }
 
-    # Sortieren: erst nach Gegneranzahl, dann nach Spielername für stabile Reihenfolge
-    top_underdog = sorted(seen_underdog.values(), key=lambda x: (-x['opponents'], x['name']))[:5]
+    # Realm Rank zu numerischem Wert umrechnen für Sortierung
+    def rr_to_sort_key(rr_label):
+        # z.B. "4L2" -> 4*10+2 = 42, niedrigerer Wert = niedrigerer Rank
+        try:
+            parts = rr_label.replace('L','x').split('x')
+            return int(parts[0]) * 10 + int(parts[1])
+        except:
+            return 999
+
+    # Sortieren: erst nach Gegneranzahl (desc), dann nach RR (asc = niedrigster zuerst)
+    top_underdog = sorted(
+        seen_underdog.values(),
+        key=lambda x: (-x['opponents'], rr_to_sort_key(x['rr']))
+    )[:5]
 
     # ── Top 3 Klassen pro Realm ──
     top_classes_rows = cur.execute("""
