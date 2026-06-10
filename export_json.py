@@ -362,17 +362,23 @@ def compute_stats(con, since_dt):
         }
 
     # ── Top Underdog Wins (1vX) ──
+    # Nur Kämpfe wo der Gewinner alleine war (size = Anzahl Gegner, Gewinnerteam hat 1 Spieler)
     underdog_rows = cur.execute("""
         SELECT
             p.name,
             p.class_id,
-            max(p.realm_pts) as realm_pts,
+            p.realm_pts,
             f.size as opponents,
             f.started_at
         FROM fights f
-        JOIN fight_teams t ON t.fight_id = f.id AND t.won = 1
-        JOIN fight_players p ON p.fight_id = f.id AND p.side = t.side
-        WHERE f.size > 1 AND f.started_at >= ?
+        JOIN fight_teams tw ON tw.fight_id = f.id AND tw.won = 1
+        JOIN fight_players p ON p.fight_id = f.id AND p.side = tw.side
+        WHERE f.size > 1
+          AND f.started_at >= ?
+          AND (
+            SELECT count(*) FROM fight_players p2
+            WHERE p2.fight_id = f.id AND p2.side = tw.side
+          ) = 1
         ORDER BY f.size DESC, f.started_at DESC
     """, (since_str,)).fetchall()
 
@@ -393,6 +399,33 @@ def compute_stats(con, since_dt):
     # Sortieren: erst nach Gegneranzahl, dann nach Spielername für stabile Reihenfolge
     top_underdog = sorted(seen_underdog.values(), key=lambda x: (-x['opponents'], x['name']))[:5]
 
+    # ── Top 3 Klassen pro Realm ──
+    top_classes_rows = cur.execute("""
+        SELECT p.class_id, count(DISTINCT f.id) as fights
+        FROM fight_players p
+        JOIN fights f ON f.id = p.fight_id
+        WHERE f.started_at >= ?
+        GROUP BY p.class_id
+        ORDER BY fights DESC
+    """, (since_str,)).fetchall()
+
+    from collections import defaultdict
+    realm_classes = defaultdict(list)
+    for cid, fights in top_classes_rows:
+        realm = CLASS_REALM.get(cid, 0)
+        if realm > 0:
+            realm_classes[realm].append({
+                "class_id":   cid,
+                "class_name": CLASSES.get(cid, f"Class {cid}"),
+                "fights":     fights,
+            })
+
+    top_classes_by_realm = {
+        "albion":   realm_classes[1][:3],
+        "midgard":  realm_classes[2][:3],
+        "hibernia": realm_classes[3][:3],
+    }
+
     return {
         "generated_at":    datetime.now(timezone.utc).isoformat(),
         "summary": {
@@ -410,6 +443,7 @@ def compute_stats(con, since_dt):
         "common_matchups": common_out,
         "daily_fights":    [{"day": r[0], "count": r[1]} for r in daily],
         "zone_today":      zone_today,
+        "top_classes_by_realm": top_classes_by_realm,
         "zone_yesterday":  zone_yesterday,
         "leaderboard":     leaderboard,
         "top_underdog":    top_underdog,

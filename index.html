@@ -988,14 +988,46 @@ function renderActivity(){
       </div>`;
   }
 
+  // ── Top 3 Klassen pro Realm ──
+  const tcr = DATA.top_classes_by_realm || {};
+  function realmClassList(classes, realm, color){
+    if(!classes||!classes.length) return '<div style="color:var(--text3);font-size:12px">No data</div>';
+    return classes.map((c,i)=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid var(--border)">
+        <span style="font-size:11px;color:var(--text3);font-family:Cinzel,serif;min-width:16px">${i+1}</span>
+        ${classIconHtml(c.class_id, 22)}
+        <span style="font-size:13px;color:var(--text);flex:1">${c.class_name}</span>
+        <span style="font-size:11px;color:var(--text3);font-family:Cinzel,serif">${c.fights}</span>
+      </div>`).join('');
+  }
+  const topClassesHtml = `
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <div style="font-size:10px;color:var(--alb);font-family:Cinzel,serif;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px">Albion</div>
+        ${realmClassList(tcr.albion,'alb','var(--alb)')}
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--mid);font-family:Cinzel,serif;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px">Midgard</div>
+        ${realmClassList(tcr.midgard,'mid','var(--mid)')}
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--hib);font-family:Cinzel,serif;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px">Hibernia</div>
+        ${realmClassList(tcr.hibernia,'hib','var(--hib)')}
+      </div>
+    </div>`;
+
   document.getElementById('activity-body').innerHTML = `
     <div class="activity-grid">
       <div class="activity-card activity-card-full">
         <div class="activity-card-title">Zone activity – today & yesterday</div>
         ${zoneChartHtml}
       </div>
-      <div class="activity-card activity-card-full">
+      <div class="activity-card">
         <div class="activity-card-title">Most common matchups</div>${pairsHtml}
+      </div>
+      <div class="activity-card">
+        <div class="activity-card-title">Top classes by realm</div>
+        ${topClassesHtml}
       </div>
       <div class="activity-card activity-card-full">
         <div class="activity-card-title">Fights per day – last 7 days</div>
