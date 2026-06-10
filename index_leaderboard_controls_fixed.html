@@ -223,23 +223,6 @@
 
   <!-- LEADERBOARD -->
   <div id="leaderboard" class="panel active">
-    <div class="controls" style="gap:8px;flex-wrap:nowrap">
-      <div class="search-wrap" style="max-width:150px;flex-shrink:0">
-        <span class="search-icon">🔍</span>
-        <input class="search-input" id="lb-search" type="text" placeholder="Search…">
-      </div>
-      <div class="time-filters" id="tf-leaderboard">
-        <div class="tf active" data-days="1">24h</div>
-        <div class="tf" data-days="3">3d</div>
-        <div class="tf" data-days="7">7d</div>
-        <div class="tf" data-days="30">30d</div>
-      </div>
-      <div class="time-filters" id="tf-lb-size">
-        <div class="tf" data-lbsize="10">10</div>
-        <div class="tf active" data-lbsize="30">30</div>
-        <div class="tf" data-lbsize="50">50</div>
-      </div>
-    </div>
     <div id="leaderboard-body"><div class="loading">Loading leaderboard…</div></div>
     <div id="leaderboard-pagination"></div>
   </div>
@@ -456,10 +439,21 @@ function renderUnderdogCard(){
       ${busyHtml}
     </div>
   </div>`;
-  const searchHtml = `<div style="margin-bottom:1rem">
-    <div class="search-wrap" style="max-width:100%">
+  const searchHtml = `<div class="controls" style="gap:8px;flex-wrap:wrap;margin-bottom:1rem">
+    <div class="search-wrap" style="max-width:260px;min-width:180px;flex:1">
       <span class="search-icon">🔍</span>
-      <input class="search-input" id="lb-search" type="text" placeholder="Search player…">
+      <input class="search-input" id="lb-search" type="text" placeholder="Search player…" value="${lbSearch.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}">
+    </div>
+    <div class="time-filters" id="tf-leaderboard">
+      <div class="tf ${lbDays===1?'active':''}" data-days="1">24h</div>
+      <div class="tf ${lbDays===3?'active':''}" data-days="3">3d</div>
+      <div class="tf ${lbDays===7?'active':''}" data-days="7">7d</div>
+      <div class="tf ${lbDays===30?'active':''}" data-days="30">30d</div>
+    </div>
+    <div class="time-filters" id="tf-lb-size">
+      <div class="tf ${lbPageSize===10?'active':''}" data-lbsize="10">10</div>
+      <div class="tf ${lbPageSize===30?'active':''}" data-lbsize="30">30</div>
+      <div class="tf ${lbPageSize===50?'active':''}" data-lbsize="50">50</div>
     </div>
   </div>`;
 
@@ -468,7 +462,7 @@ function renderUnderdogCard(){
     // Search nach underdog einfügen falls noch nicht vorhanden
     if(!document.getElementById('lb-search-wrap')){
       document.getElementById('underdog-wrap').insertAdjacentHTML('afterend', `<div id="lb-search-wrap">${searchHtml}</div>`);
-      document.getElementById('lb-search').addEventListener('input',e=>{lbSearch=e.target.value;lbPage=1;renderLeaderboard();});
+      bindLeaderboardControls();
     }
   } else {
     const body = document.getElementById('leaderboard-body');
@@ -476,6 +470,38 @@ function renderUnderdogCard(){
     body.insertAdjacentHTML('beforebegin', `<div id="lb-search-wrap">${searchHtml}</div>`);
     document.getElementById('lb-search').addEventListener('input',e=>{lbSearch=e.target.value;lbPage=1;renderLeaderboard();});
   }
+}
+
+function bindLeaderboardControls(){
+  const search = document.getElementById('lb-search');
+  if(search){
+    search.oninput = e => {
+      lbSearch = e.target.value;
+      lbPage = 1;
+      renderLeaderboard();
+    };
+  }
+
+  document.querySelectorAll('#tf-leaderboard .tf').forEach(btn=>{
+    btn.onclick = () => {
+      lbDays = parseInt(btn.dataset.days);
+      lbPage = 1;
+      document.querySelectorAll('#tf-leaderboard .tf').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      renderLeaderboard();
+      renderClassStats();
+    };
+  });
+
+  document.querySelectorAll('#tf-lb-size .tf').forEach(btn=>{
+    btn.onclick = () => {
+      lbPageSize = parseInt(btn.dataset.lbsize);
+      lbPage = 1;
+      document.querySelectorAll('#tf-lb-size .tf').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      renderLeaderboard();
+    };
+  });
 }
 
 function renderLeaderboard(){
