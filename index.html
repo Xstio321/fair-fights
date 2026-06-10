@@ -854,8 +854,27 @@ function renderActivity(){
     {zone_id:178,name:"Hadrian's Wall"},
   ];
 
+  function smoothPath(points){
+    // Catmull-Rom to cubic bezier smooth curve
+    if(points.length < 2) return '';
+    if(points.length === 1) return `M${points[0][0]},${points[0][1]}`;
+    let d = `M${points[0][0].toFixed(1)},${points[0][1].toFixed(1)}`;
+    for(let i=0;i<points.length-1;i++){
+      const p0 = points[Math.max(0,i-1)];
+      const p1 = points[i];
+      const p2 = points[i+1];
+      const p3 = points[Math.min(points.length-1,i+2)];
+      const cp1x = p1[0] + (p2[0]-p0[0])/6;
+      const cp1y = p1[1] + (p2[1]-p0[1])/6;
+      const cp2x = p2[0] - (p3[0]-p1[0])/6;
+      const cp2y = p2[1] - (p3[1]-p1[1])/6;
+      d += ` C${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+    }
+    return d;
+  }
+
   function buildZoneChart(zoneData, hiddenSet, toggleFn, sharedMaxVal){
-    const W=640,H=200,PL=35,PR=15,PT=10,PB=30;
+    const W=860,H=260,PL=35,PR=15,PT=10,PB=30;
     const iW=W-PL-PR, iH=H-PT-PB;
     const dataByZone = Object.fromEntries(zoneData.map(z=>[z.zone_id, z.data]));
     const maxVal = sharedMaxVal || Math.max(...zoneData.flatMap(z=>z.data.map(d=>d.count)),1);
@@ -866,17 +885,17 @@ function renderActivity(){
     ALL_RVR_ZONES.forEach((zone,i)=>{
       if(hiddenSet.has(zone.zone_id)) return;
       const data = dataByZone[zone.zone_id] || [];
-      if(data.length < 1) return;
+      if(data.length < 2) return;
       const color = ZONE_COLORS[i%ZONE_COLORS.length];
-      const pts = data.map(d=>`${xPos(d.hour).toFixed(1)},${yPos(d.count).toFixed(1)}`).join(' ');
-      linesHtml += `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>`;
-      data.forEach(d=>{
-        linesHtml += `<circle cx="${xPos(d.hour).toFixed(1)}" cy="${yPos(d.count).toFixed(1)}" r="3" fill="${color}"><title>${zone.name}: ${d.count} fights</title></circle>`;
-      });
+      const pts = data.map(d=>[xPos(d.hour), yPos(d.count)]);
+      const d = smoothPath(pts);
+      linesHtml += `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" opacity="0.9">
+        <title>${zone.name}</title>
+      </path>`;
     });
 
     let xLabels='', yLabels='';
-    [0,4,8,12,16,20,23].forEach(h=>{
+    [0,3,6,9,12,15,18,21,23].forEach(h=>{
       const x=xPos(h);
       xLabels += `<text x="${x.toFixed(1)}" y="${H-6}" text-anchor="middle" font-size="9" fill="var(--text3)" font-family="Cinzel,serif">${String(h).padStart(2,'0')}:00</text>`;
       xLabels += `<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${PT+iH}" stroke="var(--border)" stroke-width="0.5"/>`;
@@ -888,7 +907,7 @@ function renderActivity(){
     }
 
     return `<div class="chart-svg-wrap">
-        <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;min-width:300px">
+        <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%">
           ${yLabels}${xLabels}${linesHtml}
         </svg>
       </div>`;
@@ -912,7 +931,7 @@ function renderActivity(){
     const sharedMax = Math.max(...allVals, 1);
     zoneChartHtml = `
       <div class="chart-legend">${buildSharedLegend(zoneChartHidden, 'toggleZone')}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+      <div style="display:flex;flex-direction:column;gap:20px">
         <div>
           <div style="font-size:11px;color:var(--text2);font-family:'Cinzel',serif;margin-bottom:8px;letter-spacing:0.06em">Yesterday</div>
           ${buildZoneChart(zonesYest, zoneChartHidden, 'toggleZone', sharedMax)}
