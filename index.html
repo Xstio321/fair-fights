@@ -926,57 +926,6 @@ const ZONE_COLORS = [
 ];
 
 function renderActivity(){
-  // ── Fights Zeitreihe ──
-  const ftKey = chartDays===1?'fights_24h':chartDays===3?'fights_3d':chartDays===7?'fights_7d':'fights_30d';
-  const ftRaw = (DATA.fight_timeseries||{})[ftKey]||[];
-  // Bei täglichen Daten (7d/30d) Balkendiagramm statt Linie
-  let ftChart;
-  if(chartDays <= 3){
-    ftChart = buildLineChart(
-      [{id:0, name:'Fights', data:ftRaw}],
-      ()=>'var(--hib)', null, null, null
-    );
-  } else {
-    const ftMax = Math.max(...ftRaw.map(d=>d.v), 1);
-    const barW = Math.max(8, Math.floor(800/Math.max(ftRaw.length,1)) - 4);
-    const W=820,H=180,PL=35,PR=12,PT=10,PB=28;
-    const iW=W-PL-PR, iH=H-PT-PB;
-    const xp = (i,n) => PL + (i/(n-1||1))*iW;
-    let bars='', xL='', yL='';
-    ftRaw.forEach((d,i)=>{
-      const h = Math.max(2, Math.round((d.v/ftMax)*iH));
-      const x = PL + (i/(ftRaw.length||1))*iW - barW/2;
-      const y = PT+iH-h;
-      const isPeak = d.v===ftMax;
-      bars+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW}" height="${h}" fill="${isPeak?'var(--hib)':'rgba(120,178,68,0.5)'}" rx="2"><title>${d.t}: ${d.v} fights</title></rect>`;
-      const label = d.t.slice(5);
-      xL+=`<text x="${(x+barW/2).toFixed(1)}" y="${H-6}" text-anchor="middle" font-size="9" fill="var(--text3)" font-family="Cinzel,serif">${label}</text>`;
-    });
-    for(let v=0;v<=ftMax;v+=Math.ceil(ftMax/4)){
-      const y=PT+iH-(v/ftMax)*iH;
-      yL+=`<text x="${PL-4}" y="${y.toFixed(1)}" text-anchor="end" dominant-baseline="middle" font-size="9" fill="var(--text3)" font-family="Cinzel,serif">${v}</text>`;
-      yL+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${PL+iW}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="0.5"/>`;
-    }
-    ftChart = `<div class="chart-svg-wrap"><svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%">${yL}${xL}${bars}</svg></div>`;
-  }
-
-  // ── Klassen Zeitreihe ──
-  const clKey = chartDays===1?'classes_24h':chartDays===3?'classes_3d':chartDays===7?'classes_7d':'classes_30d';
-  const clRaw = (DATA.class_timeseries||{})[clKey]||[];
-  const clSeries = clRaw.map(c=>({id:c.class_id, name:c.class_name, class_id:c.class_id, realm:c.realm, data:c.data}));
-  const clRealmFilter = classChartRealmFilter
-    ? s=>(classChartRealmFilter==='alb'?REALM_ALB:classChartRealmFilter==='mid'?REALM_MID:REALM_HIB).includes(s.class_id)
-    : null;
-  const clChart = buildLineChart(
-    clSeries, (s,i)=>ZONE_COLORS[i%ZONE_COLORS.length],
-    classChartHidden, 'toggleClassChart', clRealmFilter
-  );
-  const realmChips = ['alb','mid','hib'].map(r=>{
-    const label = r==='alb'?'Albion':r==='mid'?'Midgard':'Hibernia';
-    const active = classChartRealmFilter===r?' active-'+r:'';
-    return `<div class="tf${active}" style="color:var(--${r})" onclick="toggleClRealmFilter('${r}')">${label}</div>`;
-  }).join('');
-
   const common = activityDays===1?DATA.common_matchups_1d:activityDays===3?DATA.common_matchups_3d:activityDays===7?DATA.common_matchups_7d:DATA.common_matchups||[];
   const tcr = activityDays===1?DATA.top_classes_by_realm_1d:activityDays===3?DATA.top_classes_by_realm_3d:activityDays===7?DATA.top_classes_by_realm_7d:DATA.top_classes_by_realm||{};
   const daily  = DATA.daily_fights   || [];
