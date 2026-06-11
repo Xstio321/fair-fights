@@ -929,7 +929,7 @@ const ZONE_COLORS = [
 
 function renderActivity(){
   // ── Fights Zeitreihe ──
-  const ftKey = S.acDays===1?'fights_24h':S.acDays===3?'fights_3d':S.acDays===7?'fights_7d':'fights_30d';
+  const ftKey = activityDays===1?'fights_24h':activityDays===3?'fights_3d':activityDays===7?'fights_7d':'fights_30d';
   const ftRaw = (DATA.fight_timeseries||{})[ftKey]||[];
   const ftChart = buildLineChart(
     [{id:0, name:'Fights', data:ftRaw}],
@@ -937,7 +937,7 @@ function renderActivity(){
   );
 
   // ── Klassen Zeitreihe ──
-  const clKey = S.acDays===1?'classes_24h':S.acDays===3?'classes_3d':S.acDays===7?'classes_7d':'classes_30d';
+  const clKey = activityDays===1?'classes_24h':activityDays===3?'classes_3d':activityDays===7?'classes_7d':'classes_30d';
   const clRaw = (DATA.class_timeseries||{})[clKey]||[];
   const clSeries = clRaw.map(c=>({id:c.class_id, name:c.class_name, class_id:c.class_id, realm:c.realm, data:c.data}));
   const clRealmFilter = classChartRealmFilter
@@ -953,8 +953,8 @@ function renderActivity(){
     return `<div class="tf${active}" style="color:var(--${r})" onclick="toggleClRealmFilter('${r}')">${label}</div>`;
   }).join('');
 
-  const common = S.acDays===1?DATA.common_matchups_1d:S.acDays===3?DATA.common_matchups_3d:S.acDays===7?DATA.common_matchups_7d:DATA.common_matchups||[];
-  const tcr = S.acDays===1?DATA.top_classes_by_realm_1d:S.acDays===3?DATA.top_classes_by_realm_3d:S.acDays===7?DATA.top_classes_by_realm_7d:DATA.top_classes_by_realm||{};
+  const common = activityDays===1?DATA.common_matchups_1d:activityDays===3?DATA.common_matchups_3d:activityDays===7?DATA.common_matchups_7d:DATA.common_matchups||[];
+  const tcr = activityDays===1?DATA.top_classes_by_realm_1d:activityDays===3?DATA.top_classes_by_realm_3d:activityDays===7?DATA.top_classes_by_realm_7d:DATA.top_classes_by_realm||{};
   const daily  = DATA.daily_fights   || [];
   const zones      = DATA.zone_today     || [];
   const zonesYest  = DATA.zone_yesterday || [];
@@ -1200,10 +1200,10 @@ function renderActivity(){
       </div>
       <div class="activity-card activity-card-full" style="padding:0.75rem 1.25rem;background:transparent;border:none;border-top:0.5px solid var(--border2)">
         <div class="time-filters" id="tf-activity">
-          <div class="tf ${S.acDays===1?'active':''}" data-adays="1">24h</div>
-          <div class="tf ${S.acDays===3?'active':''}" data-adays="3">3d</div>
-          <div class="tf ${S.acDays===7?'active':''}" data-adays="7">7d</div>
-          <div class="tf ${S.acDays===30?'active':''}" data-adays="30">30d</div>
+          <div class="tf ${activityDays===1?'active':''}" data-adays="1">24h</div>
+          <div class="tf ${activityDays===3?'active':''}" data-adays="3">3d</div>
+          <div class="tf ${activityDays===7?'active':''}" data-adays="7">7d</div>
+          <div class="tf ${activityDays===30?'active':''}" data-adays="30">30d</div>
         </div>
       </div>
       <div class="activity-card">
