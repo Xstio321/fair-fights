@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ELO Ranking – DAoC Freeshard 1v1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0d0f0e;--bg2:#13160f;--bg3:#1a1e16;--bg4:#222620;
+    --border:rgba(160,180,120,0.12);--border2:rgba(160,180,120,0.22);
+    --text:#e8ead4;--text2:#9fa882;--text3:#5c6348;
+    --gold:#c9a84c;--gold2:#8a6d28;
+    --hib:#7ab648;--hib2:#4a7a22;--hib3:#2a4a10;--hib-dim:rgba(122,182,72,0.12);
+    --mid:#4a8fc4;--mid2:#2a5a8a;--mid3:#122840;
+    --alb:#c44a4a;--alb2:#8a2a2a;--alb3:#401212;
+    --green:#7ab648;--amber:#c9a84c;--red:#c44a4a;--radius:6px;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Crimson Pro',Georgia,serif;font-size:16px;line-height:1.6;min-height:100vh}
+  body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(122,182,72,0.07) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 80% 100%,rgba(74,143,196,0.05) 0%,transparent 50%);pointer-events:none;z-index:0}
+  .wrap{max-width:960px;margin:0 auto;padding:2rem 1.5rem 4rem;position:relative;z-index:1}
+
+  header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:0.5px solid var(--border2)}
+  .logo-lockup{display:flex;align-items:center;gap:14px}
+  .logo-shield{width:42px;height:42px;background:linear-gradient(135deg,var(--bg3) 0%,var(--bg4) 100%);border:1px solid var(--border2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--amber)}
+  .logo-text{font-family:'Cinzel',serif;font-size:22px;font-weight:600;color:var(--text);letter-spacing:0.05em;line-height:1.2}
+  .logo-sub{font-size:11px;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;font-family:'Cinzel',serif}
+  .nav-link{font-family:'Cinzel',serif;font-size:12px;color:var(--text3);text-decoration:none;padding:5px 12px;border:0.5px solid var(--border2);border-radius:20px;transition:all 0.15s}
+  .nav-link:hover{color:var(--text2);border-color:var(--border2)}
+
+  .info-box{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;margin-bottom:1.5rem;display:flex;gap:24px;flex-wrap:wrap}
+  .info-item{display:flex;flex-direction:column;gap:2px}
+  .info-label{font-size:10px;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;font-family:'Cinzel',serif}
+  .info-value{font-family:'Cinzel',serif;font-size:20px;font-weight:600;color:var(--text)}
+  .info-sub{font-size:11px;color:var(--text3)}
+
+  .controls{display:flex;align-items:center;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap}
+  .search-wrap{position:relative;max-width:160px}
+  .search-input{width:100%;background:var(--bg2);border:0.5px solid var(--border2);border-radius:20px;padding:6px 14px 6px 32px;font-size:12px;color:var(--text);font-family:'Cinzel',serif;outline:none;transition:border-color 0.15s}
+  .search-input::placeholder{color:var(--text3)}
+  .search-input:focus{border-color:var(--amber)}
+  .search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--text3);pointer-events:none}
+  .time-filters{display:flex;gap:4px}
+  .tf{padding:4px 12px;font-size:11px;border:0.5px solid var(--border2);border-radius:20px;cursor:pointer;color:var(--text3);background:transparent;transition:all 0.15s;font-family:'Cinzel',serif;letter-spacing:0.06em;user-select:none}
+  .tf:hover{color:var(--text2)}
+  .tf.active{background:var(--amber);color:#0d0f0e;border-color:var(--amber);font-weight:600}
+
+  table{width:100%;border-collapse:collapse}
+  thead th{font-size:10px;font-weight:400;color:var(--text3);text-align:left;padding:8px 10px;border-bottom:0.5px solid var(--border2);letter-spacing:0.1em;text-transform:uppercase;font-family:'Cinzel',serif;white-space:nowrap;cursor:pointer;user-select:none}
+  thead th:hover{color:var(--text2)}
+  th.r,td.r{text-align:right}
+  th.sort-asc::after{content:' ↑'}
+  th.sort-desc::after{content:' ↓'}
+  tbody td{padding:10px;font-size:14px;color:var(--text);border-bottom:0.5px solid var(--border);transition:background 0.1s}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover td{background:var(--bg2)}
+
+  .rank-cell{font-family:'Cinzel',serif;font-size:14px;font-weight:600;min-width:32px}
+  .rank-1{color:var(--amber)}
+  .rank-2{color:var(--text2)}
+  .rank-3{color:#a07040}
+  .rank-other{color:var(--text3)}
+
+  .player-cell{display:flex;align-items:center;gap:10px}
+  .player-name{font-size:14px;font-weight:600;color:var(--text)}
+  .player-sub{font-size:11px;color:var(--text3);margin-top:1px}
+  .realm-hib{color:var(--hib)}.realm-mid{color:var(--mid)}.realm-alb{color:var(--alb)}
+  .rr-badge{color:var(--amber);font-family:'Cinzel',serif;font-size:12px}
+
+  .rating-cell{font-family:'Cinzel',serif;font-size:16px;font-weight:600}
+  .rating-up{color:var(--green)}
+  .rating-mid{color:var(--amber)}
+  .rating-down{color:var(--red)}
+
+  .peak-cell{font-family:'Cinzel',serif;font-size:13px;color:var(--text3)}
+  .wl-cell{font-size:13px;font-family:'Cinzel',serif}
+  .w-count{color:var(--green)}.l-count{color:var(--red)}
+  .wr-num{font-size:13px;font-weight:600;font-family:'Cinzel',serif}
+  .wr-green{color:var(--green)}.wr-amber{color:var(--amber)}.wr-red{color:var(--red)}
+  .bar-bg{width:56px;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden;flex-shrink:0}
+  .bar-fill{height:100%;border-radius:2px}
+  .bar-green{background:var(--green)}.bar-amber{background:var(--amber)}.bar-red{background:var(--red)}
+  .winrate-bar{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+
+  .pagination{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:1.25rem}
+  .page-btn{padding:4px 12px;font-size:11px;border:0.5px solid var(--border2);border-radius:4px;cursor:pointer;color:var(--text3);background:transparent;font-family:'Cinzel',serif;transition:all 0.15s}
+  .page-btn:hover{color:var(--text2)}
+  .page-btn.active{background:var(--amber);color:#0d0f0e;border-color:var(--amber);font-weight:600}
+  .page-btn:disabled{opacity:0.3;cursor:default}
+  .page-info{font-size:11px;color:var(--text3);font-family:'Cinzel',serif}
+
+  .elo-info{background:rgba(201,168,76,0.08);border:0.5px solid rgba(201,168,76,0.2);border-radius:var(--radius);padding:10px 16px;margin-bottom:1.5rem;font-size:12px;color:var(--text3);font-family:'Cinzel',serif;line-height:1.8}
+  .elo-info strong{color:var(--amber)}
+
+  .loading{text-align:center;padding:3rem;color:var(--text3);font-family:'Cinzel',serif;font-size:13px}
+  footer{margin-top:3rem;padding-top:1.5rem;border-top:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+  .footer-text{font-size:11px;color:var(--text3);letter-spacing:0.06em;font-family:'Cinzel',serif}
+  .footer-note{font-size:11px;color:var(--text3);font-style:italic}
+
+  @media(max-width:600px){
+    header{flex-direction:column;gap:10px}
+    .info-box{gap:16px}
+    .controls{flex-wrap:wrap}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo-lockup">
+      <div class="logo-shield">★</div>
+      <div>
+        <div class="logo-text">ELO Ranking</div>
+        <div class="logo-sub">1v1 Rating · DAoC Freeshard</div>
+      </div>
+    </div>
+    <a href="index.html" class="nav-link">← Fair Fights</a>
+  </header>
+
+  <div class="elo-info">
+    <strong>How ELO works:</strong> Every player starts at <strong>1000</strong>.
+    Beating a higher-rated opponent earns more points. Losing to a lower-rated opponent costs more points.
+    K-factor: <strong>32</strong> for players with &lt;30 fights, <strong>16</strong> for veterans.
+    Minimum <strong>5 fights</strong> to appear in the ranking.
+  </div>
+
+  <div class="info-box" id="info-box">
+    <div class="info-item">
+      <div class="info-label">Players ranked</div>
+      <div class="info-value" id="info-players">–</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Top rating</div>
+      <div class="info-value" id="info-top">–</div>
+      <div class="info-sub" id="info-top-name">–</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Avg rating</div>
+      <div class="info-value" id="info-avg">–</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Updated</div>
+      <div class="info-value" style="font-size:14px;padding-top:4px" id="info-updated">–</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" id="search" type="text" placeholder="Search player…">
+    </div>
+    <div class="time-filters" id="tf-days">
+      <div class="tf" data-days="7">7d</div>
+      <div class="tf" data-days="30">30d</div>
+      <div class="tf active" data-days="0">All time</div>
+    </div>
+    <div class="time-filters" id="tf-realm">
+      <div class="tf" data-realm="1" style="color:var(--alb)">Albion</div>
+      <div class="tf" data-realm="2" style="color:var(--mid)">Midgard</div>
+      <div class="tf" data-realm="3" style="color:var(--hib)">Hibernia</div>
+    </div>
+    <div class="time-filters" id="tf-size">
+      <div class="tf" data-size="25">25</div>
+      <div class="tf active" data-size="50">50</div>
+      <div class="tf" data-size="100">100</div>
+    </div>
+  </div>
+
+  <div id="ranking-body"><div class="loading">Loading ranking…</div></div>
+  <div id="ranking-pagination"></div>
+
+  <footer>
+    <div class="footer-text">ELO Ranking · DAoC Freeshard</div>
+    <div class="footer-note" id="footer-updated">–</div>
+  </footer>
+</div>
+
+<script>
+const REALM_HIB=[39,40,41,42,43,44,45,46,47,48,49,50,55,56,58];
+const REALM_MID=[21,22,23,24,25,26,27,28,29,30,31,32,34,59];
+const REALM_ALB=[1,2,3,4,5,6,7,8,9,10,11,12,13,19,33,63];
+const CLASS_ICONS = {
+  1:'Paladin',2:'Armsman',3:'Scout',4:'Minstrel',5:'Theurgist',
+  6:'Cleric',7:'Wizard',8:'Sorcerer',9:'Infiltrator',10:'Friar',
+  11:'Mercenary',12:'Necromancer',13:'Cabalist',19:'Reaver',
+  33:'Heretic',63:'Occultist',
+  21:'Thane',22:'Warrior',23:'Shadowblade',24:'Skald',25:'Hunter',
+  26:'Healer',27:'Spiritmaster',28:'Shaman',29:'Runemaster',
+  30:'Bonedancer',31:'Berserker',32:'Savage',34:'Valkyrie',59:'Warlock',
+  39:'Bainshee',40:'Eldritch',41:'Enchanter',42:'Mentalist',
+  43:'Blademaster',44:'Hero',45:'Champion',46:'Warden',47:'Druid',
+  48:'Bard',49:'Nightshade',50:'Ranger',55:'Animist',56:'Valewalker',58:'Vampiir',
+};
+const REALM_FILTER_MAP = {1:REALM_ALB, 2:REALM_MID, 3:REALM_HIB};
+
+function realmCss(c){return REALM_HIB.includes(c)?'hib':REALM_MID.includes(c)?'mid':REALM_ALB.includes(c)?'alb':'neu'}
+function realmName(c){return REALM_HIB.includes(c)?'Hibernia':REALM_MID.includes(c)?'Midgard':REALM_ALB.includes(c)?'Albion':''}
+function initials(n){return n?n.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase():'?'}
+function ratingColor(r){return r>=1100?'rating-up':r>=950?'rating-mid':'rating-down'}
+function wrCss(w){return w>=55?'wr-green':w>=45?'wr-amber':'wr-red'}
+function barCss(w){return w>=55?'bar-green':w>=45?'bar-amber':'bar-red'}
+
+function classIconHtml(classId, size=28){
+  const name = CLASS_ICONS[classId];
+  const rlm = realmCss(classId);
+  const REALM_FILTER_CSS = {
+    alb:'brightness(0) saturate(100%) invert(40%) sepia(50%) saturate(500%) hue-rotate(320deg) brightness(85%)',
+    mid:'brightness(0) saturate(100%) invert(50%) sepia(50%) saturate(400%) hue-rotate(175deg) brightness(85%)',
+    hib:'brightness(0) saturate(100%) invert(52%) sepia(50%) saturate(300%) hue-rotate(55deg) brightness(88%)',
+    neu:'brightness(0) saturate(0%) invert(50%)',
+  };
+  if(!name) return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:var(--bg3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:10px;font-family:Cinzel,serif;color:var(--text3)">${initials(name||'?')}</div>`;
+  return `<img src="icons/${name}_class_icon.webp" style="width:${size}px;height:${size}px;object-fit:contain;filter:${REALM_FILTER_CSS[rlm]||''}" alt="${name}">`;
+}
+
+let DATA = null;
+let sortKey = 'rating';
+let sortDir = -1;
+let filterDays = 0;
+let filterRealm = 0;
+let pageSize = 50;
+let page = 1;
+let searchTerm = '';
+
+function getFiltered(){
+  if(!DATA) return [];
+  let list = [...DATA.ranking];
+
+  if(filterDays > 0){
+    const cutoff = new Date(Date.now() - filterDays*24*60*60*1000).toISOString();
+    list = list.filter(p => p.last_fight && p.last_fight >= cutoff);
+  }
+  if(filterRealm > 0){
+    list = list.filter(p => p.class_id && REALM_FILTER_MAP[filterRealm]?.includes(p.class_id));
+  }
+  if(searchTerm){
+    const q = searchTerm.toLowerCase();
+    list = list.filter(p => p.name.toLowerCase().includes(q) || (p.class_name||'').toLowerCase().includes(q));
+  }
+
+  list.sort((a,b)=>{
+    let va=a[sortKey], vb=b[sortKey];
+    if(va===null||va===undefined) va=-1;
+    if(vb===null||vb===undefined) vb=-1;
+    return (va-vb)*sortDir;
+  });
+
+  return list;
+}
+
+function renderRanking(){
+  const list = getFiltered();
+  const total = list.length;
+  const totalPages = Math.max(1, Math.ceil(total/pageSize));
+  if(page > totalPages) page = 1;
+  const items = list.slice((page-1)*pageSize, page*pageSize);
+
+  if(!items.length){
+    document.getElementById('ranking-body').innerHTML = '<div class="loading">No players found.</div>';
+    document.getElementById('ranking-pagination').innerHTML = '';
+    return;
+  }
+
+  const cols = [
+    {key:'rank',    label:'#',        cls:''},
+    {key:null,      label:'Player',   cls:''},
+    {key:'rating',  label:'ELO',      cls:'r sortable'},
+    {key:'peak',    label:'Peak',     cls:'r sortable'},
+    {key:'fights',  label:'Fights',   cls:'r sortable'},
+    {key:'winrate', label:'Win Rate', cls:'r sortable'},
+    {key:'wins',    label:'W / L',    cls:'r sortable'},
+  ];
+
+  let thead = '<thead><tr>';
+  cols.forEach(c=>{
+    let extra = '';
+    if(c.key === sortKey) extra = sortDir===-1?' sort-desc':' sort-asc';
+    const click = c.key ? `onclick="sortBy('${c.key}')"` : '';
+    thead += `<th class="${c.cls}${extra}" ${click}>${c.label}</th>`;
+  });
+  thead += '</tr></thead>';
+
+  let tbody = '<tbody>';
+  items.forEach((p, i) => {
+    const rank = (page-1)*pageSize + i + 1;
+    const rlm = realmCss(p.class_id);
+    const wr = p.winrate;
+    const rankCls = rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'rank-other';
+    tbody += `<tr>
+      <td><span class="rank-cell ${rankCls}">${rank}</span></td>
+      <td><div class="player-cell">
+        ${classIconHtml(p.class_id)}
+        <div>
+          <div class="player-name">${p.name}</div>
+          <div class="player-sub"><span class="realm-${rlm}">${realmName(p.class_id)}</span> · ${p.class_name} · <span class="rr-badge">${p.rr}</span></div>
+        </div>
+      </div></td>
+      <td class="r"><span class="rating-cell ${ratingColor(p.rating)}">${Math.round(p.rating)}</span></td>
+      <td class="r"><span class="peak-cell">${Math.round(p.peak)}</span></td>
+      <td class="r"><span style="color:var(--text2);font-family:'Cinzel',serif;font-size:13px">${p.fights}</span></td>
+      <td class="r"><div class="winrate-bar">
+        <span class="wr-num ${wrCss(wr)}">${wr}%</span>
+        <div class="bar-bg"><div class="bar-fill ${barCss(wr)}" style="width:${wr}%"></div></div>
+      </div></td>
+      <td class="r"><span class="wl-cell"><span class="w-count">${p.wins}W</span> / <span class="l-count">${p.losses}L</span></span></td>
+    </tr>`;
+  });
+  tbody += '</tbody>';
+
+  document.getElementById('ranking-body').innerHTML = `<table>${thead}${tbody}</table>`;
+  renderPagination(totalPages, total);
+}
+
+function renderPagination(totalPages, total){
+  if(totalPages<=1){document.getElementById('ranking-pagination').innerHTML='';return;}
+  let html = '<div class="pagination">';
+  html += `<button class="page-btn" onclick="goPage(${page-1})" ${page===1?'disabled':''}>‹</button>`;
+  for(let i=1;i<=totalPages;i++){
+    if(totalPages>7 && i>2 && i<totalPages-1 && Math.abs(i-page)>1){
+      if(i===3||i===totalPages-2) html+=`<span class="page-info">…</span>`;
+      continue;
+    }
+    html += `<button class="page-btn ${i===page?'active':''}" onclick="goPage(${i})">${i}</button>`;
+  }
+  html += `<button class="page-btn" onclick="goPage(${page+1})" ${page===totalPages?'disabled':''}>›</button>`;
+  html += `<span class="page-info">${total} players</span>`;
+  html += '</div>';
+  document.getElementById('ranking-pagination').innerHTML = html;
+}
+
+function goPage(p){ page=p; renderRanking(); }
+
+function sortBy(key){
+  if(sortKey===key){ sortDir*=-1; } else { sortKey=key; sortDir=-1; }
+  page=1;
+  renderRanking();
+}
+
+// Filters
+document.getElementById('search').addEventListener('input', e=>{
+  searchTerm = e.target.value;
+  page = 1;
+  renderRanking();
+});
+
+document.querySelectorAll('.time-filters').forEach(group=>{
+  group.querySelectorAll('.tf').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      group.querySelectorAll('.tf').forEach(b=>b.classList.remove('active'));
+
+      const days = btn.dataset.days;
+      if(days !== undefined){
+        const d = parseInt(days);
+        if(filterDays === d && d !== 0){ filterDays=0; }
+        else { btn.classList.add('active'); filterDays=d; }
+        page=1; renderRanking(); return;
+      }
+      const realm = btn.dataset.realm;
+      if(realm){
+        const r = parseInt(realm);
+        if(filterRealm === r){ filterRealm=0; }
+        else { btn.classList.add('active'); filterRealm=r; }
+        page=1; renderRanking(); return;
+      }
+      const size = btn.dataset.size;
+      if(size){
+        btn.classList.add('active');
+        pageSize = parseInt(size);
+        page=1; renderRanking(); return;
+      }
+    });
+  });
+});
+
+async function loadData(){
+  try{
+    const r = await fetch('ranking.json?t='+Date.now());
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    DATA = await r.json();
+
+    const list = DATA.ranking;
+    document.getElementById('info-players').textContent = DATA.total_players;
+    if(list.length){
+      document.getElementById('info-top').textContent = Math.round(list[0].rating);
+      document.getElementById('info-top-name').textContent = list[0].name;
+      const avg = Math.round(list.reduce((s,p)=>s+p.rating,0)/list.length);
+      document.getElementById('info-avg').textContent = avg;
+    }
+    const upd = new Date(DATA.generated_at);
+    document.getElementById('info-updated').textContent = upd.toLocaleTimeString();
+    document.getElementById('footer-updated').textContent = 'Updated: '+upd.toLocaleString();
+
+    renderRanking();
+  }catch(e){
+    console.error(e);
+    document.getElementById('ranking-body').innerHTML = '<div class="loading">⚠ Could not load ranking data.</div>';
+  }
+}
+
+loadData();
+setInterval(loadData, 5*60*1000);
+</script>
+</body>
+</html>

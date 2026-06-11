@@ -32,7 +32,7 @@ POLL_INTERVAL = 300  # Sekunden zwischen Abfragen (5 Minuten)
 
 # Session-Cookies (einmalig aus dem Browser kopieren)
 COOKIES = {
-    "eden_daoc_sid": "7cf9c3d7d1972760174c2cf3354b070e",
+    "eden_daoc_sid": "1c8c2ebfc130c94913f3c40acffbe580",
     "eden_daoc_u":   "39665",
 }
 
@@ -280,6 +280,7 @@ def run_once(session: requests.Session, con: sqlite3.Connection, only_1v1=True):
     # Automatisch exportieren und pushen
     import subprocess
     subprocess.run(["python", "export_json.py"], check=False)
+    subprocess.run(["python", "elo_calculator.py", "--no-push"], check=False)
 
 
 def run_loop(only_1v1=True):
