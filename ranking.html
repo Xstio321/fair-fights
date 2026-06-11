@@ -92,8 +92,14 @@
   .page-btn:disabled{opacity:0.3;cursor:default}
   .page-info{font-size:11px;color:var(--text3);font-family:'Cinzel',serif}
 
-  .elo-info{background:rgba(201,168,76,0.08);border:0.5px solid rgba(201,168,76,0.2);border-radius:var(--radius);padding:10px 16px;margin-bottom:1.5rem;font-size:12px;color:var(--text3);font-family:'Cinzel',serif;line-height:1.8}
-  .elo-info strong{color:var(--amber)}
+  .elo-info{background:rgba(201,168,76,0.08);border:0.5px solid rgba(201,168,76,0.2);border-radius:var(--radius);padding:1.25rem 1.5rem;margin-bottom:1.5rem}
+  .elo-info-title{font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--amber);margin-bottom:1rem}
+  .elo-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}
+  .elo-info-section h4{font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text2);margin-bottom:0.5rem}
+  .elo-info-section p{font-size:13px;color:var(--text3);line-height:1.7;font-family:'Crimson Pro',Georgia,serif}
+  .elo-info-section p strong{color:var(--amber);font-family:'Cinzel',serif}
+  .elo-formula{background:var(--bg3);border:0.5px solid var(--border);border-radius:4px;padding:8px 14px;margin-top:8px;font-family:'Cinzel',serif;font-size:12px;color:var(--text2);letter-spacing:0.04em}
+  @media(max-width:700px){.elo-info-grid{grid-template-columns:1fr}}
 
   .loading{text-align:center;padding:3rem;color:var(--text3);font-family:'Cinzel',serif;font-size:13px}
   footer{margin-top:3rem;padding-top:1.5rem;border-top:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
@@ -132,10 +138,26 @@
   </header>
 
   <div class="elo-info">
-    <strong>How ELO works:</strong> Every player starts at <strong>1000</strong>.
-    Beating a higher-rated opponent earns more points. Losing to a lower-rated opponent costs more points.
-    K-factor: <strong>32</strong> for players with &lt;30 fights, <strong>16</strong> for veterans.
-    Minimum <strong>5 fights</strong> to appear in the ranking.
+    <div class="elo-info-title">About this Ranking</div>
+    <div class="elo-info-grid">
+      <div class="elo-info-section">
+        <h4>What is ELO?</h4>
+        <p>ELO is a method for calculating the relative skill of players based on fight outcomes. Every player starts at <strong>1000</strong> points. After each fight, points are transferred from the loser to the winner — the amount depends on the rating difference between both players.</p>
+      </div>
+      <div class="elo-info-section">
+        <h4>How are points calculated?</h4>
+        <p>Before each fight, the system calculates an expected win probability for both players based on their current ratings. Beating a <strong>stronger opponent</strong> earns more points than beating a weaker one. Losing to a <strong>weaker opponent</strong> costs more points than losing to a stronger one.</p>
+        <div class="elo-formula">New Rating = Rating + K × (Result − Expected)</div>
+      </div>
+      <div class="elo-info-section">
+        <h4>K-Factor</h4>
+        <p>The K-factor controls how quickly ratings change. New players (fewer than <strong>30 fights</strong>) use K=<strong>32</strong>, so their rating adjusts quickly to reflect their true skill. Veterans (30+ fights) use K=<strong>16</strong> for more stability. A minimum of <strong>5 fights</strong> is required to appear in this ranking.</p>
+      </div>
+      <div class="elo-info-section">
+        <h4>Data source</h4>
+        <p>All ratings are based exclusively on fights registered by <strong>Eden's Fair Fight system</strong> — only 1v1 duels that the server itself recognizes and records. Casual RvR kills or fights outside the Fair Fight system are not counted.</p>
+      </div>
+    </div>
   </div>
 
   <div class="info-box" id="info-box">
