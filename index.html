@@ -417,8 +417,8 @@ function renderUnderdogCard(){
     const rankCls = i===0?'underdog-rank-1':i===1?'underdog-rank-2':i===2?'underdog-rank-3':'underdog-rank';
     return `<div class="underdog-row" style="padding:6px 0;border-bottom:0.5px solid var(--border)">
       <span class="${rankCls}" style="min-width:20px;text-align:center;flex-shrink:0">${i+1}</span>
-      <div style="width:26px;height:26px;flex-shrink:0;display:flex;align-items:center;justify-content:center">
-        ${classIconHtml(p.class_id, 22)}
+      <div style="width:32px;height:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center">
+        ${classIconHtml(p.class_id, 30)}
       </div>
       <div style="flex:1;min-width:0">
         <div class="underdog-name">${p.name}</div>
