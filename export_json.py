@@ -442,24 +442,30 @@ def compute_stats(con, since_dt):
         }
 
     # ── Top Underdog Wins (1vX) ──
-    # Nur Kämpfe wo der Gewinner alleine war (size = Anzahl Gegner, Gewinnerteam hat 1 Spieler)
+    # Echte Gegneranzahl aus fight_players zählen statt f.size (Eden-Wert oft falsch)
     underdog_rows = cur.execute("""
         SELECT
             p.name,
             p.class_id,
             p.realm_pts,
-            f.size as opponents,
+            (SELECT count(*) FROM fight_players p3
+             JOIN fight_teams tl ON tl.fight_id = f.id AND tl.side = p3.side AND tl.won = 0
+             WHERE p3.fight_id = f.id) as real_opponents,
             f.started_at
         FROM fights f
         JOIN fight_teams tw ON tw.fight_id = f.id AND tw.won = 1
         JOIN fight_players p ON p.fight_id = f.id AND p.side = tw.side
-        WHERE f.size > 1
-          AND f.started_at >= ?
+        WHERE f.started_at >= ?
           AND (
             SELECT count(*) FROM fight_players p2
             WHERE p2.fight_id = f.id AND p2.side = tw.side
           ) = 1
-        ORDER BY f.size DESC, f.started_at DESC
+          AND (
+            SELECT count(*) FROM fight_players p3
+            JOIN fight_teams tl ON tl.fight_id = f.id AND tl.side = p3.side AND tl.won = 0
+            WHERE p3.fight_id = f.id
+          ) > 1
+        ORDER BY real_opponents DESC, f.started_at DESC
     """, (since_str,)).fetchall()
 
     # Pro Spieler den besten (höchsten) Underdog-Win nehmen
