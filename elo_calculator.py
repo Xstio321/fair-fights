@@ -11,6 +11,15 @@ from datetime import datetime, timezone
 DB_PATH      = "fights.db"
 JSON_PATH    = "ranking.json"
 START_RATING = 1000
+
+def load_excluded_players():
+    try:
+        with open('excluded_players.txt') as f:
+            return {line.strip() for line in f if line.strip() and not line.startswith('#')}
+    except FileNotFoundError:
+        return set()
+
+EXCLUDED_PLAYERS = load_excluded_players()
 K_NEW        = 32   # K-Faktor für Spieler < 30 Fights
 K_STABLE     = 16   # K-Faktor für Spieler >= 30 Fights
 
@@ -126,6 +135,7 @@ def calculate_elo(con, reset=False):
     last_fight = {}
     class_ids = {}
     realm_pts = {}
+    fight_history = {}  # name -> list of fights (neueste zuerst, max 200)
 
     def get_rating(name):
         return ratings.get(name, START_RATING)
@@ -136,6 +146,8 @@ def calculate_elo(con, reset=False):
     processed = 0
     for fight in fights:
         fid, started_at, winner, w_class, w_rp, loser, l_class, l_rp = fight
+        if winner in EXCLUDED_PLAYERS or loser in EXCLUDED_PLAYERS:
+            continue
 
         r_w = get_rating(winner)
         r_l = get_rating(loser)
@@ -168,6 +180,32 @@ def calculate_elo(con, reset=False):
         if w_rp:    realm_pts[winner] = w_rp
         if l_rp:    realm_pts[loser]  = l_rp
 
+        # Fight History aufzeichnen
+        w_entry = {
+            "date":       started_at,
+            "opponent":   loser,
+            "opp_class":  CLASSES.get(l_class, f"Class {l_class}") if l_class else "Unknown",
+            "opp_class_id": l_class,
+            "result":     "W",
+            "elo_before": round(r_w, 1),
+            "elo_after":  round(new_r_w, 1),
+            "elo_change": round(new_r_w - r_w, 1),
+        }
+        l_entry = {
+            "date":       started_at,
+            "opponent":   winner,
+            "opp_class":  CLASSES.get(w_class, f"Class {w_class}") if w_class else "Unknown",
+            "opp_class_id": w_class,
+            "result":     "L",
+            "elo_before": round(r_l, 1),
+            "elo_after":  round(new_r_l, 1),
+            "elo_change": round(new_r_l - r_l, 1),
+        }
+        if winner not in fight_history: fight_history[winner] = []
+        if loser  not in fight_history: fight_history[loser]  = []
+        fight_history[winner].append(w_entry)
+        fight_history[loser].append(l_entry)
+
         processed += 1
 
     # In DB speichern
@@ -198,10 +236,10 @@ def calculate_elo(con, reset=False):
 
     con.commit()
     print(f"  ✓ ELO berechnet: {processed} Fights, {len(ratings)} Spieler")
-    return ratings
+    return ratings, fight_history
 
 
-def export_ranking(con, push=True):
+def export_ranking(con, fight_history=None, push=True):
     rows = con.execute("""
         SELECT name, rating, fights, wins, losses, peak_rating, last_fight, class_id, realm_pts
         FROM elo_ratings
@@ -241,9 +279,18 @@ def export_ranking(con, push=True):
 
     print(f"  ✓ ranking.json geschrieben ({len(ranking)} Spieler)")
 
+    # fight_history.json schreiben (neueste zuerst)
+    if fight_history:
+        history_out = {}
+        for name, fights in fight_history.items():
+            history_out[name] = list(reversed(fights))  # neueste zuerst
+        with open("fight_history.json", "w") as f:
+            json.dump(history_out, f, separators=(",", ":"))
+        print(f"  ✓ fight_history.json geschrieben ({len(history_out)} Spieler)")
+
     if push:
         try:
-            subprocess.run(["git", "add", JSON_PATH], check=True)
+            subprocess.run(["git", "add", JSON_PATH, "fight_history.json"], check=True)
             subprocess.run(["git", "commit", "-m", "update ranking"], check=True)
             subprocess.run(["git", "push"], check=True)
             print("  ✓ GitHub Push erfolgreich")
@@ -254,8 +301,8 @@ def export_ranking(con, push=True):
 def run(reset=False, push=True):
     con = sqlite3.connect(DB_PATH)
     init_elo_table(con)
-    calculate_elo(con, reset=reset)
-    export_ranking(con, push=push)
+    _, fight_history = calculate_elo(con, reset=reset)
+    export_ranking(con, fight_history=fight_history, push=push)
     con.close()
 
 

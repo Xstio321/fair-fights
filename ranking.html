@@ -100,6 +100,17 @@
   .footer-text{font-size:11px;color:var(--text3);letter-spacing:0.06em;font-family:'Cinzel',serif}
   .footer-note{font-size:11px;color:var(--text3);font-style:italic}
 
+  .fh-wrap{display:none;background:var(--bg2);border-top:0.5px solid var(--line2)}
+  .fh-wrap.open{display:block}
+  .fh-table{width:100%;border-collapse:collapse}
+  .fh-table th{font-size:9px;font-weight:400;color:var(--ink3);text-align:left;padding:6px 10px;border-bottom:0.5px solid var(--line2);letter-spacing:0.1em;text-transform:uppercase;font-family:'Cinzel',serif;white-space:nowrap;background:var(--bg2)}
+  .fh-table td{padding:7px 10px;font-size:13px;color:var(--ink);border-bottom:0.5px solid var(--line)}
+  .fh-table tr:last-child td{border-bottom:none}
+  .fh-win{color:var(--green);font-family:'Cinzel',serif;font-weight:600}
+  .fh-loss{color:var(--red);font-family:'Cinzel',serif;font-weight:600}
+  .fh-plus{color:var(--green);font-family:'Cinzel',serif}
+  .fh-minus{color:var(--red);font-family:'Cinzel',serif}
+  .fh-pages{display:flex;align-items:center;justify-content:center;gap:4px;padding:8px}
   @media(max-width:600px){
     header{flex-direction:column;gap:10px}
     .info-box{gap:16px}
@@ -213,6 +224,25 @@ function classIconHtml(classId, size=28){
 }
 
 let DATA = null;
+let FIGHT_HISTORY = null;
+let FH_LOADING = false;
+let openProfile = null;  // player name
+let profilePage = {};    // name -> page number
+
+async function loadFightHistory() {
+  if (FIGHT_HISTORY) return FIGHT_HISTORY;
+  if (FH_LOADING) {
+    await new Promise(r => { const i = setInterval(()=>{ if(FIGHT_HISTORY){ clearInterval(i); r(); }}, 50); });
+    return FIGHT_HISTORY;
+  }
+  FH_LOADING = true;
+  try {
+    const r = await fetch('fight_history.json?t=' + Date.now());
+    FIGHT_HISTORY = await r.json();
+  } catch(e) { FIGHT_HISTORY = {}; }
+  FH_LOADING = false;
+  return FIGHT_HISTORY;
+}
 let sortKey = 'rating';
 let sortDir = -1;
 
@@ -282,12 +312,14 @@ function renderRanking(){
     const rlm = realmCss(p.class_id);
     const wr = p.winrate;
     const rankCls = rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'rank-other';
-    tbody += `<tr>
+    const isOpen = openProfile === p.name;
+    const safeName = p.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    tbody += `<tr class="row-click" onclick="toggleProfile('${safeName}')">
       <td><span class="rank-cell ${rankCls}">${rank}</span></td>
       <td><div class="player-cell">
         ${classIconHtml(p.class_id)}
         <div>
-          <div class="player-name">${p.name}</div>
+          <div class="player-name">${p.name} <span style="font-size:9px;color:var(--ink3);margin-left:4px;display:inline-block;transition:transform 0.15s;transform:${isOpen?'rotate(90deg)':'rotate(0)'}">▶</span></div>
           <div class="player-sub"><span class="realm-${rlm}">${realmName(p.class_id)}</span> · ${p.class_name} · <span class="rr-badge">${p.rr}</span></div>
         </div>
       </div></td>
@@ -299,7 +331,10 @@ function renderRanking(){
         <div class="bar-bg"><div class="bar-fill ${barCss(wr)}" style="width:${wr}%"></div></div>
       </div></td>
       <td class="r"><span class="wl-cell"><span class="w-count">${p.wins}W</span> / <span class="l-count">${p.losses}L</span></span></td>
-    </tr>`;
+    </tr>
+    <tr><td colspan="7" style="padding:0;border:none">
+      <div class="fh-wrap${isOpen?' open':''}">${isOpen?buildFightHistory(p.name):''}</div>
+    </td></tr>`;
   });
   tbody += '</tbody>';
 
@@ -325,6 +360,86 @@ function renderPagination(totalPages, total){
 }
 
 function goPage(p){ page=p; renderRanking(); }
+
+async function toggleProfile(name) {
+  if (openProfile === name) {
+    openProfile = null;
+    renderRanking();
+    return;
+  }
+  openProfile = name;
+  if (!profilePage[name]) profilePage[name] = 1;
+  renderRanking();
+  if (!FIGHT_HISTORY) {
+    await loadFightHistory();
+    renderRanking();
+  }
+  setTimeout(()=>{
+    const el = document.querySelector('.fh-wrap.open');
+    if(el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }, 50);
+}
+
+function buildFightHistory(name) {
+  const PAGE_SIZE = 5;
+  const fights = FIGHT_HISTORY?.[name];
+  if (!fights) return '<div style="padding:12px;color:var(--ink3);font-family:Cinzel,serif;font-size:12px">' + (FIGHT_HISTORY ? 'No fight history.' : 'Loading…') + '</div>';
+
+  const page = profilePage[name] || 1;
+  const total = fights.length;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const items = fights.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE);
+
+  let rows = items.map(f => {
+    const d = new Date(f.date).toLocaleDateString('en', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+    const res = f.result === 'W'
+      ? '<span class="fh-win">W</span>'
+      : '<span class="fh-loss">L</span>';
+    const chg = f.elo_change >= 0
+      ? `<span class="fh-plus">+${f.elo_change}</span>`
+      : `<span class="fh-minus">${f.elo_change}</span>`;
+    const oppIcon = f.opp_class_id ? classIconHtml(f.opp_class_id, 20) : '';
+    return `<tr>
+      <td>${d}</td>
+      <td>${res}</td>
+      <td><div style="display:flex;align-items:center;gap:6px">${oppIcon}<span>${f.opponent}</span></div></td>
+      <td style="color:var(--ink3)">${f.opp_class}</td>
+      <td class="r mono" style="color:var(--ink2)">${Math.round(f.elo_before)}</td>
+      <td class="r">${chg}</td>
+      <td class="r mono" style="color:var(--ink)">${Math.round(f.elo_after)}</td>
+    </tr>`;
+  }).join('');
+
+  // Pagination
+  let pag = '';
+  if (pages > 1) {
+    pag = '<div class="fh-pages">';
+    pag += `<button class="page-btn" onclick="fhPage('${name}',${page-1})" ${page===1?'disabled':''}>‹</button>`;
+    for(let i=1;i<=pages;i++){
+      if(pages>7&&i>2&&i<pages-1&&Math.abs(i-page)>1){ if(i===3||i===pages-2) pag+=`<span class="page-info">…</span>`; continue; }
+      pag+=`<button class="page-btn ${i===page?'active':''}" onclick="fhPage('${name}',${i})">${i}</button>`;
+    }
+    pag += `<button class="page-btn" onclick="fhPage('${name}',${page+1})" ${page===pages?'disabled':''}>›</button>`;
+    pag += `<span class="page-info">${total} fights</span></div>`;
+  }
+
+  return `<table class="fh-table">
+    <thead><tr>
+      <th>Date</th><th>Result</th><th>Opponent</th><th>Class</th>
+      <th class="r">ELO Before</th><th class="r">Change</th><th class="r">ELO After</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>${pag}`;
+}
+
+function fhPage(name, p) {
+  profilePage[name] = p;
+  renderRanking();
+  setTimeout(()=>{
+    const el = document.querySelector('.fh-wrap.open');
+    if(el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
+  },30);
+}
 
 function sortBy(key){
   if(sortKey===key){ sortDir*=-1; } else { sortKey=key; sortDir=-1; }
