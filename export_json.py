@@ -442,30 +442,24 @@ def compute_stats(con, since_dt):
         }
 
     # ── Top Underdog Wins (1vX) ──
-    # Echte Gegneranzahl aus fight_players zählen statt f.size (Eden-Wert oft falsch)
+    # Nur Kämpfe wo der Gewinner alleine war (size = Anzahl Gegner, Gewinnerteam hat 1 Spieler)
     underdog_rows = cur.execute("""
         SELECT
             p.name,
             p.class_id,
             p.realm_pts,
-            (SELECT count(*) FROM fight_players p3
-             JOIN fight_teams tl ON tl.fight_id = f.id AND tl.side = p3.side AND tl.won = 0
-             WHERE p3.fight_id = f.id) as real_opponents,
+            f.size as opponents,
             f.started_at
         FROM fights f
         JOIN fight_teams tw ON tw.fight_id = f.id AND tw.won = 1
         JOIN fight_players p ON p.fight_id = f.id AND p.side = tw.side
-        WHERE f.started_at >= ?
+        WHERE f.size > 1
+          AND f.started_at >= ?
           AND (
             SELECT count(*) FROM fight_players p2
             WHERE p2.fight_id = f.id AND p2.side = tw.side
           ) = 1
-          AND (
-            SELECT count(*) FROM fight_players p3
-            JOIN fight_teams tl ON tl.fight_id = f.id AND tl.side = p3.side AND tl.won = 0
-            WHERE p3.fight_id = f.id
-          ) > 1
-        ORDER BY real_opponents DESC, f.started_at DESC
+        ORDER BY f.size DESC, f.started_at DESC
     """, (since_str,)).fetchall()
 
     # Pro Spieler den besten (höchsten) Underdog-Win nehmen
@@ -521,6 +515,89 @@ def compute_stats(con, since_dt):
     top_classes_by_realm_3d = build_top_classes(3)
     top_classes_by_realm_7d = build_top_classes(7)
 
+    # ── Fights per hour/day Zeitreihen ──
+    def build_fight_timeseries():
+        result = {}
+        # 24h: stündlich
+        rows_24h = cur.execute("""
+            SELECT strftime('%Y-%m-%d %H:00', started_at) as t, count(*) as cnt
+            FROM fights
+            WHERE started_at >= datetime('now', '-1 day')
+            GROUP BY t ORDER BY t ASC
+        """).fetchall()
+        result['fights_24h'] = [{"t": r[0], "v": r[1]} for r in rows_24h]
+
+        # 3d: stündlich
+        rows_3d = cur.execute("""
+            SELECT strftime('%Y-%m-%d %H:00', started_at) as t, count(*) as cnt
+            FROM fights
+            WHERE started_at >= datetime('now', '-3 days')
+            GROUP BY t ORDER BY t ASC
+        """).fetchall()
+        result['fights_3d'] = [{"t": r[0], "v": r[1]} for r in rows_3d]
+
+        # 7d: täglich
+        rows_7d = cur.execute("""
+            SELECT date(started_at) as t, count(*) as cnt
+            FROM fights
+            WHERE started_at >= datetime('now', '-7 days')
+            GROUP BY t ORDER BY t ASC
+        """).fetchall()
+        result['fights_7d'] = [{"t": r[0], "v": r[1]} for r in rows_7d]
+
+        # 30d: täglich
+        rows_30d = cur.execute("""
+            SELECT date(started_at) as t, count(*) as cnt
+            FROM fights
+            WHERE started_at >= datetime('now', '-30 days')
+            GROUP BY t ORDER BY t ASC
+        """).fetchall()
+        result['fights_30d'] = [{"t": r[0], "v": r[1]} for r in rows_30d]
+        return result
+
+    def build_class_timeseries():
+        result = {}
+        def fetch(interval_sql, where_sql):
+            rows = cur.execute(f"""
+                SELECT p.class_id, {interval_sql} as t, count(DISTINCT f.id) as cnt
+                FROM fight_players p
+                JOIN fights f ON f.id = p.fight_id
+                WHERE {where_sql}
+                GROUP BY p.class_id, t ORDER BY t ASC
+            """).fetchall()
+            # Gruppieren nach Klasse
+            from collections import defaultdict
+            by_class = defaultdict(list)
+            for cid, t, cnt in rows:
+                by_class[cid].append({"t": t, "v": cnt})
+            return [
+                {"class_id": cid, "class_name": CLASSES.get(cid, f"Class {cid}"),
+                 "realm": CLASS_REALM.get(cid, 0), "data": data}
+                for cid, data in sorted(by_class.items(),
+                    key=lambda x: -sum(d["v"] for d in x[1]))
+            ]
+
+        result['classes_24h'] = fetch(
+            "strftime('%Y-%m-%d %H:00', f.started_at)",
+            "f.started_at >= datetime('now', '-1 day')"
+        )
+        result['classes_3d'] = fetch(
+            "strftime('%Y-%m-%d %H:00', f.started_at)",
+            "f.started_at >= datetime('now', '-3 days')"
+        )
+        result['classes_7d'] = fetch(
+            "date(f.started_at)",
+            "f.started_at >= datetime('now', '-7 days')"
+        )
+        result['classes_30d'] = fetch(
+            "date(f.started_at)",
+            "f.started_at >= datetime('now', '-30 days')"
+        )
+        return result
+
+    fight_timeseries = build_fight_timeseries()
+    class_timeseries = build_class_timeseries()
+
     return {
         "generated_at":    datetime.now(timezone.utc).isoformat(),
         "summary": {
@@ -542,6 +619,8 @@ def compute_stats(con, since_dt):
         "common_matchups_7d": common_7d,
         "daily_fights":    [{"day": r[0], "count": r[1]} for r in daily],
         "zone_today":      zone_today,
+        "fight_timeseries": fight_timeseries,
+        "class_timeseries": class_timeseries,
         "busy_zones":      busy_zones,
         "top_classes_by_realm":    top_classes_by_realm,
         "top_classes_by_realm_1d": top_classes_by_realm_1d,

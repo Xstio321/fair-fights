@@ -164,6 +164,7 @@
   .underdog-name{font-size:14px;color:var(--text);font-weight:600;flex:1}
   .underdog-sub{font-size:11px;color:var(--text3)}
   .underdog-badge{font-family:'Cinzel',serif;font-size:13px;font-weight:600;color:var(--amber);padding:2px 10px;border:0.5px solid var(--gold2);border-radius:20px;background:rgba(201,168,76,0.1)}
+  .realm-filter-wrap{display:flex;gap:6px;align-items:center;margin-bottom:10px}
   .loading{text-align:center;padding:3rem;color:var(--text3);font-family:'Cinzel',serif;font-size:13px;letter-spacing:0.1em}
   .error-msg{background:rgba(196,74,74,0.1);border:0.5px solid var(--alb2);border-radius:var(--radius);padding:12px 16px;color:var(--alb);font-size:13px;font-family:'Cinzel',serif;margin-bottom:1rem}
   footer{margin-top:3rem;padding-top:1.5rem;border-top:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
@@ -916,6 +917,8 @@ function renderMatchups(){
 // ── Activity ──
 // Zone Liniendiagramm State
 let zoneChartHidden = new Set();
+let classChartHidden = new Set();
+let classChartRealmFilter = null;
 let activityDays = 30;
 
 // Farben für Zonen
@@ -925,8 +928,33 @@ const ZONE_COLORS = [
 ];
 
 function renderActivity(){
-  const common = activityDays===1?DATA.common_matchups_1d:activityDays===3?DATA.common_matchups_3d:activityDays===7?DATA.common_matchups_7d:DATA.common_matchups||[];
-  const tcr = activityDays===1?DATA.top_classes_by_realm_1d:activityDays===3?DATA.top_classes_by_realm_3d:activityDays===7?DATA.top_classes_by_realm_7d:DATA.top_classes_by_realm||{};
+  // ── Fights Zeitreihe ──
+  const ftKey = S.acDays===1?'fights_24h':S.acDays===3?'fights_3d':S.acDays===7?'fights_7d':'fights_30d';
+  const ftRaw = (DATA.fight_timeseries||{})[ftKey]||[];
+  const ftChart = buildLineChart(
+    [{id:0, name:'Fights', data:ftRaw}],
+    ()=>'var(--hib)', null, null, null
+  );
+
+  // ── Klassen Zeitreihe ──
+  const clKey = S.acDays===1?'classes_24h':S.acDays===3?'classes_3d':S.acDays===7?'classes_7d':'classes_30d';
+  const clRaw = (DATA.class_timeseries||{})[clKey]||[];
+  const clSeries = clRaw.map(c=>({id:c.class_id, name:c.class_name, class_id:c.class_id, realm:c.realm, data:c.data}));
+  const clRealmFilter = classChartRealmFilter
+    ? s=>(classChartRealmFilter==='alb'?REALM_ALB:classChartRealmFilter==='mid'?REALM_MID:REALM_HIB).includes(s.class_id)
+    : null;
+  const clChart = buildLineChart(
+    clSeries, (s,i)=>ZONE_COLORS[i%ZONE_COLORS.length],
+    classChartHidden, 'toggleClassChart', clRealmFilter
+  );
+  const realmChips = ['alb','mid','hib'].map(r=>{
+    const label = r==='alb'?'Albion':r==='mid'?'Midgard':'Hibernia';
+    const active = classChartRealmFilter===r?' active-'+r:'';
+    return `<div class="tf${active}" style="color:var(--${r})" onclick="toggleClRealmFilter('${r}')">${label}</div>`;
+  }).join('');
+
+  const common = S.acDays===1?DATA.common_matchups_1d:S.acDays===3?DATA.common_matchups_3d:S.acDays===7?DATA.common_matchups_7d:DATA.common_matchups||[];
+  const tcr = S.acDays===1?DATA.top_classes_by_realm_1d:S.acDays===3?DATA.top_classes_by_realm_3d:S.acDays===7?DATA.top_classes_by_realm_7d:DATA.top_classes_by_realm||{};
   const daily  = DATA.daily_fights   || [];
   const zones      = DATA.zone_today     || [];
   const zonesYest  = DATA.zone_yesterday || [];
@@ -980,6 +1008,61 @@ function renderActivity(){
     {zone_id:177,name:"Pennine Mountains"},
     {zone_id:178,name:"Hadrian's Wall"},
   ];
+
+  // ── Generischer Line Chart Builder ──
+  function buildLineChart(series, colorFn, hiddenSet, toggleFn, realmFilterFn) {
+    const filtered = realmFilterFn ? series.filter(realmFilterFn) : series;
+    const allTs = [...new Set(series.flatMap(s=>s.data.map(d=>d.t)))].sort();
+    if (!allTs.length) return '<div style="padding:1rem;color:var(--text3);font-size:13px">No data yet.</div>';
+    const W=820,H=220,PL=35,PR=12,PT=10,PB=28;
+    const iW=W-PL-PR, iH=H-PT-PB;
+    const maxV = Math.max(...series.flatMap(s=>s.data.map(d=>d.v)), 1);
+    const xp = i => PL + (i/Math.max(allTs.length-1,1))*iW;
+    const yp = v => PT+iH-(v/maxV)*iH;
+
+    let lines='';
+    filtered.forEach((s,i)=>{
+      if(hiddenSet && hiddenSet.has(s.id)) return;
+      const color = colorFn(s,i);
+      const pts = s.data.map(d=>[xp(allTs.indexOf(d.t)), yp(d.v)]);
+      if(pts.length<2) return;
+      const path = smoothPath(pts);
+      lines+=`<path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" opacity="0.9"><title>${s.name}</title></path>`;
+    });
+
+    const step = Math.max(1, Math.floor(allTs.length/8));
+    let xL='', yL='';
+    allTs.forEach((t,i)=>{
+      if(i%step!==0 && i!==allTs.length-1) return;
+      const x=xp(i);
+      const label = t.length>10 ? t.slice(11,16) : t.slice(5);
+      xL+=`<text x="${x.toFixed(1)}" y="${H-6}" text-anchor="middle" font-size="9" fill="var(--text3)" font-family="Cinzel,serif">${label}</text>`;
+      xL+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${PT+iH}" stroke="var(--border)" stroke-width="0.5"/>`;
+    });
+    for(let v=0;v<=maxV;v+=Math.ceil(maxV/4)){
+      const y=yp(v);
+      yL+=`<text x="${PL-4}" y="${y.toFixed(1)}" text-anchor="end" dominant-baseline="middle" font-size="9" fill="var(--text3)" font-family="Cinzel,serif">${v}</text>`;
+      yL+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${PL+iW}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="0.5"/>`;
+    }
+
+    let legend='';
+    if(toggleFn){
+      filtered.forEach((s,i)=>{
+        const color=colorFn(s,i);
+        const off=hiddenSet&&hiddenSet.has(s.id)?' inactive':'';
+        legend+=`<div class="legend-btn${off}" style="border-color:${color};color:${color}" onclick="${toggleFn}(${s.id})">
+          <div class="leg-line" style="background:${color}"></div>${s.name}
+        </div>`;
+      });
+    }
+
+    return `${legend?`<div class="chart-legend">${legend}</div>`:''}
+      <div class="chart-svg-wrap">
+        <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%">
+          ${yL}${xL}${lines}
+        </svg>
+      </div>`;
+  }
 
   function smoothPath(points){
     // Catmull-Rom to cubic bezier smooth curve
@@ -1101,15 +1184,26 @@ function renderActivity(){
   document.getElementById('activity-body').innerHTML = `
     <div class="activity-grid">
       <div class="activity-card activity-card-full">
+        <div class="activity-card-title">1v1 Fair Fights</div>
+        ${ftChart}
+      </div>
+      <div class="activity-card activity-card-full">
+        <div class="activity-card-title" style="display:flex;justify-content:space-between;align-items:center">
+          <span>Classes in Fair Fights</span>
+          <div class="time-filters" style="gap:3px">${realmChips}</div>
+        </div>
+        ${clChart}
+      </div>
+      <div class="activity-card activity-card-full">
         <div class="activity-card-title">Zone activity – today & yesterday</div>
         ${zoneChartHtml}
       </div>
       <div class="activity-card activity-card-full" style="padding:0.75rem 1.25rem;background:transparent;border:none;border-top:0.5px solid var(--border2)">
         <div class="time-filters" id="tf-activity">
-          <div class="tf ${activityDays===1?'active':''}" data-adays="1">24h</div>
-          <div class="tf ${activityDays===3?'active':''}" data-adays="3">3d</div>
-          <div class="tf ${activityDays===7?'active':''}" data-adays="7">7d</div>
-          <div class="tf ${activityDays===30?'active':''}" data-adays="30">30d</div>
+          <div class="tf ${S.acDays===1?'active':''}" data-adays="1">24h</div>
+          <div class="tf ${S.acDays===3?'active':''}" data-adays="3">3d</div>
+          <div class="tf ${S.acDays===7?'active':''}" data-adays="7">7d</div>
+          <div class="tf ${S.acDays===30?'active':''}" data-adays="30">30d</div>
         </div>
       </div>
       <div class="activity-card">
@@ -1129,6 +1223,18 @@ function renderActivity(){
 function toggleZone(zoneId){
   if(zoneChartHidden.has(zoneId)) zoneChartHidden.delete(zoneId);
   else zoneChartHidden.add(zoneId);
+  renderActivity();
+}
+
+function toggleClassChart(id){
+  if(classChartHidden.has(id)) classChartHidden.delete(id);
+  else classChartHidden.add(id);
+  renderActivity();
+}
+
+function toggleClRealmFilter(r){
+  classChartRealmFilter = classChartRealmFilter===r ? null : r;
+  classChartHidden.clear();
   renderActivity();
 }
 
