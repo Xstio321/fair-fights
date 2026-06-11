@@ -361,6 +361,26 @@ function renderPagination(totalPages, total){
 
 function goPage(p){ page=p; renderRanking(); }
 
+function navigateToPlayer(name) {
+  // Finde Spieler in der gefilterten Liste
+  const list = getFiltered();
+  const idx = list.findIndex(p => p.name === name);
+  if (idx === -1) return;
+
+  // Richtige Seite berechnen
+  const targetPage = Math.ceil((idx + 1) / pageSize);
+  page = targetPage;
+  openProfile = name;
+  if (!profilePage[name]) profilePage[name] = 1;
+  renderRanking();
+
+  // Nach kurzem Delay scrollen
+  setTimeout(()=>{
+    const el = document.querySelector('.fh-wrap.open');
+    if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
+  }, 100);
+}
+
 async function toggleProfile(name) {
   if (openProfile === name) {
     openProfile = null;
@@ -399,10 +419,11 @@ function buildFightHistory(name) {
       ? `<span class="fh-plus">+${f.elo_change}</span>`
       : `<span class="fh-minus">${f.elo_change}</span>`;
     const oppIcon = f.opp_class_id ? classIconHtml(f.opp_class_id, 20) : '';
+    const safeOpp = f.opponent.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     return `<tr>
-      <td>${d}</td>
+      <td style="color:var(--ink3);font-size:12px">${d}</td>
       <td>${res}</td>
-      <td><div style="display:flex;align-items:center;gap:6px">${oppIcon}<span>${f.opponent}</span></div></td>
+      <td><div style="display:flex;align-items:center;gap:6px;cursor:pointer" onclick="navigateToPlayer('${safeOpp}')">${oppIcon}<span style="color:var(--amber);text-decoration:underline dotted;text-underline-offset:3px">${f.opponent}</span></div></td>
       <td style="color:var(--ink3)">${f.opp_class}</td>
       <td class="r mono" style="color:var(--ink2)">${Math.round(f.elo_before)}</td>
       <td class="r">${chg}</td>
