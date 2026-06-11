@@ -152,11 +152,7 @@
       <span class="search-icon">🔍</span>
       <input class="search-input" id="search" type="text" placeholder="Search player…">
     </div>
-    <div class="time-filters" id="tf-days">
-      <div class="tf" data-days="7">7d</div>
-      <div class="tf" data-days="30">30d</div>
-      <div class="tf active" data-days="0">All time</div>
-    </div>
+
     <div class="time-filters" id="tf-realm">
       <div class="tf" data-realm="1" style="color:var(--alb)">Albion</div>
       <div class="tf" data-realm="2" style="color:var(--mid)">Midgard</div>
@@ -219,7 +215,7 @@ function classIconHtml(classId, size=28){
 let DATA = null;
 let sortKey = 'rating';
 let sortDir = -1;
-let filterDays = 0;
+
 let filterRealm = 0;
 let pageSize = 50;
 let page = 1;
@@ -229,10 +225,7 @@ function getFiltered(){
   if(!DATA) return [];
   let list = [...DATA.ranking];
 
-  if(filterDays > 0){
-    const cutoff = new Date(Date.now() - filterDays*24*60*60*1000).toISOString();
-    list = list.filter(p => p.last_fight && p.last_fight >= cutoff);
-  }
+
   if(filterRealm > 0){
     list = list.filter(p => p.class_id && REALM_FILTER_MAP[filterRealm]?.includes(p.class_id));
   }
@@ -351,13 +344,7 @@ document.querySelectorAll('.time-filters').forEach(group=>{
     btn.addEventListener('click',()=>{
       group.querySelectorAll('.tf').forEach(b=>b.classList.remove('active'));
 
-      const days = btn.dataset.days;
-      if(days !== undefined){
-        const d = parseInt(days);
-        if(filterDays === d && d !== 0){ filterDays=0; }
-        else { btn.classList.add('active'); filterDays=d; }
-        page=1; renderRanking(); return;
-      }
+
       const realm = btn.dataset.realm;
       if(realm){
         const r = parseInt(realm);
