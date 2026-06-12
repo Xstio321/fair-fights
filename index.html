@@ -109,16 +109,20 @@
   /* Matrix */
   .matrix-note{font-size:12px;color:var(--text3);margin-bottom:12px;letter-spacing:0.04em}
   .matrix-wrap{overflow-x:auto}
-  .matrix-table{width:100%;border-collapse:collapse;font-size:12px}
-  .matrix-table th{font-size:9px;padding:4px 6px;font-weight:400;color:var(--text3);background:var(--bg2);letter-spacing:0.06em;text-transform:uppercase;font-family:'Cinzel',serif;border:0.5px solid var(--border);height:36px;vertical-align:middle;white-space:nowrap}
-  .matrix-table td{padding:4px 6px;text-align:center;border:0.5px solid var(--border);font-family:'Cinzel',serif;font-size:11px;transition:background 0.1s;height:36px;vertical-align:middle;white-space:nowrap}
-  .row-header{font-size:10px;font-weight:600;color:var(--text2);background:var(--bg2);text-align:left;padding:4px 10px;white-space:nowrap;font-family:'Cinzel',serif;position:sticky;left:0;z-index:1}
-  .matrix-table thead th:first-child{position:sticky;left:0;z-index:2}
-  .matrix-table th{position:sticky;top:0;z-index:1}
-  
-  .cell-high{background:rgba(122,182,72,0.15);color:var(--hib);font-weight:600}
-  .cell-mid{background:rgba(201,168,76,0.12);color:var(--amber);font-weight:600}
-  .cell-low{background:rgba(196,74,74,0.12);color:var(--alb);font-weight:600}
+  .matrix-table{border-collapse:collapse;font-size:12px}
+  .matrix-table th{font-size:9px;padding:4px 6px;font-weight:400;color:var(--text3);background:var(--bg2);letter-spacing:0.06em;text-transform:uppercase;font-family:'Cinzel',serif;border:0.5px solid var(--border);height:36px;vertical-align:middle;white-space:nowrap;position:sticky;top:0;z-index:1;transition:background 0.1s}
+  .matrix-table td{padding:4px 8px;text-align:center;border:0.5px solid var(--border);font-family:'Cinzel',serif;font-size:11px;transition:background 0.1s;height:36px;vertical-align:middle;white-space:nowrap;cursor:default}
+  .row-header{font-size:10px;font-weight:700;color:var(--text);background:var(--bg2);text-align:left;padding:4px 14px 4px 10px;white-space:nowrap;font-family:'Cinzel',serif;position:sticky;left:0;z-index:1;border-right:1.5px solid var(--border2)!important}
+  .matrix-table thead th:first-child{position:sticky;left:0;z-index:2;border-right:1.5px solid var(--border2)!important}
+  .matrix-table tr.row-hover .row-header{background:var(--bg4)!important}
+  .matrix-table td.col-hover,.matrix-table th.col-hover{background:rgba(160,180,120,0.07)!important}
+  .matrix-table tr.row-hover td{background:rgba(160,180,120,0.06)}
+  .matrix-table tr.row-hover td.col-hover{background:rgba(160,180,120,0.16)!important}
+  .cell-high{background:rgba(122,182,72,0.20);color:var(--hib);font-weight:600}
+  .cell-midhigh{background:rgba(122,182,72,0.08);color:#9dc870}
+  .cell-even{color:var(--text2)}
+  .cell-midlow{background:rgba(196,74,74,0.08);color:#c87070}
+  .cell-low{background:rgba(196,74,74,0.20);color:var(--alb);font-weight:600}
   .cell-na{color:var(--text3);font-size:11px}
   .cell-self{background:var(--bg3);color:var(--text3)}
   /* Activity */
@@ -963,17 +967,17 @@ function renderMatchups(){
   });
   let html=legendHtml+`<div class="matrix-wrap"><table class="matrix-table"><thead><tr>
     <th style="text-align:left;min-width:110px">vs. →</th>`;
-  allClasses.forEach(c=>{html+=`<th>${nameMap[c]||c}</th>`;});
+  allClasses.forEach(c=>{html+=`<th data-col="${c}">${nameMap[c]||c}</th>`;});
   html+='</tr></thead><tbody>';
   classes.forEach(rowC=>{
     const rlm=realmCss(rowC);
     html+=`<tr><td class="row-header" style="color:var(--${rlm})">${nameMap[rowC]||rowC}</td>`;
     allClasses.forEach(colC=>{
-      if(rowC===colC){html+=`<td class="cell-self">–</td>`;return;}
+      if(rowC===colC){html+=`<td class="cell-self" data-col="${colC}">–</td>`;return;}
       const d=lookup[`${rowC}_${colC}`];
-      if(!d){html+=`<td class="cell-na">–</td>`;return;}
-      const cc=d.wr>=60?'cell-high':d.wr>=45?'cell-mid':'cell-low';
-      html+=`<td class="${cc}">${d.wr}%<br><span style="font-size:10px;font-weight:400;color:var(--text3)">(${d.fights})</span></td>`;
+      if(!d){html+=`<td class="cell-na" data-col="${colC}" title="${nameMap[rowC]} vs ${nameMap[colC]}: no data">–</td>`;return;}
+      const cc=d.wr>=65?'cell-high':d.wr>=55?'cell-midhigh':d.wr>=45?'cell-even':d.wr>=35?'cell-midlow':'cell-low';
+      html+=`<td class="${cc}" data-col="${colC}" title="${nameMap[rowC]} vs ${nameMap[colC]}: ${d.fights} fights · ${d.wr}% win rate">${d.wr}%</td>`;
     });
     html+='</tr>';
   });
@@ -1310,6 +1314,38 @@ async function loadData(){
     });
   }
 }
+
+// Crosshair Hover Effekt für Matrix
+document.addEventListener('mouseover', e=>{
+  const td = e.target.closest('.matrix-table td, .matrix-table th');
+  if(!td) return;
+  const table = td.closest('.matrix-table');
+  if(!table) return;
+
+  // Alle highlights entfernen
+  table.querySelectorAll('.row-hover').forEach(r=>r.classList.remove('row-hover'));
+  table.querySelectorAll('.col-hover').forEach(c=>c.classList.remove('col-hover'));
+
+  // Zeile highlighten
+  const row = td.closest('tr');
+  if(row) row.classList.add('row-hover');
+
+  // Spalte highlighten (via data-col)
+  const colId = td.dataset.col;
+  if(colId){
+    table.querySelectorAll(`td[data-col="${colId}"], th[data-col="${colId}"]`).forEach(c=>c.classList.add('col-hover'));
+  }
+});
+document.addEventListener('mouseout', e=>{
+  const td = e.target.closest('.matrix-table td, .matrix-table th');
+  if(!td) return;
+  const table = td.closest('.matrix-table');
+  if(!table) return;
+  if(!table.contains(e.relatedTarget)){
+    table.querySelectorAll('.row-hover').forEach(r=>r.classList.remove('row-hover'));
+    table.querySelectorAll('.col-hover').forEach(c=>c.classList.remove('col-hover'));
+  }
+});
 
 loadData();
 setInterval(loadData,5*60*1000);
