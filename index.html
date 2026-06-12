@@ -818,6 +818,14 @@ function toggleMxClass(cid){
   renderMatchups();
 }
 
+function getMxData(){
+  if(matchupFilter==='count-100')       return DATA.matchups_100||[];
+  if(matchupFilter==='count-500')       return DATA.matchups_500||[];
+  if(matchupFilter==='count-1000')      return DATA.matchups_1000||[];
+  if(matchupFilter==='all')             return DATA.matchups_all||[];
+  return DATA.matchups||[];
+}
+
 function toggleMxAll(){
   const data = getMxData();
   const classSet = new Set();
@@ -878,12 +886,7 @@ function sortCs(key){
 
 // ── Matchup Matrix ──
 function renderMatchups(){
-  let matchups;
-  if(matchupFilter==='count-100')       matchups=DATA.matchups_100||[];
-  else if(matchupFilter==='count-500')  matchups=DATA.matchups_500||[];
-  else if(matchupFilter==='count-1000') matchups=DATA.matchups_1000||[];
-  else if(matchupFilter==='all')        matchups=DATA.matchups_all||[];
-  else matchups=DATA.matchups||[];
+  const matchups = getMxData();
   if(!matchups||matchups.length===0){
     document.getElementById('matchups-body').innerHTML='<div class="loading">Not enough fight data yet.</div>';
     return;
