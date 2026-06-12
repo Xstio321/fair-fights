@@ -919,9 +919,9 @@ function renderMatchups(){
     ? [...classSet].filter(c=>REALM_MAP_FILTER[matchupRealmFilter]?.includes(c))
     : [...classSet])]).filter(c=>!matchupHiddenClasses.has(c));
 
-  const colClassSet = new Set([...(matchupColRealmFilter
+  const colClassSet = new Set(matchupColRealmFilter
     ? [...classSet].filter(c=>REALM_MAP_FILTER[matchupColRealmFilter]?.includes(c))
-    : [...classSet])].filter(c=>!matchupHiddenClasses.has(c)));
+    : [...classSet]);
   const allClasses=[...colClassSet].sort((a,b)=>{
     const ra=REALM_ORDER[a]??3, rb=REALM_ORDER[b]??3;
     if(ra!==rb) return ra-rb;
