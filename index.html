@@ -872,13 +872,25 @@ function setColRealmFilter(realm){
 }
 
 function setRealmFilter(realm){
+  const data = getMxData();
+  const classSet = new Set();
+  data.forEach(m=>{classSet.add(m.class_a);classSet.add(m.class_b);});
+  const REALM_IDS = {alb:REALM_ALB, mid:REALM_MID, hib:REALM_HIB};
+
   if(matchupRealmFilter === realm){
+    // Toggle off: alle Klassen wieder einblenden
     matchupRealmFilter = null;
+    matchupHiddenClasses.clear();
     document.querySelectorAll('#tf-matchups-realm .tf').forEach(b=>b.classList.remove('active','active-alb','active-mid','active-hib'));
   } else {
     matchupRealmFilter = realm;
     document.querySelectorAll('#tf-matchups-realm .tf').forEach(b=>b.classList.remove('active','active-alb','active-mid','active-hib'));
     document.querySelector(`#tf-matchups-realm .tf[data-realm="${realm}"]`).classList.add(`active-${realm}`);
+    // Alle Nicht-Realm Klassen in hiddenClasses setzen
+    matchupHiddenClasses.clear();
+    [...classSet].forEach(c=>{
+      if(!REALM_IDS[realm]?.includes(c)) matchupHiddenClasses.add(c);
+    });
   }
   renderMatchups();
 }
@@ -919,10 +931,8 @@ function renderMatchups(){
     const allHidden = groupClasses.every(c=>matchupHiddenClasses.has(c));
     legendHtml += `<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">`;
     groupClasses.forEach(c=>{
-      const hiddenByFilter = matchupRealmFilter && matchupRealmFilter !== g.realm;
-      const off = (matchupHiddenClasses.has(c) || hiddenByFilter) ? ' off' : '';
-      const style = hiddenByFilter ? 'opacity:0.15;pointer-events:none' : '';
-      legendHtml += `<div class="mx-leg-btn${off}" style="border-color:${g.color};color:${g.color};${style}" onclick="toggleMxClass(${c})">${nameMap[c]||c}</div>`;
+      const off = matchupHiddenClasses.has(c) ? ' off' : '';
+      legendHtml += `<div class="mx-leg-btn${off}" style="border-color:${g.color};color:${g.color}" onclick="toggleMxClass(${c})">${nameMap[c]||c}</div>`;
     });
     legendHtml += '</div>';
   });
@@ -942,9 +952,7 @@ function renderMatchups(){
     mid:[21,22,23,24,25,26,27,28,29,30,31,32,34,59],
     hib:[39,40,41,42,43,44,45,46,47,48,49,50,55,56,58],
   };
-  const rowClasses = ([...(matchupRealmFilter
-    ? [...classSet].filter(c=>REALM_MAP_FILTER[matchupRealmFilter]?.includes(c))
-    : [...classSet])]).filter(c=>!matchupHiddenClasses.has(c));
+  const rowClasses = [...classSet].filter(c=>!matchupHiddenClasses.has(c));
 
   const colClassSet = new Set(matchupColRealmFilter
     ? [...classSet].filter(c=>REALM_MAP_FILTER[matchupColRealmFilter]?.includes(c))
