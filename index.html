@@ -165,6 +165,9 @@
   .underdog-sub{font-size:11px;color:var(--text3)}
   .underdog-badge{font-family:'Cinzel',serif;font-size:13px;font-weight:600;color:var(--amber);padding:2px 10px;border:0.5px solid var(--gold2);border-radius:20px;background:rgba(201,168,76,0.1)}
   .realm-filter-wrap{display:flex;gap:6px;align-items:center;margin-bottom:10px}
+  .mx-legend{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px}
+  .mx-leg-btn{font-size:10px;font-family:'Cinzel',serif;padding:2px 9px;border-radius:20px;border:0.5px solid;cursor:pointer;transition:opacity 0.15s;user-select:none}
+  .mx-leg-btn.off{opacity:0.25}
   .loading{text-align:center;padding:3rem;color:var(--text3);font-family:'Cinzel',serif;font-size:13px;letter-spacing:0.1em}
   .error-msg{background:rgba(196,74,74,0.1);border:0.5px solid var(--alb2);border-radius:var(--radius);padding:12px 16px;color:var(--alb);font-size:13px;font-family:'Cinzel',serif;margin-bottom:1rem}
   footer{margin-top:3rem;padding-top:1.5rem;border-top:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
@@ -325,6 +328,7 @@ let csSortKey = 'fights';
 let matchupFilter = 'count-100';
 let matchupRealmFilter = null;
 let matchupColRealmFilter = null;
+let matchupHiddenClasses = new Set();
 let csSortDir = -1;
 let drillSort = {};
 
@@ -808,6 +812,12 @@ function sortDrill(classId,key){
   },10);
 }
 
+function toggleMxClass(cid){
+  if(matchupHiddenClasses.has(cid)) matchupHiddenClasses.delete(cid);
+  else matchupHiddenClasses.add(cid);
+  renderMatchups();
+}
+
 function setColRealmFilter(realm){
   if(matchupColRealmFilter === realm){
     matchupColRealmFilter = null;
@@ -851,7 +861,25 @@ function renderMatchups(){
   }
 
   const classSet=new Set();
-  matchups.forEach(m=>{classSet.add(m.class_a);classSet.add(m.class_b);});
+  const nameMap={};
+  matchups.forEach(m=>{classSet.add(m.class_a);classSet.add(m.class_b);nameMap[m.class_a]=m.class_a_name;nameMap[m.class_b]=m.class_b_name;});
+
+  // Legende nach Realm gruppiert
+  const legendGroups = [
+    {realm:'alb', ids:REALM_ALB, color:'var(--alb)'},
+    {realm:'mid', ids:REALM_MID, color:'var(--mid)'},
+    {realm:'hib', ids:REALM_HIB, color:'var(--hib)'},
+  ];
+  let legendHtml = '<div class="mx-legend">';
+  legendGroups.forEach(g=>{
+    [...classSet].filter(c=>g.ids.includes(c))
+      .sort((a,b)=>(nameMap[a]||'').localeCompare(nameMap[b]||''))
+      .forEach(c=>{
+        const off = matchupHiddenClasses.has(c) ? ' off' : '';
+        legendHtml += `<div class="mx-leg-btn${off}" style="border-color:${g.color};color:${g.color}" onclick="toggleMxClass(${c})">${nameMap[c]||c}</div>`;
+      });
+  });
+  legendHtml += '</div>';
 
   // Sortierung: Albion → Hibernia → Midgard, innerhalb alphabetisch
   const REALM_ORDER={
@@ -867,14 +895,13 @@ function renderMatchups(){
     mid:[21,22,23,24,25,26,27,28,29,30,31,32,34,59],
     hib:[39,40,41,42,43,44,45,46,47,48,49,50,55,56,58],
   };
-  const rowClasses = matchupRealmFilter
+  const rowClasses = ([...(matchupRealmFilter
     ? [...classSet].filter(c=>REALM_MAP_FILTER[matchupRealmFilter]?.includes(c))
-    : [...classSet];
+    : [...classSet])]).filter(c=>!matchupHiddenClasses.has(c));
 
-  // Spalten auch nach Realm filterbar (separater State)
-  const colClassSet = matchupColRealmFilter
-    ? new Set([...classSet].filter(c=>REALM_MAP_FILTER[matchupColRealmFilter]?.includes(c)))
-    : classSet;
+  const colClassSet = new Set([...(matchupColRealmFilter
+    ? [...classSet].filter(c=>REALM_MAP_FILTER[matchupColRealmFilter]?.includes(c))
+    : [...classSet])].filter(c=>!matchupHiddenClasses.has(c)));
   const allClasses=[...colClassSet].sort((a,b)=>{
     const ra=REALM_ORDER[a]??3, rb=REALM_ORDER[b]??3;
     if(ra!==rb) return ra-rb;
@@ -891,10 +918,7 @@ function renderMatchups(){
     lookup[`${m.class_a}_${m.class_b}`]={fights:m.fights,wr:m.winrate_a};
     lookup[`${m.class_b}_${m.class_a}`]={fights:m.fights,wr:100-m.winrate_a};
   });
-  const nameMap={};
-  matchups.forEach(m=>{nameMap[m.class_a]=m.class_a_name;nameMap[m.class_b]=m.class_b_name;});
-
-  let html=`<div class="matrix-wrap"><table class="matrix-table"><thead><tr>
+  let html=legendHtml+`<div class="matrix-wrap"><table class="matrix-table"><thead><tr>
     <th style="text-align:left;min-width:110px">vs. →</th>`;
   allClasses.forEach(c=>{html+=`<th>${nameMap[c]||c}</th>`;});
   html+='</tr></thead><tbody>';
