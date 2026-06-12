@@ -1008,25 +1008,16 @@ const ZONE_COLORS = [
 function renderActivity(){
   // ── Class Activity (Spieler pro Klasse) ──
   const clsActKey = clsActDays===1?'class_stats_1d':clsActDays===3?'class_stats_3d':clsActDays===7?'class_stats_7d':'class_stats';
-  const clsActData = (DATA[clsActKey]||[]);
-
-  // Spieler pro Klasse aus class_players berechnen
-  const clsActPlayers = clsActData.map(c=>({
-    class_id: c.class_id,
-    class_name: c.class_name,
-    realm: c.realm,
-    players: (DATA.class_players&&DATA.class_players[c.class_id])?DATA.class_players[c.class_id].length:0,
-  })).filter(c=>c.players>0).sort((a,b)=>b.players-a.players);
-
-  const maxPlayers = Math.max(...clsActPlayers.map(c=>c.players), 1);
+  const clsActData = (DATA[clsActKey]||[]).filter(c=>c.players>0).sort((a,b)=>b.players-a.players);
+  const maxPlayers = Math.max(...clsActData.map(c=>c.players), 1);
 
   // Realm-Farbe
   function realmColor(cid){
     return REALM_HIB.includes(cid)?'var(--hib)':REALM_MID.includes(cid)?'var(--mid)':REALM_ALB.includes(cid)?'var(--alb)':'var(--text3)';
   }
 
-  const clsActHtml = clsActPlayers.length ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px">` +
-    clsActPlayers.map(c=>`
+  const clsActHtml = clsActData.length ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px">` +
+    clsActData.map(c=>`
       <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:0.5px solid var(--border)">
         ${classIconHtml(c.class_id, 20)}
         <span style="font-size:13px;min-width:100px;color:var(--text)">${c.class_name}</span>
