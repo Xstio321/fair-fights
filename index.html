@@ -977,7 +977,7 @@ function renderMatchups(){
       const d=lookup[`${rowC}_${colC}`];
       if(!d){html+=`<td class="cell-na" data-col="${colC}" title="${nameMap[rowC]} vs ${nameMap[colC]}: no data">–</td>`;return;}
       const cc=d.wr>=65?'cell-high':d.wr>=55?'cell-midhigh':d.wr>=45?'cell-even':d.wr>=35?'cell-midlow':'cell-low';
-      html+=`<td class="${cc}" data-col="${colC}" title="${nameMap[rowC]} vs ${nameMap[colC]}: ${d.fights} fights · ${d.wr}% win rate">${d.wr}%</td>`;
+      html+=`<td class="${cc}" data-col="${colC}" title="${nameMap[rowC]} vs ${nameMap[colC]}: ${d.fights} fights · ${d.wr}% win rate">${d.wr}%<br><span style="font-size:9px;font-weight:400;opacity:0.6">${d.fights}</span></td>`;
     });
     html+='</tr>';
   });
