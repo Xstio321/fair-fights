@@ -818,6 +818,20 @@ function toggleMxClass(cid){
   renderMatchups();
 }
 
+function toggleMxAll(){
+  const data = getMxData();
+  const classSet = new Set();
+  data.forEach(m=>{classSet.add(m.class_a);classSet.add(m.class_b);});
+  const all = [...classSet];
+  const allHidden = all.every(c=>matchupHiddenClasses.has(c));
+  if(allHidden){
+    all.forEach(c=>matchupHiddenClasses.delete(c));
+  } else {
+    all.forEach(c=>matchupHiddenClasses.add(c));
+  }
+  renderMatchups();
+}
+
 function toggleMxRealm(realm){
   const ids = REALM_MAP_FILTER[realm]||[];
   const data = getMxData();
@@ -885,7 +899,12 @@ function renderMatchups(){
     {realm:'mid', label:'Midgard',  ids:REALM_MID, color:'var(--mid)'},
     {realm:'hib', label:'Hibernia', ids:REALM_HIB, color:'var(--hib)'},
   ];
+  const allClassesInSet = [...classSet];
+  const allHiddenAll = allClassesInSet.every(c=>matchupHiddenClasses.has(c));
   let legendHtml = '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">';
+  legendHtml += `<div style="display:flex;gap:5px;margin-bottom:2px">
+    <div class="mx-leg-btn" style="border-color:var(--text3);color:var(--text3);font-weight:600" onclick="toggleMxAll()">${allHiddenAll?'Show all':'Hide all'}</div>
+  </div>`;
   legendGroups.forEach(g=>{
     const groupClasses = [...classSet].filter(c=>g.ids.includes(c))
       .sort((a,b)=>(nameMap[a]||'').localeCompare(nameMap[b]||''));
@@ -893,8 +912,10 @@ function renderMatchups(){
     const allHidden = groupClasses.every(c=>matchupHiddenClasses.has(c));
     legendHtml += `<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">`;
     groupClasses.forEach(c=>{
-      const off = matchupHiddenClasses.has(c) ? ' off' : '';
-      legendHtml += `<div class="mx-leg-btn${off}" style="border-color:${g.color};color:${g.color}" onclick="toggleMxClass(${c})">${nameMap[c]||c}</div>`;
+      const hiddenByFilter = matchupRealmFilter && matchupRealmFilter !== g.realm;
+      const off = (matchupHiddenClasses.has(c) || hiddenByFilter) ? ' off' : '';
+      const style = hiddenByFilter ? 'opacity:0.15;pointer-events:none' : '';
+      legendHtml += `<div class="mx-leg-btn${off}" style="border-color:${g.color};color:${g.color};${style}" onclick="toggleMxClass(${c})">${nameMap[c]||c}</div>`;
     });
     legendHtml += '</div>';
   });
