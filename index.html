@@ -818,6 +818,21 @@ function toggleMxClass(cid){
   renderMatchups();
 }
 
+function toggleMxRealm(realm){
+  const ids = REALM_MAP_FILTER[realm]||[];
+  const data = getMxData();
+  const classSet = new Set();
+  data.forEach(m=>{classSet.add(m.class_a);classSet.add(m.class_b);});
+  const realmClasses = ids.filter(c=>classSet.has(c));
+  const allHidden = realmClasses.every(c=>matchupHiddenClasses.has(c));
+  if(allHidden){
+    realmClasses.forEach(c=>matchupHiddenClasses.delete(c));
+  } else {
+    realmClasses.forEach(c=>matchupHiddenClasses.add(c));
+  }
+  renderMatchups();
+}
+
 function setColRealmFilter(realm){
   if(matchupColRealmFilter === realm){
     matchupColRealmFilter = null;
@@ -864,20 +879,25 @@ function renderMatchups(){
   const nameMap={};
   matchups.forEach(m=>{classSet.add(m.class_a);classSet.add(m.class_b);nameMap[m.class_a]=m.class_a_name;nameMap[m.class_b]=m.class_b_name;});
 
-  // Legende nach Realm gruppiert
+  // Legende nach Realm gruppiert mit Realm-Toggle
   const legendGroups = [
-    {realm:'alb', ids:REALM_ALB, color:'var(--alb)'},
-    {realm:'mid', ids:REALM_MID, color:'var(--mid)'},
-    {realm:'hib', ids:REALM_HIB, color:'var(--hib)'},
+    {realm:'alb', label:'Albion',   ids:REALM_ALB, color:'var(--alb)'},
+    {realm:'mid', label:'Midgard',  ids:REALM_MID, color:'var(--mid)'},
+    {realm:'hib', label:'Hibernia', ids:REALM_HIB, color:'var(--hib)'},
   ];
-  let legendHtml = '<div class="mx-legend">';
+  let legendHtml = '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">';
   legendGroups.forEach(g=>{
-    [...classSet].filter(c=>g.ids.includes(c))
-      .sort((a,b)=>(nameMap[a]||'').localeCompare(nameMap[b]||''))
-      .forEach(c=>{
-        const off = matchupHiddenClasses.has(c) ? ' off' : '';
-        legendHtml += `<div class="mx-leg-btn${off}" style="border-color:${g.color};color:${g.color}" onclick="toggleMxClass(${c})">${nameMap[c]||c}</div>`;
-      });
+    const groupClasses = [...classSet].filter(c=>g.ids.includes(c))
+      .sort((a,b)=>(nameMap[a]||'').localeCompare(nameMap[b]||''));
+    if(!groupClasses.length) return;
+    const allHidden = groupClasses.every(c=>matchupHiddenClasses.has(c));
+    legendHtml += `<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">`;
+    legendHtml += `<div class="mx-leg-btn${allHidden?' off':''}" style="border-color:${g.color};color:${g.color};font-weight:600;padding:2px 11px" onclick="toggleMxRealm('${g.realm}')">${g.label}</div>`;
+    groupClasses.forEach(c=>{
+      const off = matchupHiddenClasses.has(c) ? ' off' : '';
+      legendHtml += `<div class="mx-leg-btn${off}" style="border-color:${g.color};color:${g.color}" onclick="toggleMxClass(${c})">${nameMap[c]||c}</div>`;
+    });
+    legendHtml += '</div>';
   });
   legendHtml += '</div>';
 
