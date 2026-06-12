@@ -892,7 +892,6 @@ function renderMatchups(){
     if(!groupClasses.length) return;
     const allHidden = groupClasses.every(c=>matchupHiddenClasses.has(c));
     legendHtml += `<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">`;
-    legendHtml += `<div class="mx-leg-btn${allHidden?' off':''}" style="border-color:${g.color};color:${g.color};font-weight:600;padding:2px 11px" onclick="toggleMxRealm('${g.realm}')">${g.label}</div>`;
     groupClasses.forEach(c=>{
       const off = matchupHiddenClasses.has(c) ? ' off' : '';
       legendHtml += `<div class="mx-leg-btn${off}" style="border-color:${g.color};color:${g.color}" onclick="toggleMxClass(${c})">${nameMap[c]||c}</div>`;
