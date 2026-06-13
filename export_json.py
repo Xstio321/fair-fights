@@ -423,9 +423,9 @@ def compute_stats(con, since_dt):
         else:
             pp["lost_vs"][opp_cid] += 1
             if opp_rp: pp["lost_vs_rp"][opp_cid].append(opp_rp)
-        if dmg_done: pp["dmg_done"].append(dmg_done)
-        if heal_done: pp["heal_done"].append(heal_done)
-        if dmg_taken: pp["dmg_taken"].append(dmg_taken)
+        if dmg_done is not None: pp["dmg_done"].append(dmg_done)
+        if heal_done is not None: pp["heal_done"].append(heal_done)
+        if dmg_taken is not None: pp["dmg_taken"].append(dmg_taken)
 
     player_profile_data = {}
     for name, pp in player_profiles.items():
