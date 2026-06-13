@@ -427,27 +427,28 @@ def compute_stats(con, since_dt):
         if heal_done is not None: pp["heal_done"].append(heal_done)
         if dmg_taken is not None: pp["dmg_taken"].append(dmg_taken)
 
+    def avg(lst): return round(sum(lst)/len(lst)) if lst else None
+
+    def build_won_lost(won_vs_counter, won_vs_rp, lost_vs_counter, lost_vs_rp):
+        won_vs = []
+        for cid, c in won_vs_counter.most_common(5):
+            rp_list = won_vs_rp.get(cid, [])
+            avg_rp = int(sum(rp_list)/len(rp_list)) if rp_list else None
+            won_vs.append({"class_id": cid, "class_name": CLASSES.get(cid, f"Class {cid}"),
+                           "count": c, "avg_rr": rp_to_rr(avg_rp) if avg_rp else None})
+        lost_vs = []
+        for cid, c in lost_vs_counter.most_common(5):
+            rp_list = lost_vs_rp.get(cid, [])
+            avg_rp = int(sum(rp_list)/len(rp_list)) if rp_list else None
+            lost_vs.append({"class_id": cid, "class_name": CLASSES.get(cid, f"Class {cid}"),
+                            "count": c, "avg_rr": rp_to_rr(avg_rp) if avg_rp else None})
+        return won_vs, lost_vs
+
     player_profile_data = {}
     for name, pp in player_profiles.items():
         top_zones = [{"name": z, "count": c} for z, c in pp["zones"].most_common(5)]
         top_hours = [{"hour": h, "count": c} for h, c in sorted(pp["hours"].items(), key=lambda x: -x[1])[:5]]
-        won_vs = []
-        for cid, c in pp["won_vs"].most_common(5):
-            rp_list = pp["won_vs_rp"].get(cid, [])
-            avg_rp = int(sum(rp_list)/len(rp_list)) if rp_list else None
-            won_vs.append({
-                "class_id": cid, "class_name": CLASSES.get(cid, f"Class {cid}"),
-                "count": c, "avg_rr": rp_to_rr(avg_rp) if avg_rp else None
-            })
-        lost_vs = []
-        for cid, c in pp["lost_vs"].most_common(5):
-            rp_list = pp["lost_vs_rp"].get(cid, [])
-            avg_rp = int(sum(rp_list)/len(rp_list)) if rp_list else None
-            lost_vs.append({
-                "class_id": cid, "class_name": CLASSES.get(cid, f"Class {cid}"),
-                "count": c, "avg_rr": rp_to_rr(avg_rp) if avg_rp else None
-            })
-        def avg(lst): return round(sum(lst)/len(lst)) if lst else None
+        won_vs, lost_vs = build_won_lost(pp["won_vs"], pp["won_vs_rp"], pp["lost_vs"], pp["lost_vs_rp"])
         player_profile_data[name] = {
             "top_zones":  top_zones,
             "top_hours":  top_hours,
@@ -457,6 +458,52 @@ def compute_stats(con, since_dt):
             "avg_heal":   avg(pp["heal_done"]),
             "avg_taken":  avg(pp["dmg_taken"]),
         }
+
+    # ── Zeitgefilterte Stats (Wins/Losses/Dmg) für 1d/3d/7d ──
+    def build_profile_stats(days):
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+        rows = cur.execute("""
+            SELECT p.name, t.won, opp.class_id, opp.realm_pts,
+                   p.dmg_done, p.heal_done, p.dmg_taken
+            FROM fight_players p
+            JOIN fights f ON f.id = p.fight_id
+            JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
+            JOIN fight_players opp ON opp.fight_id = f.id AND opp.side != p.side
+            WHERE f.started_at >= ?
+        """, (cutoff,)).fetchall()
+
+        stats = defaultdict(lambda: {
+            "won_vs": Counter(), "lost_vs": Counter(),
+            "won_vs_rp": defaultdict(list), "lost_vs_rp": defaultdict(list),
+            "dmg_done": [], "heal_done": [], "dmg_taken": [],
+        })
+        for name, won, opp_cid, opp_rp, dmg_done, heal_done, dmg_taken in rows:
+            s = stats[name]
+            if won:
+                s["won_vs"][opp_cid] += 1
+                if opp_rp: s["won_vs_rp"][opp_cid].append(opp_rp)
+            else:
+                s["lost_vs"][opp_cid] += 1
+                if opp_rp: s["lost_vs_rp"][opp_cid].append(opp_rp)
+            if dmg_done is not None: s["dmg_done"].append(dmg_done)
+            if heal_done is not None: s["heal_done"].append(heal_done)
+            if dmg_taken is not None: s["dmg_taken"].append(dmg_taken)
+
+        result = {}
+        for name, s in stats.items():
+            won_vs, lost_vs = build_won_lost(s["won_vs"], s["won_vs_rp"], s["lost_vs"], s["lost_vs_rp"])
+            result[name] = {
+                "won_vs":   won_vs,
+                "lost_vs":  lost_vs,
+                "avg_dmg":  avg(s["dmg_done"]),
+                "avg_heal": avg(s["heal_done"]),
+                "avg_taken":avg(s["dmg_taken"]),
+            }
+        return result
+
+    profile_stats_1d = build_profile_stats(1)
+    profile_stats_3d = build_profile_stats(3)
+    profile_stats_7d = build_profile_stats(7)
 
     # ── Top Underdog Wins (1vX) ──
     # Echte Gegneranzahl aus fight_players zählen statt f.size (Eden-Wert oft falsch)
@@ -664,7 +711,10 @@ def compute_stats(con, since_dt):
         "leaderboard_3d": leaderboard_3d,
         "leaderboard_7d": leaderboard_7d,
         "top_underdog":    top_underdog,
-        "player_profiles": player_profile_data,
+        "player_profiles":   player_profile_data,
+        "profile_stats_1d":  profile_stats_1d,
+        "profile_stats_3d":  profile_stats_3d,
+        "profile_stats_7d":  profile_stats_7d,
     }
 
 

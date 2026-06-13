@@ -301,10 +301,8 @@
 let DATA = null;
 let PROFILES = null;
 
-async function loadProfiles() {
-  if (PROFILES) return PROFILES;
-  // Profile sind bereits in DATA.player_profiles enthalten
-  PROFILES = (DATA && DATA.player_profiles) ? DATA.player_profiles : {};
+function loadProfiles() {
+  PROFILES = DATA.player_profiles || {};
   return PROFILES;
 }
 const PAGE_SIZE = 50;
@@ -580,6 +578,16 @@ function buildPlayerProfile(name){
   const pp = PROFILES && PROFILES[name];
   if(!pp) return '<div style="padding:12px;color:var(--text3);font-size:12px;font-family:Cinzel,serif">No profile data yet.</div>';
 
+  // Zeitgefilterte Stats für Wins/Losses/Dmg
+  const statsKey = lbDays===1?'profile_stats_1d':lbDays===3?'profile_stats_3d':lbDays===7?'profile_stats_7d':null;
+  const ts = statsKey && DATA[statsKey] ? DATA[statsKey][name] : null;
+  const wonVsData  = ts ? ts.won_vs  : pp.won_vs;
+  const lostVsData = ts ? ts.lost_vs : pp.lost_vs;
+  const avgDmg     = ts != null ? ts.avg_dmg   : pp.avg_dmg;
+  const avgHeal    = ts != null ? ts.avg_heal  : pp.avg_heal;
+  const avgTaken   = ts != null ? ts.avg_taken : pp.avg_taken;
+  const statsPeriod = lbDays===1?'24h':lbDays===3?'3d':lbDays===7?'7d':'30d';
+
   // Top Zonen
   let zonesHtml = pp.top_zones.length
     ? pp.top_zones.map(z=>`<div class="profile-item">
@@ -605,8 +613,8 @@ function buildPlayerProfile(name){
   hoursHtml += '</div>';
 
   // Won vs
-  let wonHtml = pp.won_vs.length
-    ? pp.won_vs.map(v=>`<div class="profile-item">
+  let wonHtml = wonVsData.length
+    ? wonVsData.map(v=>`<div class="profile-item">
         <div style="flex:1">
           <span class="profile-item-name">${v.class_name}</span>
           ${v.avg_rr?`<span style="font-size:10px;color:var(--text3);margin-left:4px">avg ${v.avg_rr}</span>`:''}
@@ -616,8 +624,8 @@ function buildPlayerProfile(name){
     : '<div style="color:var(--text3);font-size:11px">No data</div>';
 
   // Lost vs
-  let lostHtml = pp.lost_vs.length
-    ? pp.lost_vs.map(v=>`<div class="profile-item">
+  let lostHtml = lostVsData.length
+    ? lostVsData.map(v=>`<div class="profile-item">
         <div style="flex:1">
           <span class="profile-item-name">${v.class_name}</span>
           ${v.avg_rr?`<span style="font-size:10px;color:var(--text3);margin-left:4px">avg ${v.avg_rr}</span>`:''}
@@ -631,15 +639,15 @@ function buildPlayerProfile(name){
     <div style="display:flex;gap:24px;padding:8px 10px;border-top:0.5px solid var(--border2)">
       <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
         <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase">Avg Dmg</span>
-        <span style="font-size:14px;font-family:'Cinzel',serif;color:var(--alb);font-weight:600">${pp.avg_dmg!=null?pp.avg_dmg.toLocaleString():'–'}</span>
+        <span style="font-size:14px;font-family:'Cinzel',serif;color:var(--alb);font-weight:600">${avgDmg!=null?avgDmg.toLocaleString():'–'}</span>
       </div>
       <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
         <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase">Avg Heal</span>
-        <span style="font-size:14px;font-family:'Cinzel',serif;color:var(--mid);font-weight:600">${pp.avg_heal!=null?pp.avg_heal.toLocaleString():'–'}</span>
+        <span style="font-size:14px;font-family:'Cinzel',serif;color:var(--mid);font-weight:600">${avgHeal!=null?avgHeal.toLocaleString():'–'}</span>
       </div>
       <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
         <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase">Avg Taken</span>
-        <span style="font-size:14px;font-family:'Cinzel',serif;color:var(--text2);font-weight:600">${pp.avg_taken!=null?pp.avg_taken.toLocaleString():'–'}</span>
+        <span style="font-size:14px;font-family:'Cinzel',serif;color:var(--text2);font-weight:600">${avgTaken!=null?avgTaken.toLocaleString():'–'}</span>
       </div>
     </div>`;
 
@@ -662,19 +670,15 @@ function buildPlayerProfile(name){
     </div>
   </div>
   ${statsHtml}
-  <div style="padding:4px 10px 8px;font-size:10px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.06em">Profile data based on last 30 days</div>`;
+  <div style="padding:4px 10px 8px;font-size:10px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.06em">Zones & peak hours: last 30 days · Wins/losses/dmg: last ${statsPeriod}</div>`;
 }
 
-async function toggleProfile(name){
+function toggleProfile(name){
   if(lbProfileOpen === name){
     lbProfileOpen = null;
-    renderLeaderboard();
-    return;
-  }
-  lbProfileOpen = name;
-  // Profiles direkt aus DATA laden (kein extra fetch nötig)
-  if (!PROFILES) {
-    PROFILES = (DATA && DATA.player_profiles) ? DATA.player_profiles : {};
+  } else {
+    lbProfileOpen = name;
+    PROFILES = DATA.player_profiles || {};
   }
   renderLeaderboard();
   setTimeout(()=>{
@@ -1357,7 +1361,6 @@ async function loadData(){
     const r=await fetch('data.json?t='+Date.now());
     if(!r.ok)throw new Error('HTTP '+r.status);
     DATA=await r.json();
-    PROFILES = DATA.player_profiles || {}; // direkt mitsynchronisieren
     renderSummary();
     renderUnderdogCard();
     renderLeaderboard();
