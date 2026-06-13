@@ -300,23 +300,11 @@
 <script>
 let DATA = null;
 let PROFILES = null;
-let PROFILES_LOADING = false;
 
 async function loadProfiles() {
   if (PROFILES) return PROFILES;
-  if (PROFILES_LOADING) {
-    // Warten bis geladen
-    await new Promise(r => { const i = setInterval(()=>{ if(PROFILES){ clearInterval(i); r(); }}, 50); });
-    return PROFILES;
-  }
-  PROFILES_LOADING = true;
-  try {
-    const r = await fetch('profiles.json?t=' + Date.now());
-    PROFILES = await r.json();
-  } catch(e) {
-    PROFILES = {};
-  }
-  PROFILES_LOADING = false;
+  // Profile sind bereits in DATA.player_profiles enthalten
+  PROFILES = (DATA && DATA.player_profiles) ? DATA.player_profiles : {};
   return PROFILES;
 }
 const PAGE_SIZE = 50;
@@ -684,12 +672,11 @@ async function toggleProfile(name){
     return;
   }
   lbProfileOpen = name;
-  renderLeaderboard();
-  // Profiles laden falls noch nicht gecacht
+  // Profiles direkt aus DATA laden (kein extra fetch nötig)
   if (!PROFILES) {
-    await loadProfiles();
-    renderLeaderboard(); // nochmal rendern mit Profil-Daten
+    PROFILES = (DATA && DATA.player_profiles) ? DATA.player_profiles : {};
   }
+  renderLeaderboard();
   setTimeout(()=>{
     const open = document.querySelector('.player-profile.open');
     if(open) open.scrollIntoView({behavior:'smooth',block:'nearest'});
@@ -1370,6 +1357,7 @@ async function loadData(){
     const r=await fetch('data.json?t='+Date.now());
     if(!r.ok)throw new Error('HTTP '+r.status);
     DATA=await r.json();
+    PROFILES = DATA.player_profiles || {}; // direkt mitsynchronisieren
     renderSummary();
     renderUnderdogCard();
     renderLeaderboard();
