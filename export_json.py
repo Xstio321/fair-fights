@@ -160,11 +160,17 @@ def compute_stats(con, since_dt):
 
     # ── Summary ──
     total_all = cur.execute("SELECT count(*) FROM fights").fetchone()[0]
+    # Aktuelle Uhrzeit als Referenz für fairen Vergleich
+    now_time = datetime.now(timezone.utc)
+    current_time_str = now_time.strftime('%H:%M:%S')
+
     fights_today = cur.execute(
-        "SELECT count(*) FROM fights WHERE date(started_at) = date('now')"
+        "SELECT count(*) FROM fights WHERE date(started_at) = date('now') AND strftime('%H:%M:%S', started_at) <= ?",
+        (current_time_str,)
     ).fetchone()[0]
     fights_yesterday = cur.execute(
-        "SELECT count(*) FROM fights WHERE date(started_at) = date('now','-1 day')"
+        "SELECT count(*) FROM fights WHERE date(started_at) = date('now','-1 day') AND strftime('%H:%M:%S', started_at) <= ?",
+        (current_time_str,)
     ).fetchone()[0]
 
     # 1v1 aktive Spieler (letzte 24h) statt Klassen
@@ -442,30 +448,24 @@ def compute_stats(con, since_dt):
         }
 
     # ── Top Underdog Wins (1vX) ──
-    # Echte Gegneranzahl aus fight_players zählen statt f.size (Eden-Wert oft falsch)
+    # Nur Kämpfe wo der Gewinner alleine war (size = Anzahl Gegner, Gewinnerteam hat 1 Spieler)
     underdog_rows = cur.execute("""
         SELECT
             p.name,
             p.class_id,
             p.realm_pts,
-            (SELECT count(*) FROM fight_players p3
-             JOIN fight_teams tl ON tl.fight_id = f.id AND tl.side = p3.side AND tl.won = 0
-             WHERE p3.fight_id = f.id) as real_opponents,
+            f.size as opponents,
             f.started_at
         FROM fights f
         JOIN fight_teams tw ON tw.fight_id = f.id AND tw.won = 1
         JOIN fight_players p ON p.fight_id = f.id AND p.side = tw.side
-        WHERE f.started_at >= ?
+        WHERE f.size > 1
+          AND f.started_at >= ?
           AND (
             SELECT count(*) FROM fight_players p2
             WHERE p2.fight_id = f.id AND p2.side = tw.side
           ) = 1
-          AND (
-            SELECT count(*) FROM fight_players p3
-            JOIN fight_teams tl ON tl.fight_id = f.id AND tl.side = p3.side AND tl.won = 0
-            WHERE p3.fight_id = f.id
-          ) > 1
-        ORDER BY real_opponents DESC, f.started_at DESC
+        ORDER BY f.size DESC, f.started_at DESC
     """, (since_str,)).fetchall()
 
     # Pro Spieler den besten (höchsten) Underdog-Win nehmen
@@ -521,178 +521,6 @@ def compute_stats(con, since_dt):
     top_classes_by_realm_3d = build_top_classes(3)
     top_classes_by_realm_7d = build_top_classes(7)
 
-    # ── Fights per hour/day Zeitreihen ──
-    def build_fight_timeseries():
-        result = {}
-        # 24h: stündlich
-        rows_24h = cur.execute("""
-            SELECT strftime('%Y-%m-%d %H:00', started_at) as t, count(*) as cnt
-            FROM fights
-            WHERE started_at >= datetime('now', '-1 day')
-            GROUP BY t ORDER BY t ASC
-        """).fetchall()
-        result['fights_24h'] = [{"t": r[0], "v": r[1]} for r in rows_24h]
-
-        # 3d: stündlich
-        rows_3d = cur.execute("""
-            SELECT strftime('%Y-%m-%d %H:00', started_at) as t, count(*) as cnt
-            FROM fights
-            WHERE started_at >= datetime('now', '-3 days')
-            GROUP BY t ORDER BY t ASC
-        """).fetchall()
-        result['fights_3d'] = [{"t": r[0], "v": r[1]} for r in rows_3d]
-
-        # 7d: täglich
-        rows_7d = cur.execute("""
-            SELECT date(started_at) as t, count(*) as cnt
-            FROM fights
-            WHERE started_at >= datetime('now', '-7 days')
-            GROUP BY t ORDER BY t ASC
-        """).fetchall()
-        result['fights_7d'] = [{"t": r[0], "v": r[1]} for r in rows_7d]
-
-        # 30d: täglich
-        rows_30d = cur.execute("""
-            SELECT date(started_at) as t, count(*) as cnt
-            FROM fights
-            WHERE started_at >= datetime('now', '-30 days')
-            GROUP BY t ORDER BY t ASC
-        """).fetchall()
-        result['fights_30d'] = [{"t": r[0], "v": r[1]} for r in rows_30d]
-        return result
-
-    def build_class_timeseries():
-        result = {}
-        def fetch(interval_sql, where_sql):
-            rows = cur.execute(f"""
-                SELECT p.class_id, {interval_sql} as t, count(DISTINCT f.id) as cnt
-                FROM fight_players p
-                JOIN fights f ON f.id = p.fight_id
-                WHERE {where_sql}
-                GROUP BY p.class_id, t ORDER BY t ASC
-            """).fetchall()
-            # Gruppieren nach Klasse
-            from collections import defaultdict
-            by_class = defaultdict(list)
-            for cid, t, cnt in rows:
-                by_class[cid].append({"t": t, "v": cnt})
-            return [
-                {"class_id": cid, "class_name": CLASSES.get(cid, f"Class {cid}"),
-                 "realm": CLASS_REALM.get(cid, 0), "data": data}
-                for cid, data in sorted(by_class.items(),
-                    key=lambda x: -sum(d["v"] for d in x[1]))
-            ]
-
-        result['classes_24h'] = fetch(
-            "strftime('%Y-%m-%d %H:00', f.started_at)",
-            "f.started_at >= datetime('now', '-1 day')"
-        )
-        result['classes_3d'] = fetch(
-            "strftime('%Y-%m-%d %H:00', f.started_at)",
-            "f.started_at >= datetime('now', '-3 days')"
-        )
-        result['classes_7d'] = fetch(
-            "date(f.started_at)",
-            "f.started_at >= datetime('now', '-7 days')"
-        )
-        result['classes_30d'] = fetch(
-            "date(f.started_at)",
-            "f.started_at >= datetime('now', '-30 days')"
-        )
-        return result
-
-    fight_timeseries = build_fight_timeseries()
-    class_timeseries = build_class_timeseries()
-
-    # ── Separate Leaderboard Datensätze pro Zeitfenster ──
-    def build_leaderboard(days):
-        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
-        rows = cur.execute("""
-            SELECT p.name, p.class_id, max(p.realm_pts) as realm_pts,
-                   count(DISTINCT f.id) as fights, sum(t.won) as wins,
-                   max(f.started_at) as last_fight
-            FROM fight_players p
-            JOIN fights f ON f.id = p.fight_id
-            JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
-            WHERE f.started_at >= ?
-            GROUP BY p.name
-            HAVING fights >= ?
-            ORDER BY wins * 1.0 / fights DESC
-        """, (cutoff, MIN_FIGHTS_LEADERBOARD)).fetchall()
-
-        opp_rows = cur.execute("""
-            SELECT p.name, t.won, avg(opp.realm_pts) as avg_opp_rp
-            FROM fight_players p
-            JOIN fights f ON f.id = p.fight_id
-            JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
-            JOIN fight_players opp ON opp.fight_id = f.id AND opp.side != p.side
-            WHERE f.started_at >= ? AND opp.realm_pts IS NOT NULL
-            GROUP BY p.name, t.won
-        """, (cutoff,)).fetchall()
-
-        opp_map = {}
-        for name, won, avg_rp in opp_rows:
-            if name not in opp_map: opp_map[name] = {}
-            opp_map[name][won] = int(avg_rp) if avg_rp else None
-
-        result = []
-        for name, cid, rp, fights, wins, last_fight in rows:
-            wins = wins or 0
-            losses = fights - wins
-            orpm = opp_map.get(name, {})
-            result.append({
-                "name":        name,
-                "class_id":    cid,
-                "class_name":  CLASSES.get(cid, f"Class {cid}"),
-                "realm":       CLASS_REALM.get(cid, 0),
-                "realm_name":  REALM_NAMES.get(CLASS_REALM.get(cid, 0), ""),
-                "rr":          rp_to_rr(rp),
-                "fights":      fights,
-                "wins":        wins,
-                "losses":      losses,
-                "winrate":     round(wins / fights * 100) if fights > 0 else 0,
-                "wilson":      wilson_score(wins, fights),
-                "avg_win_rr":  rp_to_rr(orpm.get(1)) if orpm.get(1) else None,
-                "avg_loss_rr": rp_to_rr(orpm.get(0)) if orpm.get(0) else None,
-                "last_fight":  last_fight,
-            })
-        return result
-
-    leaderboard_1d = build_leaderboard(1)
-    leaderboard_3d = build_leaderboard(3)
-    leaderboard_7d = build_leaderboard(7)
-
-    # ── Separate Class Stats Datensätze pro Zeitfenster ──
-    def build_class_stats(days):
-        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
-        rows = cur.execute("""
-            SELECT p.class_id, count(DISTINCT f.id) as fights,
-                   sum(t.won) as wins, max(f.started_at) as last_fight
-            FROM fight_players p
-            JOIN fights f ON f.id = p.fight_id
-            JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
-            WHERE f.started_at >= ?
-            GROUP BY p.class_id ORDER BY fights DESC
-        """, (cutoff,)).fetchall()
-        result = []
-        for cid, fights, wins, last_fight in rows:
-            wins = wins or 0
-            result.append({
-                "class_id":   cid,
-                "class_name": CLASSES.get(cid, f"Class {cid}"),
-                "realm":      CLASS_REALM.get(cid, 0),
-                "realm_name": REALM_NAMES.get(CLASS_REALM.get(cid, 0), ""),
-                "fights":     fights,
-                "wins":       wins,
-                "winrate":    round(wins / fights * 100) if fights > 0 else 0,
-                "last_fight": last_fight,
-            })
-        return result
-
-    class_stats_1d = build_class_stats(1)
-    class_stats_3d = build_class_stats(3)
-    class_stats_7d = build_class_stats(7)
-
     return {
         "generated_at":    datetime.now(timezone.utc).isoformat(),
         "summary": {
@@ -701,10 +529,7 @@ def compute_stats(con, since_dt):
             "total_fights":     total_all,
             "active_players":   active_players,
         },
-        "class_stats":    class_stats,
-        "class_stats_1d": class_stats_1d,
-        "class_stats_3d": class_stats_3d,
-        "class_stats_7d": class_stats_7d,
+        "class_stats":     class_stats,
         "class_players":   class_players,
         "matchups":        matchups,
         "matchups_100":    matchups_100,
@@ -717,18 +542,13 @@ def compute_stats(con, since_dt):
         "common_matchups_7d": common_7d,
         "daily_fights":    [{"day": r[0], "count": r[1]} for r in daily],
         "zone_today":      zone_today,
-        "fight_timeseries": fight_timeseries,
-        "class_timeseries": class_timeseries,
         "busy_zones":      busy_zones,
         "top_classes_by_realm":    top_classes_by_realm,
         "top_classes_by_realm_1d": top_classes_by_realm_1d,
         "top_classes_by_realm_3d": top_classes_by_realm_3d,
         "top_classes_by_realm_7d": top_classes_by_realm_7d,
         "zone_yesterday":  zone_yesterday,
-        "leaderboard":    leaderboard,
-        "leaderboard_1d": leaderboard_1d,
-        "leaderboard_3d": leaderboard_3d,
-        "leaderboard_7d": leaderboard_7d,
+        "leaderboard":     leaderboard,
         "top_underdog":    top_underdog,
         "player_profiles": player_profile_data,
     }
