@@ -111,7 +111,7 @@ def compute_stats(con, since_dt):
     daily = cur.execute("""
         SELECT date(started_at) as day, count(*) as cnt
         FROM fights
-        WHERE started_at >= ?
+        WHERE size = 1 AND started_at >= ?
         GROUP BY day ORDER BY day ASC
     """, ((datetime.now(timezone.utc) - timedelta(days=7)).isoformat(),)).fetchall()
 
@@ -125,7 +125,7 @@ def compute_stats(con, since_dt):
                 CAST(strftime('%H', started_at) AS INTEGER) as hour,
                 count(*) as cnt
             FROM fights
-            WHERE date(started_at) = ? AND zone_id IS NOT NULL
+            WHERE size = 1 AND date(started_at) = ? AND zone_id IS NOT NULL
             GROUP BY zone_id, hour
             ORDER BY hour ASC
         """, (date_filter,)).fetchall()
@@ -148,7 +148,7 @@ def compute_stats(con, since_dt):
     busy_zones_rows = cur.execute("""
         SELECT zone_id, count(*) as cnt
         FROM fights
-        WHERE started_at >= ? AND zone_id IS NOT NULL
+        WHERE size = 1 AND started_at >= ? AND zone_id IS NOT NULL
         GROUP BY zone_id
         ORDER BY cnt DESC
         LIMIT 5
@@ -159,17 +159,15 @@ def compute_stats(con, since_dt):
     ]
 
     # ── Summary ──
-    total_all = cur.execute("SELECT count(*) FROM fights").fetchone()[0]
-    # Aktuelle Uhrzeit als Referenz für fairen Vergleich
+    total_all = cur.execute("SELECT count(*) FROM fights WHERE size = 1").fetchone()[0]
     now_time = datetime.now(timezone.utc)
     current_time_str = now_time.strftime('%H:%M:%S')
-
     fights_today = cur.execute(
-        "SELECT count(*) FROM fights WHERE date(started_at) = date('now') AND strftime('%H:%M:%S', started_at) <= ?",
+        "SELECT count(*) FROM fights WHERE size = 1 AND date(started_at) = date('now') AND strftime('%H:%M:%S', started_at) <= ?",
         (current_time_str,)
     ).fetchone()[0]
     fights_yesterday = cur.execute(
-        "SELECT count(*) FROM fights WHERE date(started_at) = date('now','-1 day') AND strftime('%H:%M:%S', started_at) <= ?",
+        "SELECT count(*) FROM fights WHERE size = 1 AND date(started_at) = date('now','-1 day') AND strftime('%H:%M:%S', started_at) <= ?",
         (current_time_str,)
     ).fetchone()[0]
 
@@ -178,7 +176,7 @@ def compute_stats(con, since_dt):
         SELECT count(DISTINCT p.name)
         FROM fight_players p
         JOIN fights f ON f.id = p.fight_id
-        WHERE f.started_at >= datetime('now','-1 day')
+        WHERE f.size = 1 AND f.started_at >= datetime('now','-1 day')
     """).fetchone()[0]
 
     # ── Class Stats ──
@@ -190,14 +188,14 @@ def compute_stats(con, since_dt):
         FROM fight_players p
         JOIN fights f ON f.id = p.fight_id
         JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
-        WHERE f.started_at >= ?
+        WHERE f.size = 1 AND f.started_at >= ?
         GROUP BY p.class_id
         ORDER BY fights DESC
     """, (since_str,)).fetchall()
 
     class_stats = []
     for row in class_rows:
-        cid, fights, wins, last_fight = row
+        cid, fights, wins, last_fight, players = row
         wins = wins or 0
         class_stats.append({
             "class_id":     cid,
@@ -208,6 +206,7 @@ def compute_stats(con, since_dt):
             "wins":         wins,
             "winrate":      round(wins / fights * 100) if fights > 0 else 0,
             "last_fight":   last_fight,
+            "players":      players,
         })
 
     # ── Matchup Matrix ──
@@ -240,10 +239,11 @@ def compute_stats(con, since_dt):
         JOIN fight_teams tw ON tw.fight_id = f.id AND tw.side = pw.side AND tw.won = 1
         JOIN fight_players pl ON pl.fight_id = f.id
         JOIN fight_teams tl ON tl.fight_id = f.id AND tl.side = pl.side AND tl.won = 0
+        WHERE f.size = 1
     """
 
     # Nach Zeitfenster (30d)
-    rows_time = cur.execute(MATCHUP_SQL + " WHERE f.started_at >= ?", (since_str,)).fetchall()
+    rows_time = cur.execute(MATCHUP_SQL + " AND f.started_at >= ?", (since_str,)).fetchall()
     matchups = build_matchups_from_rows(rows_time)
 
     # Nach letzten N Fights PRO Klassen-Kombination
@@ -280,7 +280,7 @@ def compute_stats(con, since_dt):
     # ── Häufigste Matchups (für verschiedene Zeitfenster) ──
     def build_common_matchups(days):
         cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
-        rows = cur.execute(MATCHUP_SQL + " WHERE f.started_at >= ? ORDER BY f.started_at DESC", (cutoff,)).fetchall()
+        rows = cur.execute(MATCHUP_SQL + " AND f.started_at >= ? ORDER BY f.started_at DESC", (cutoff,)).fetchall()
         data = build_matchups_from_rows(rows)
         top = sorted(data, key=lambda x: x["fights"], reverse=True)[:8]
         return [{
@@ -308,7 +308,7 @@ def compute_stats(con, since_dt):
         FROM fight_players p
         JOIN fights f ON f.id = p.fight_id
         JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
-        WHERE f.started_at >= ?
+        WHERE f.size = 1 AND f.started_at >= ?
         GROUP BY p.name
         HAVING fights >= ?
         ORDER BY wins * 1.0 / fights DESC
@@ -324,7 +324,7 @@ def compute_stats(con, since_dt):
         JOIN fights f ON f.id = p.fight_id
         JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
         JOIN fight_players opp ON opp.fight_id = f.id AND opp.side != p.side
-        WHERE f.started_at >= ? AND opp.realm_pts IS NOT NULL
+        WHERE f.size = 1 AND f.started_at >= ? AND opp.realm_pts IS NOT NULL
         GROUP BY p.name, t.won
     """, (since_str,)).fetchall()
 
@@ -366,7 +366,7 @@ def compute_stats(con, since_dt):
         FROM fight_players p
         JOIN fights f ON f.id = p.fight_id
         JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
-        WHERE f.started_at >= ?
+        WHERE f.size = 1 AND f.started_at >= ?
         GROUP BY p.class_id, p.name
         ORDER BY p.class_id, wins * 1.0 / count(DISTINCT f.id) DESC
     """, (since_str,)).fetchall()
@@ -400,7 +400,7 @@ def compute_stats(con, since_dt):
         JOIN fights f ON f.id = p.fight_id
         JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
         JOIN fight_players opp ON opp.fight_id = f.id AND opp.side != p.side
-        WHERE f.started_at >= ?
+        WHERE f.size = 1 AND f.started_at >= ?
     """, (since_str,)).fetchall()
 
     from collections import defaultdict, Counter
@@ -429,26 +429,26 @@ def compute_stats(con, since_dt):
 
     def avg(lst): return round(sum(lst)/len(lst)) if lst else None
 
-    def build_won_lost(won_vs_counter, won_vs_rp, lost_vs_counter, lost_vs_rp):
-        won_vs = []
-        for cid, c in won_vs_counter.most_common(5):
-            rp_list = won_vs_rp.get(cid, [])
-            avg_rp = int(sum(rp_list)/len(rp_list)) if rp_list else None
-            won_vs.append({"class_id": cid, "class_name": CLASSES.get(cid, f"Class {cid}"),
-                           "count": c, "avg_rr": rp_to_rr(avg_rp) if avg_rp else None})
-        lost_vs = []
-        for cid, c in lost_vs_counter.most_common(5):
-            rp_list = lost_vs_rp.get(cid, [])
-            avg_rp = int(sum(rp_list)/len(rp_list)) if rp_list else None
-            lost_vs.append({"class_id": cid, "class_name": CLASSES.get(cid, f"Class {cid}"),
-                            "count": c, "avg_rr": rp_to_rr(avg_rp) if avg_rp else None})
-        return won_vs, lost_vs
-
     player_profile_data = {}
     for name, pp in player_profiles.items():
         top_zones = [{"name": z, "count": c} for z, c in pp["zones"].most_common(5)]
         top_hours = [{"hour": h, "count": c} for h, c in sorted(pp["hours"].items(), key=lambda x: -x[1])[:5]]
-        won_vs, lost_vs = build_won_lost(pp["won_vs"], pp["won_vs_rp"], pp["lost_vs"], pp["lost_vs_rp"])
+        won_vs = []
+        for cid, c in pp["won_vs"].most_common(5):
+            rp_list = pp["won_vs_rp"].get(cid, [])
+            avg_rp = int(sum(rp_list)/len(rp_list)) if rp_list else None
+            won_vs.append({
+                "class_id": cid, "class_name": CLASSES.get(cid, f"Class {cid}"),
+                "count": c, "avg_rr": rp_to_rr(avg_rp) if avg_rp else None
+            })
+        lost_vs = []
+        for cid, c in pp["lost_vs"].most_common(5):
+            rp_list = pp["lost_vs_rp"].get(cid, [])
+            avg_rp = int(sum(rp_list)/len(rp_list)) if rp_list else None
+            lost_vs.append({
+                "class_id": cid, "class_name": CLASSES.get(cid, f"Class {cid}"),
+                "count": c, "avg_rr": rp_to_rr(avg_rp) if avg_rp else None
+            })
         player_profile_data[name] = {
             "top_zones":  top_zones,
             "top_hours":  top_hours,
@@ -459,54 +459,7 @@ def compute_stats(con, since_dt):
             "avg_taken":  avg(pp["dmg_taken"]),
         }
 
-    # ── Zeitgefilterte Stats (Wins/Losses/Dmg) für 1d/3d/7d ──
-    def build_profile_stats(days):
-        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
-        rows = cur.execute("""
-            SELECT p.name, t.won, opp.class_id, opp.realm_pts,
-                   p.dmg_done, p.heal_done, p.dmg_taken
-            FROM fight_players p
-            JOIN fights f ON f.id = p.fight_id
-            JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
-            JOIN fight_players opp ON opp.fight_id = f.id AND opp.side != p.side
-            WHERE f.started_at >= ?
-        """, (cutoff,)).fetchall()
-
-        stats = defaultdict(lambda: {
-            "won_vs": Counter(), "lost_vs": Counter(),
-            "won_vs_rp": defaultdict(list), "lost_vs_rp": defaultdict(list),
-            "dmg_done": [], "heal_done": [], "dmg_taken": [],
-        })
-        for name, won, opp_cid, opp_rp, dmg_done, heal_done, dmg_taken in rows:
-            s = stats[name]
-            if won:
-                s["won_vs"][opp_cid] += 1
-                if opp_rp: s["won_vs_rp"][opp_cid].append(opp_rp)
-            else:
-                s["lost_vs"][opp_cid] += 1
-                if opp_rp: s["lost_vs_rp"][opp_cid].append(opp_rp)
-            if dmg_done is not None: s["dmg_done"].append(dmg_done)
-            if heal_done is not None: s["heal_done"].append(heal_done)
-            if dmg_taken is not None: s["dmg_taken"].append(dmg_taken)
-
-        result = {}
-        for name, s in stats.items():
-            won_vs, lost_vs = build_won_lost(s["won_vs"], s["won_vs_rp"], s["lost_vs"], s["lost_vs_rp"])
-            result[name] = {
-                "won_vs":   won_vs,
-                "lost_vs":  lost_vs,
-                "avg_dmg":  avg(s["dmg_done"]),
-                "avg_heal": avg(s["heal_done"]),
-                "avg_taken":avg(s["dmg_taken"]),
-            }
-        return result
-
-    profile_stats_1d = build_profile_stats(1)
-    profile_stats_3d = build_profile_stats(3)
-    profile_stats_7d = build_profile_stats(7)
-
     # ── Top Underdog Wins (1vX) ──
-    # Echte Gegneranzahl aus fight_players zählen statt f.size (Eden-Wert oft falsch)
     underdog_rows = cur.execute("""
         SELECT
             p.name,
@@ -568,7 +521,7 @@ def compute_stats(con, since_dt):
             SELECT p.class_id, count(DISTINCT p.name) as players
             FROM fight_players p
             JOIN fights f ON f.id = p.fight_id
-            WHERE f.started_at >= ?
+            WHERE f.size = 1 AND f.started_at >= ?
             GROUP BY p.class_id
             ORDER BY players DESC
         """, (cutoff,)).fetchall()
@@ -595,7 +548,7 @@ def compute_stats(con, since_dt):
             FROM fight_players p
             JOIN fights f ON f.id = p.fight_id
             JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
-            WHERE f.started_at >= ?
+            WHERE f.size = 1 AND f.started_at >= ?
             GROUP BY p.class_id ORDER BY fights DESC
         """, (cutoff,)).fetchall()
         result = []
@@ -628,7 +581,7 @@ def compute_stats(con, since_dt):
             FROM fight_players p
             JOIN fights f ON f.id = p.fight_id
             JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
-            WHERE f.started_at >= ?
+            WHERE f.size = 1 AND f.started_at >= ?
             GROUP BY p.name
             HAVING fights >= ?
             ORDER BY wins * 1.0 / fights DESC
@@ -640,7 +593,7 @@ def compute_stats(con, since_dt):
             JOIN fights f ON f.id = p.fight_id
             JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
             JOIN fight_players opp ON opp.fight_id = f.id AND opp.side != p.side
-            WHERE f.started_at >= ? AND opp.realm_pts IS NOT NULL
+            WHERE f.size = 1 AND f.started_at >= ? AND opp.realm_pts IS NOT NULL
             GROUP BY p.name, t.won
         """, (cutoff,)).fetchall()
 
@@ -675,6 +628,60 @@ def compute_stats(con, since_dt):
     leaderboard_1d = build_leaderboard(1)
     leaderboard_3d = build_leaderboard(3)
     leaderboard_7d = build_leaderboard(7)
+
+    # ── Zeitgefilterte Profile Stats ──
+    def build_won_lost(won_vs_c, won_vs_rp, lost_vs_c, lost_vs_rp):
+        won_vs = []
+        for cid, c in won_vs_c.most_common(5):
+            rp_list = won_vs_rp.get(cid, [])
+            avg_rp = int(sum(rp_list)/len(rp_list)) if rp_list else None
+            won_vs.append({"class_id": cid, "class_name": CLASSES.get(cid, f"Class {cid}"),
+                           "count": c, "avg_rr": rp_to_rr(avg_rp) if avg_rp else None})
+        lost_vs = []
+        for cid, c in lost_vs_c.most_common(5):
+            rp_list = lost_vs_rp.get(cid, [])
+            avg_rp = int(sum(rp_list)/len(rp_list)) if rp_list else None
+            lost_vs.append({"class_id": cid, "class_name": CLASSES.get(cid, f"Class {cid}"),
+                            "count": c, "avg_rr": rp_to_rr(avg_rp) if avg_rp else None})
+        return won_vs, lost_vs
+
+    def build_profile_stats(days):
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+        rows = cur.execute("""
+            SELECT p.name, t.won, opp.class_id, opp.realm_pts,
+                   p.dmg_done, p.heal_done, p.dmg_taken
+            FROM fight_players p
+            JOIN fights f ON f.id = p.fight_id
+            JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
+            JOIN fight_players opp ON opp.fight_id = f.id AND opp.side != p.side
+            WHERE f.size = 1 AND f.started_at >= ?
+        """, (cutoff,)).fetchall()
+        from collections import Counter as C, defaultdict as dd
+        stats = dd(lambda: {"won_vs": C(), "lost_vs": C(),
+                             "won_vs_rp": dd(list), "lost_vs_rp": dd(list),
+                             "dmg_done": [], "heal_done": [], "dmg_taken": []})
+        for name, won, opp_cid, opp_rp, dmg_done, heal_done, dmg_taken in rows:
+            s = stats[name]
+            if won:
+                s["won_vs"][opp_cid] += 1
+                if opp_rp: s["won_vs_rp"][opp_cid].append(opp_rp)
+            else:
+                s["lost_vs"][opp_cid] += 1
+                if opp_rp: s["lost_vs_rp"][opp_cid].append(opp_rp)
+            if dmg_done is not None: s["dmg_done"].append(dmg_done)
+            if heal_done is not None: s["heal_done"].append(heal_done)
+            if dmg_taken is not None: s["dmg_taken"].append(dmg_taken)
+        result = {}
+        for name, s in stats.items():
+            won_vs, lost_vs = build_won_lost(s["won_vs"], s["won_vs_rp"], s["lost_vs"], s["lost_vs_rp"])
+            result[name] = {"won_vs": won_vs, "lost_vs": lost_vs,
+                            "avg_dmg": avg(s["dmg_done"]), "avg_heal": avg(s["heal_done"]),
+                            "avg_taken": avg(s["dmg_taken"])}
+        return result
+
+    profile_stats_1d = build_profile_stats(1)
+    profile_stats_3d = build_profile_stats(3)
+    profile_stats_7d = build_profile_stats(7)
 
     return {
         "generated_at":    datetime.now(timezone.utc).isoformat(),
