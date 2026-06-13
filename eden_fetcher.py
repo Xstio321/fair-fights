@@ -239,27 +239,17 @@ def save_fight(con: sqlite3.Connection, fight: dict) -> bool:
 # HAUPTSCHLEIFE
 # ──────────────────────────────────────────────
 def run_once(session: requests.Session, con: sqlite3.Connection, only_1v1=True):
-    # Immer 1v1 holen
-    log.info("Fetching fight list (1v1)...")
+    min_s = 1
+    max_s = 1 if only_1v1 else 8
+
+    log.info(f"Fetching fight list (size {min_s}v{min_s}–{max_s}v{max_s})...")
     try:
-        fights_1v1 = fetch_fight_list(session, min_size=1, max_size=1)
+        fights_summary = fetch_fight_list(session, min_size=min_s, max_size=max_s)
     except Exception as e:
-        log.error(f"Fehler beim 1v1 Listenabruf: {e}")
-        fights_1v1 = []
-    log.info(f"  → {len(fights_1v1)} 1v1 Fights in der Liste")
+        log.error(f"Fehler beim Listenabruf: {e}")
+        return
 
-    # Optional 8v8 holen
-    fights_8v8 = []
-    if not only_1v1:
-        log.info("Fetching fight list (8v8)...")
-        try:
-            fights_8v8 = fetch_fight_list(session, min_size=8, max_size=8)
-        except Exception as e:
-            log.error(f"Fehler beim 8v8 Listenabruf: {e}")
-        log.info(f"  → {len(fights_8v8)} 8v8 Fights in der Liste")
-
-    fights_summary = fights_1v1 + fights_8v8
-    log.info(f"  → {len(fights_summary)} Fights total")
+    log.info(f"  → {len(fights_summary)} Fights in der Liste")
 
     new_count = 0
     for summary in fights_summary:
@@ -290,7 +280,6 @@ def run_once(session: requests.Session, con: sqlite3.Connection, only_1v1=True):
     # Automatisch exportieren und pushen
     import subprocess
     subprocess.run(["python", "export_json.py"], check=False)
-    subprocess.run(["python", "export_8v8.py", "--no-push"], check=False)
     subprocess.run(["python", "elo_calculator.py"], check=False)
 
 
