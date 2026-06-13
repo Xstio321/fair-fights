@@ -526,12 +526,13 @@ function renderLeaderboard(){
     const rlm=realmCss(p.class_id);
     const wr=p.winrate;
     const rankCls=rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'rank-num';
-    tbody+=`<tr>
+    const safeName2 = p.name.replace(/'/g,String.fromCharCode(92)+String.fromCharCode(39));
+    tbody+=`<tr class='cs-row' style='cursor:pointer' onclick="toggleProfile('${safeName2}')"
       <td><span class="${rankCls}">${rank}</span></td>
-      <td style="cursor:pointer" onclick="toggleProfile('${p.name.replace(/'/g,String.fromCharCode(92)+String.fromCharCode(39))}')"><div class="class-cell">
+      <td><div class="class-cell">
         ${classIconHtml(p.class_id)}
         <div>
-          <div class="player-name">${p.name} <span class="expand-icon${lbProfileOpen===p.name?' open':''}" style="font-size:10px;color:var(--text3)">▶</span></div>
+          <div class="player-name">${p.name}</div>
           <div class="player-sub"><span class="realm-${rlm}">${realmName(p.class_id)}</span> · ${p.class_name} · <span class="rr-badge">${p.rr}</span></div>
         </div>
       </div></td>
