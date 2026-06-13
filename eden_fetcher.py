@@ -32,7 +32,7 @@ POLL_INTERVAL = 300  # Sekunden zwischen Abfragen (5 Minuten)
 
 # Session-Cookies (einmalig aus dem Browser kopieren)
 COOKIES = {
-    "eden_daoc_sid": "8fb1c24f287e9fd21859cef24667a666",
+    "eden_daoc_sid": "2c74d8b84d64c93a4b89e961f6c4e49e",
     "eden_daoc_u":   "39665",
 }
 
@@ -239,17 +239,27 @@ def save_fight(con: sqlite3.Connection, fight: dict) -> bool:
 # HAUPTSCHLEIFE
 # ──────────────────────────────────────────────
 def run_once(session: requests.Session, con: sqlite3.Connection, only_1v1=True):
-    min_s = 1
-    max_s = 1 if only_1v1 else 8
-
-    log.info(f"Fetching fight list (size {min_s}v{min_s}–{max_s}v{max_s})...")
+    # Immer 1v1 holen
+    log.info("Fetching fight list (1v1)...")
     try:
-        fights_summary = fetch_fight_list(session, min_size=min_s, max_size=max_s)
+        fights_1v1 = fetch_fight_list(session, min_size=1, max_size=1)
     except Exception as e:
-        log.error(f"Fehler beim Listenabruf: {e}")
-        return
+        log.error(f"Fehler beim 1v1 Listenabruf: {e}")
+        fights_1v1 = []
+    log.info(f"  → {len(fights_1v1)} 1v1 Fights in der Liste")
 
-    log.info(f"  → {len(fights_summary)} Fights in der Liste")
+    # Optional 8v8 holen
+    fights_8v8 = []
+    if not only_1v1:
+        log.info("Fetching fight list (8v8)...")
+        try:
+            fights_8v8 = fetch_fight_list(session, min_size=8, max_size=8)
+        except Exception as e:
+            log.error(f"Fehler beim 8v8 Listenabruf: {e}")
+        log.info(f"  → {len(fights_8v8)} 8v8 Fights in der Liste")
+
+    fights_summary = fights_1v1 + fights_8v8
+    log.info(f"  → {len(fights_summary)} Fights total")
 
     new_count = 0
     for summary in fights_summary:
@@ -280,6 +290,7 @@ def run_once(session: requests.Session, con: sqlite3.Connection, only_1v1=True):
     # Automatisch exportieren und pushen
     import subprocess
     subprocess.run(["python", "export_json.py"], check=False)
+    subprocess.run(["python", "export_8v8.py", "--no-push"], check=False)
     subprocess.run(["python", "elo_calculator.py"], check=False)
 
 
