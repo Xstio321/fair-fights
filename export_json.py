@@ -392,7 +392,10 @@ def compute_stats(con, since_dt):
             strftime('%H', f.started_at) as hour,
             t.won,
             opp.class_id as opp_class_id,
-            opp.realm_pts as opp_rp
+            opp.realm_pts as opp_rp,
+            p.dmg_done,
+            p.heal_done,
+            p.dmg_taken
         FROM fight_players p
         JOIN fights f ON f.id = p.fight_id
         JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
@@ -405,9 +408,10 @@ def compute_stats(con, since_dt):
         "zones": Counter(), "hours": Counter(),
         "won_vs": Counter(), "lost_vs": Counter(),
         "won_vs_rp": defaultdict(list), "lost_vs_rp": defaultdict(list),
+        "dmg_done": [], "heal_done": [], "dmg_taken": [],
     })
 
-    for name, cid, zone_id, hour, won, opp_cid, opp_rp in profile_rows:
+    for name, cid, zone_id, hour, won, opp_cid, opp_rp, dmg_done, heal_done, dmg_taken in profile_rows:
         pp = player_profiles[name]
         if zone_id and zone_id in ZONE_NAMES:
             pp["zones"][ZONE_NAMES[zone_id]] += 1
@@ -419,6 +423,9 @@ def compute_stats(con, since_dt):
         else:
             pp["lost_vs"][opp_cid] += 1
             if opp_rp: pp["lost_vs_rp"][opp_cid].append(opp_rp)
+        if dmg_done: pp["dmg_done"].append(dmg_done)
+        if heal_done: pp["heal_done"].append(heal_done)
+        if dmg_taken: pp["dmg_taken"].append(dmg_taken)
 
     player_profile_data = {}
     for name, pp in player_profiles.items():
@@ -440,11 +447,15 @@ def compute_stats(con, since_dt):
                 "class_id": cid, "class_name": CLASSES.get(cid, f"Class {cid}"),
                 "count": c, "avg_rr": rp_to_rr(avg_rp) if avg_rp else None
             })
+        def avg(lst): return round(sum(lst)/len(lst)) if lst else None
         player_profile_data[name] = {
-            "top_zones": top_zones,
-            "top_hours": top_hours,
-            "won_vs":    won_vs,
-            "lost_vs":   lost_vs,
+            "top_zones":  top_zones,
+            "top_hours":  top_hours,
+            "won_vs":     won_vs,
+            "lost_vs":    lost_vs,
+            "avg_dmg":    avg(pp["dmg_done"]),
+            "avg_heal":   avg(pp["heal_done"]),
+            "avg_taken":  avg(pp["dmg_taken"]),
         }
 
     # ── Top Underdog Wins (1vX) ──

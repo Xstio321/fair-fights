@@ -108,7 +108,7 @@
   .page-info{font-size:11px;color:var(--text3);font-family:'Cinzel',serif}
   /* Matrix */
   .matrix-note{font-size:12px;color:var(--text3);margin-bottom:12px;letter-spacing:0.04em}
-  .matrix-wrap{overflow:auto;max-height:70vh}
+  .matrix-wrap{overflow-x:auto}
   .matrix-table{border-collapse:collapse;font-size:12px}
   .matrix-table th{font-size:9px;padding:4px 6px;font-weight:400;color:var(--text3);background:var(--bg2);letter-spacing:0.06em;text-transform:uppercase;font-family:'Cinzel',serif;border:0.5px solid var(--border);height:36px;vertical-align:middle;white-space:nowrap;position:sticky;top:0;z-index:1;transition:background 0.1s}
   .matrix-table td{padding:4px 8px;text-align:center;border:0.5px solid var(--border);font-family:'Cinzel',serif;font-size:11px;transition:background 0.1s;height:36px;vertical-align:middle;white-space:nowrap;cursor:default}
@@ -638,6 +638,23 @@ function buildPlayerProfile(name){
       </div>`).join('')
     : '<div style="color:var(--text3);font-size:11px">No data</div>';
 
+  // Avg dmg/heal/taken
+  const statsHtml = `
+    <div style="display:flex;gap:24px;padding:8px 10px;border-top:0.5px solid var(--border2)">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+        <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase">Avg Dmg</span>
+        <span style="font-size:14px;font-family:'Cinzel',serif;color:var(--alb);font-weight:600">${pp.avg_dmg!=null?pp.avg_dmg.toLocaleString():'–'}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+        <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase">Avg Heal</span>
+        <span style="font-size:14px;font-family:'Cinzel',serif;color:var(--mid);font-weight:600">${pp.avg_heal!=null?pp.avg_heal.toLocaleString():'–'}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+        <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase">Avg Taken</span>
+        <span style="font-size:14px;font-family:'Cinzel',serif;color:var(--text2);font-weight:600">${pp.avg_taken!=null?pp.avg_taken.toLocaleString():'–'}</span>
+      </div>
+    </div>`;
+
   return `<div class="profile-grid">
     <div>
       <div class="profile-section-title">⚔ Most active zones</div>
@@ -656,6 +673,7 @@ function buildPlayerProfile(name){
       ${lostHtml}
     </div>
   </div>
+  ${statsHtml}
   <div style="padding:4px 10px 8px;font-size:10px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.06em">Profile data based on last 30 days</div>`;
 }
 
@@ -996,6 +1014,7 @@ function renderMatchups(){
 // ── Activity ──
 // Zone Liniendiagramm State
 let zoneChartHidden = new Set();
+let clsActDays = 7;
 let activityDays = 30;
 
 // Farben für Zonen
@@ -1005,6 +1024,28 @@ const ZONE_COLORS = [
 ];
 
 function renderActivity(){
+  // ── Class Activity (Spieler pro Klasse) ──
+  const clsActKey = clsActDays===1?'class_stats_1d':clsActDays===3?'class_stats_3d':clsActDays===7?'class_stats_7d':'class_stats';
+  const clsActData = (DATA[clsActKey]||[]).filter(c=>c.players>0).sort((a,b)=>b.players-a.players);
+  const maxPlayers = Math.max(...clsActData.map(c=>c.players), 1);
+
+  // Realm-Farbe
+  function realmColor(cid){
+    return REALM_HIB.includes(cid)?'var(--hib)':REALM_MID.includes(cid)?'var(--mid)':REALM_ALB.includes(cid)?'var(--alb)':'var(--text3)';
+  }
+
+  const clsActHtml = clsActData.length ? `<div style="display:grid;grid-template-columns:1fr;gap:0">` +
+    clsActData.map(c=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:0.5px solid var(--border)">
+        ${classIconHtml(c.class_id, 20)}
+        <span style="font-size:13px;min-width:100px;color:var(--text)">${c.class_name}</span>
+        <div style="flex:1;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden">
+          <div style="height:100%;width:${Math.round(c.players/maxPlayers*100)}%;background:${realmColor(c.class_id)};border-radius:3px;opacity:0.8"></div>
+        </div>
+        <span style="font-size:12px;color:var(--text3);font-family:'Cinzel',serif;min-width:24px;text-align:right">${c.players}</span>
+      </div>`).join('') + '</div>'
+    : '<div class="loading">No data</div>';
+
   const common = activityDays===1?DATA.common_matchups_1d:activityDays===3?DATA.common_matchups_3d:activityDays===7?DATA.common_matchups_7d:DATA.common_matchups||[];
   const tcr = activityDays===1?DATA.top_classes_by_realm_1d:activityDays===3?DATA.top_classes_by_realm_3d:activityDays===7?DATA.top_classes_by_realm_7d:DATA.top_classes_by_realm||{};
   const daily  = DATA.daily_fights   || [];
@@ -1202,6 +1243,18 @@ function renderActivity(){
         ${topClassesHtml}
       </div>
       <div class="activity-card activity-card-full">
+        <div class="activity-card-title" style="display:flex;justify-content:space-between;align-items:center">
+          <span>Class Activity – Players</span>
+          <div class="time-filters" id="tf-cls-act">
+            <div class="tf ${clsActDays===1?'active':''}" data-clsa="1">24h</div>
+            <div class="tf ${clsActDays===3?'active':''}" data-clsa="3">3d</div>
+            <div class="tf ${clsActDays===7?'active':''}" data-clsa="7">7d</div>
+            <div class="tf ${clsActDays===30?'active':''}" data-clsa="30">30d</div>
+          </div>
+        </div>
+        ${clsActHtml}
+      </div>
+      <div class="activity-card activity-card-full">
         <div class="activity-card-title">Fights per day – last 7 days</div>
         <div class="day-grid">${dayHtml}</div>
       </div>
@@ -1214,6 +1267,15 @@ function toggleZone(zoneId){
   renderActivity();
 }
 
+
+// Class Activity Filter
+document.getElementById('activity').addEventListener('click', e=>{
+  const btn = e.target.closest('[data-clsa]');
+  if(btn){
+    clsActDays = parseInt(btn.dataset.clsa);
+    renderActivity();
+  }
+});
 
 // ── Tab switching ──
 function switchTab(id,el){
