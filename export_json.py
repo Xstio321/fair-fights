@@ -459,48 +459,43 @@ def compute_stats(con, since_dt):
             "avg_taken":  avg(pp["dmg_taken"]),
         }
 
-    # ── Top Underdog Wins (1vX) ──
     # ── Top Win Streaks ──
     streak_rows = cur.execute("""
-        SELECT p.name, p.class_id, max(p.realm_pts) as rp, t.won, f.started_at
+        SELECT p.name, p.class_id, p.realm_pts, t.won, f.started_at, f.id
         FROM fight_players p
         JOIN fights f ON f.id = p.fight_id
         JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
         WHERE f.started_at >= ?
-        ORDER BY p.name, f.started_at ASC
+        ORDER BY p.name, f.started_at ASC, f.id ASC
     """, (since_str,)).fetchall()
 
     from collections import defaultdict
+    seen_fight = set()
     player_fights_seq = defaultdict(list)
     player_meta = {}
-    for name, cid, rp, won, started_at in streak_rows:
+    for name, cid, rp, won, started_at, fid in streak_rows:
+        key = (name, fid)
+        if key in seen_fight:
+            continue
+        seen_fight.add(key)
         player_fights_seq[name].append(int(won))
         if name not in player_meta:
-            player_meta[name] = {"class_id": cid, "rp": rp}
-        else:
-            if rp and (not player_meta[name]["rp"] or rp > player_meta[name]["rp"]):
-                player_meta[name]["rp"] = rp
+            player_meta[name] = {"class_id": cid, "rp": rp or 0}
+        elif rp and rp > (player_meta[name]["rp"] or 0):
+            player_meta[name]["rp"] = rp
 
-    streak_data = {}
+    streak_results = {}
     for name, results in player_fights_seq.items():
-        # Längste aktuelle Streak (vom Ende)
         current = 0
         for r in reversed(results):
-            if r == 1:
-                current += 1
-            else:
-                break
-        # Längste jemals
+            if r == 1: current += 1
+            else: break
         best = 0
         run = 0
         for r in results:
-            if r == 1:
-                run += 1
-                best = max(best, run)
-            else:
-                run = 0
-        if current >= 3 or best >= 5:
-            streak_data[name] = {"current": current, "best": best}
+            if r == 1: run += 1; best = max(best, run)
+            else: run = 0
+        streak_results[name] = {"current": current, "best": best}
 
     top_underdog = sorted(
         [
@@ -511,10 +506,10 @@ def compute_stats(con, since_dt):
                 "realm":      CLASS_REALM.get(player_meta[name]["class_id"], 0),
                 "rr":         rp_to_rr(player_meta[name]["rp"]),
                 "opponents":  v["current"],
-                "label":      f"{v['current']}W" if v["current"] > 0 else f"Best: {v['best']}W",
+                "label":      f"{v['current']}W streak",
             }
-            for name, v in streak_data.items()
-            if v["current"] >= 3
+            for name, v in streak_results.items()
+            if v["current"] >= 2
         ],
         key=lambda x: -x["opponents"]
     )[:5]
