@@ -460,59 +460,63 @@ def compute_stats(con, since_dt):
         }
 
     # ── Top Underdog Wins (1vX) ──
-    # Echte Gegneranzahl aus fight_players zählen statt f.size (Eden-Wert oft falsch)
-    underdog_rows = cur.execute("""
-        SELECT
-            p.name,
-            p.class_id,
-            p.realm_pts,
-            (SELECT count(*) FROM fight_players p3
-             JOIN fight_teams tl ON tl.fight_id = f.id AND tl.side = p3.side AND tl.won = 0
-             WHERE p3.fight_id = f.id) as real_opponents,
-            f.started_at
-        FROM fights f
-        JOIN fight_teams tw ON tw.fight_id = f.id AND tw.won = 1
-        JOIN fight_players p ON p.fight_id = f.id AND p.side = tw.side
+    # ── Top Win Streaks ──
+    streak_rows = cur.execute("""
+        SELECT p.name, p.class_id, max(p.realm_pts) as rp, t.won, f.started_at
+        FROM fight_players p
+        JOIN fights f ON f.id = p.fight_id
+        JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
         WHERE f.started_at >= ?
-          AND (
-            SELECT count(*) FROM fight_players p2
-            WHERE p2.fight_id = f.id AND p2.side = tw.side
-          ) = 1
-          AND (
-            SELECT count(*) FROM fight_players p3
-            JOIN fight_teams tl ON tl.fight_id = f.id AND tl.side = p3.side AND tl.won = 0
-            WHERE p3.fight_id = f.id
-          ) > 1
-        ORDER BY real_opponents DESC, f.started_at DESC
+        ORDER BY p.name, f.started_at ASC
     """, (since_str,)).fetchall()
 
-    # Pro Spieler den besten (höchsten) Underdog-Win nehmen
-    seen_underdog = {}
-    for name, cid, rp, opponents, started_at in underdog_rows:
-        if name not in seen_underdog or opponents > seen_underdog[name]['opponents']:
-            seen_underdog[name] = {
-                "name":       name,
-                "class_id":   cid,
-                "class_name": CLASSES.get(cid, f"Class {cid}"),
-                "realm":      CLASS_REALM.get(cid, 0),
-                "rr":         rp_to_rr(rp),
-                "opponents":  opponents,
-                "label":      f"1v{opponents}",
-            }
+    from collections import defaultdict
+    player_fights_seq = defaultdict(list)
+    player_meta = {}
+    for name, cid, rp, won, started_at in streak_rows:
+        player_fights_seq[name].append(int(won))
+        if name not in player_meta:
+            player_meta[name] = {"class_id": cid, "rp": rp}
+        else:
+            if rp and (not player_meta[name]["rp"] or rp > player_meta[name]["rp"]):
+                player_meta[name]["rp"] = rp
 
-    # Realm Rank zu numerischem Wert umrechnen für Sortierung
-    def rr_to_sort_key(rr_label):
-        # z.B. "4L2" -> 4*10+2 = 42, niedrigerer Wert = niedrigerer Rank
-        try:
-            parts = rr_label.replace('L','x').split('x')
-            return int(parts[0]) * 10 + int(parts[1])
-        except:
-            return 999
+    streak_data = {}
+    for name, results in player_fights_seq.items():
+        # Längste aktuelle Streak (vom Ende)
+        current = 0
+        for r in reversed(results):
+            if r == 1:
+                current += 1
+            else:
+                break
+        # Längste jemals
+        best = 0
+        run = 0
+        for r in results:
+            if r == 1:
+                run += 1
+                best = max(best, run)
+            else:
+                run = 0
+        if current >= 3 or best >= 5:
+            streak_data[name] = {"current": current, "best": best}
 
-    # Sortieren: erst nach Gegneranzahl (desc), dann nach RR (asc = niedrigster zuerst)
     top_underdog = sorted(
-        seen_underdog.values(),
-        key=lambda x: (-x['opponents'], rr_to_sort_key(x['rr']))
+        [
+            {
+                "name":       name,
+                "class_id":   player_meta[name]["class_id"],
+                "class_name": CLASSES.get(player_meta[name]["class_id"], "Unknown"),
+                "realm":      CLASS_REALM.get(player_meta[name]["class_id"], 0),
+                "rr":         rp_to_rr(player_meta[name]["rp"]),
+                "opponents":  v["current"],
+                "label":      f"{v['current']}W" if v["current"] > 0 else f"Best: {v['best']}W",
+            }
+            for name, v in streak_data.items()
+            if v["current"] >= 3
+        ],
+        key=lambda x: -x["opponents"]
     )[:5]
 
     # ── Top 3 Klassen pro Realm (für verschiedene Zeitfenster) ──
@@ -630,6 +634,61 @@ def compute_stats(con, since_dt):
     leaderboard_3d = build_leaderboard(3)
     leaderboard_7d = build_leaderboard(7)
 
+    # ── Zeitgefilterte Profile Stats ──
+    def build_won_lost(won_vs_c, won_vs_rp, lost_vs_c, lost_vs_rp):
+        won_vs = []
+        for cid, c in won_vs_c.most_common(5):
+            rp_list = won_vs_rp.get(cid, [])
+            avg_rp = int(sum(rp_list)/len(rp_list)) if rp_list else None
+            won_vs.append({"class_id": cid, "class_name": CLASSES.get(cid, f"Class {cid}"),
+                           "count": c, "avg_rr": rp_to_rr(avg_rp) if avg_rp else None})
+        lost_vs = []
+        for cid, c in lost_vs_c.most_common(5):
+            rp_list = lost_vs_rp.get(cid, [])
+            avg_rp = int(sum(rp_list)/len(rp_list)) if rp_list else None
+            lost_vs.append({"class_id": cid, "class_name": CLASSES.get(cid, f"Class {cid}"),
+                            "count": c, "avg_rr": rp_to_rr(avg_rp) if avg_rp else None})
+        return won_vs, lost_vs
+
+    def build_profile_stats(days):
+        from collections import Counter as C, defaultdict as dd
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+        rows = cur.execute("""
+            SELECT p.name, t.won, opp.class_id, opp.realm_pts,
+                   p.dmg_done, p.heal_done, p.dmg_taken
+            FROM fight_players p
+            JOIN fights f ON f.id = p.fight_id
+            JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
+            JOIN fight_players opp ON opp.fight_id = f.id AND opp.side != p.side
+            WHERE f.size = 1 AND f.started_at >= ?
+        """, (cutoff,)).fetchall()
+        stats = dd(lambda: {"won_vs": C(), "lost_vs": C(),
+                             "won_vs_rp": dd(list), "lost_vs_rp": dd(list),
+                             "dmg_done": [], "heal_done": [], "dmg_taken": []})
+        for name, won, opp_cid, opp_rp, dmg_done, heal_done, dmg_taken in rows:
+            s = stats[name]
+            if won:
+                s["won_vs"][opp_cid] += 1
+                if opp_rp: s["won_vs_rp"][opp_cid].append(opp_rp)
+            else:
+                s["lost_vs"][opp_cid] += 1
+                if opp_rp: s["lost_vs_rp"][opp_cid].append(opp_rp)
+            if dmg_done is not None: s["dmg_done"].append(dmg_done)
+            if heal_done is not None: s["heal_done"].append(heal_done)
+            if dmg_taken is not None: s["dmg_taken"].append(dmg_taken)
+        def avg(lst): return round(sum(lst)/len(lst)) if lst else None
+        result = {}
+        for name, s in stats.items():
+            won_vs, lost_vs = build_won_lost(s["won_vs"], s["won_vs_rp"], s["lost_vs"], s["lost_vs_rp"])
+            result[name] = {"won_vs": won_vs, "lost_vs": lost_vs,
+                            "avg_dmg": avg(s["dmg_done"]), "avg_heal": avg(s["heal_done"]),
+                            "avg_taken": avg(s["dmg_taken"])}
+        return result
+
+    profile_stats_1d = build_profile_stats(1)
+    profile_stats_3d = build_profile_stats(3)
+    profile_stats_7d = build_profile_stats(7)
+
     return {
         "generated_at":    datetime.now(timezone.utc).isoformat(),
         "summary": {
@@ -665,7 +724,10 @@ def compute_stats(con, since_dt):
         "leaderboard_3d": leaderboard_3d,
         "leaderboard_7d": leaderboard_7d,
         "top_underdog":    top_underdog,
-        "player_profiles": player_profile_data,
+        "player_profiles":   player_profile_data,
+        "profile_stats_1d":  profile_stats_1d,
+        "profile_stats_3d":  profile_stats_3d,
+        "profile_stats_7d":  profile_stats_7d,
     }
 
 
