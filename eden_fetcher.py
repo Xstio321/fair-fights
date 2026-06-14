@@ -179,6 +179,12 @@ def save_fight(con: sqlite3.Connection, fight: dict) -> bool:
     size_b = fight["b"].get("s", 1)
     size   = max(size_a, size_b)
 
+    # Nur echte 1v1 Fights speichern (genau 1 Spieler pro Seite)
+    players_a = len(fight["a"].get("p", []))
+    players_b = len(fight["b"].get("p", []))
+    if players_a != 1 or players_b != 1:
+        return False
+
     def realm_from_players(group):
         players = group.get("p", [])
         if not players:
