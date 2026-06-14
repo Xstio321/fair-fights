@@ -117,6 +117,13 @@
   .fh-plus{color:var(--green);font-family:'Cinzel',serif}
   .fh-minus{color:var(--red);font-family:'Cinzel',serif}
   .fh-pages{display:flex;align-items:center;justify-content:center;gap:4px;padding:8px}
+  .podium-card{background:var(--bg1);border:0.5px solid var(--line2);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.5rem}
+  .podium-title{font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink3);margin-bottom:1rem}
+  .podium-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .podium-place{text-align:center;padding:12px 8px;background:var(--bg2);border:0.5px solid var(--line);border-radius:4px}
+  .podium-medal{font-size:22px;margin-bottom:6px}
+  .podium-name{font-family:'Cinzel',serif;font-size:13px;font-weight:600;color:var(--ink);margin-bottom:2px}
+  .podium-rating{font-family:'Cinzel',serif;font-size:11px;color:var(--amber)}
   @media(max-width:600px){
     header{flex-direction:column;gap:10px}
     .info-box{gap:16px}
@@ -157,8 +164,14 @@
         <h4>Data source</h4>
         <p>All ratings are based exclusively on fights registered by <strong>Eden's Fair Fight system</strong> — only 1v1 duels that the server itself recognizes and records. Casual RvR kills or fights outside the Fair Fight system are not counted.</p>
       </div>
+      <div class="elo-info-section">
+        <h4>Monthly Reset</h4>
+        <p>All ELO ratings reset to <strong>1000</strong> on the <strong>1st of each month</strong> at server time 00:00. The top 3 players of the previous month are honored with medals next to their name and displayed in the Champions card above the ranking.</p>
+      </div>
     </div>
   </div>
+
+  <div id="podium-wrap"></div>
 
   <div class="info-box" id="info-box">
     <div class="info-item">
@@ -297,6 +310,7 @@ function getFiltered(){
 }
 
 function renderRanking(){
+  const podiumNames = DATA && DATA.last_month_podium ? DATA.last_month_podium.map(function(p){return p.name;}) : [];
   const list = getFiltered();
   const total = list.length;
   const totalPages = Math.max(1, Math.ceil(total/pageSize));
@@ -341,7 +355,7 @@ function renderRanking(){
       <td><div class="player-cell">
         ${classIconHtml(p.class_id)}
         <div>
-          <div class="player-name">${p.name} <span style="font-size:9px;color:var(--ink3);margin-left:4px;display:inline-block;transition:transform 0.15s;transform:${isOpen?'rotate(90deg)':'rotate(0)'}">▶</span></div>
+          <div class="player-name">${p.name}${podiumNames[0]===p.name?' &#11088;':podiumNames[1]===p.name?' &#129352;':podiumNames[2]===p.name?' &#129353;':''} <span style="font-size:9px;color:var(--ink3);margin-left:4px;display:inline-block;transition:transform 0.15s;transform:${isOpen?'rotate(90deg)':'rotate(0)'}">▶</span></div>
           <div class="player-sub"><span class="realm-${rlm}">${realmName(p.class_id)}</span> · ${p.class_name} · <span class="rr-badge">${p.rr}</span></div>
         </div>
       </div></td>
@@ -516,6 +530,18 @@ async function loadData(){
     const upd = new Date(DATA.generated_at);
     document.getElementById('info-updated').textContent = upd.toLocaleTimeString();
     document.getElementById('footer-updated').textContent = 'Updated: '+upd.toLocaleString();
+
+    // Podium des Vormonats
+    const podium = DATA.last_month_podium || [];
+    const pw = document.getElementById('podium-wrap');
+    if(podium.length >= 1){
+      const medals = ['&#11088;','&#129352;','&#129353;'];
+      const ml = DATA.last_month ? new Date(DATA.last_month+'-01').toLocaleDateString('en',{month:'long',year:'numeric'}) : 'Last Month';
+      pw.innerHTML = '<div class="podium-card"><div class="podium-title">'+ml+' Champions</div><div class="podium-grid">'+
+        podium.slice(0,3).map(function(p,i){
+          return '<div class="podium-place"><div class="podium-medal">'+medals[i]+'</div><div class="podium-name">'+p.name+'</div><div class="podium-rating">'+Math.round(p.rating)+' ELO</div></div>';
+        }).join('')+'</div></div>';
+    } else { pw.innerHTML=''; }
 
     renderRanking();
   }catch(e){

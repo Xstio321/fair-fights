@@ -20,6 +20,19 @@ def load_excluded_players():
         return set()
 
 EXCLUDED_PLAYERS = load_excluded_players()
+
+PODIUM_PATH = "podium_history.json"
+
+def load_podium():
+    try:
+        with open(PODIUM_PATH) as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}
+
+def save_podium(podium):
+    with open(PODIUM_PATH, "w") as f:
+        json.dump(podium, f, separators=(",", ":"))
 K_NEW        = 32   # K-Faktor für Spieler < 30 Fights
 K_STABLE     = 16   # K-Faktor für Spieler >= 30 Fights
 
@@ -268,10 +281,17 @@ def export_ranking(con, fight_history=None, push=True):
             "last_fight": last,
         })
 
+    # Letztes Podium laden
+    podium = load_podium()
+    last_month = sorted(podium.keys())[-1] if podium else None
+    last_month_podium = podium.get(last_month, []) if last_month else []
+
     data = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "total_players": len(ranking),
         "ranking": ranking,
+        "last_month_podium": last_month_podium,
+        "last_month": last_month,
     }
 
     with open(JSON_PATH, "w") as f:
@@ -290,7 +310,7 @@ def export_ranking(con, fight_history=None, push=True):
 
     if push:
         try:
-            subprocess.run(["git", "add", JSON_PATH, "fight_history.json"], check=True)
+            subprocess.run(["git", "add", JSON_PATH, "fight_history.json", PODIUM_PATH], check=True)
             subprocess.run(["git", "commit", "-m", "update ranking"], check=True)
             subprocess.run(["git", "push"], check=True)
             print("  ✓ GitHub Push erfolgreich")
@@ -301,6 +321,36 @@ def export_ranking(con, fight_history=None, push=True):
 def run(reset=False, push=True):
     con = sqlite3.connect(DB_PATH)
     init_elo_table(con)
+
+    # Auto-Reset am 1. des Monats
+    now = datetime.now(timezone.utc)
+    is_first_of_month = now.day == 1
+
+    if is_first_of_month and not reset:
+        # Podium des Vormonats speichern bevor Reset
+        rows = con.execute("""
+            SELECT name, rating, class_id, realm_pts
+            FROM elo_ratings WHERE fights >= 5
+            ORDER BY rating DESC LIMIT 3
+        """).fetchall()
+        if rows:
+            podium = load_podium()
+            month_key = now.strftime("%Y-%m")
+            # Vormonat
+            if now.month == 1:
+                prev_month = f"{now.year-1}-12"
+            else:
+                prev_month = f"{now.year}-{now.month-1:02d}"
+            podium[prev_month] = [
+                {"name": r[0], "rating": round(r[1],1),
+                 "class_id": r[2], "realm_pts": r[3]}
+                for r in rows
+            ]
+            save_podium(podium)
+            print(f"  ✓ Podium für {prev_month} gespeichert")
+        reset = True
+        print("  → Erster des Monats: ELO wird zurückgesetzt")
+
     _, fight_history = calculate_elo(con, reset=reset)
     export_ranking(con, fight_history=fight_history, push=push)
     con.close()
