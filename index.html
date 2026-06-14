@@ -232,7 +232,8 @@
 
   <!-- LEADERBOARD -->
   <div id="leaderboard" class="panel active">
-
+    <div id="underdog-wrap" style="display:none"></div>
+    <div id="lb-search-wrap" style="display:none"></div>
     <div id="leaderboard-body"><div class="loading">Loading leaderboard…</div></div>
     <div id="leaderboard-pagination"></div>
   </div>
@@ -407,9 +408,7 @@ function getFilteredLb(){
 
 function renderUnderdogCard(){
   const list = DATA.top_underdog || [];
-  if(!list.length) return;
   const rows = list.map((p,i)=>{
-    const rlm = realmCss(p.class_id);
     const rankCls = i===0?'underdog-rank-1':i===1?'underdog-rank-2':i===2?'underdog-rank-3':'underdog-rank';
     return `<div class="underdog-row" style="padding:6px 0;border-bottom:0.5px solid var(--border)">
       <span class="${rankCls}" style="min-width:20px;text-align:center;flex-shrink:0">${i+1}</span>
@@ -424,8 +423,6 @@ function renderUnderdogCard(){
     </div>`;
   }).join('');
 
-  const existing = document.getElementById('underdog-wrap');
-  // Busy zones last hour
   const busyZones = DATA.busy_zones || [];
   const maxBusy = Math.max(...busyZones.map(z=>z.count), 1);
   const busyHtml = busyZones.length
@@ -440,17 +437,21 @@ function renderUnderdogCard(){
       </div>`).join('')
     : '<div style="color:var(--text3);font-size:13px;padding:10px 0;font-family:Cinzel,serif">No fights in the last hour</div>';
 
-  const html = `<div id="underdog-wrap" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.25rem">
-    <div class="underdog-card" id="underdog-card">
+  const uw = document.getElementById('underdog-wrap');
+  uw.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.25rem';
+  uw.innerHTML = `
+    <div class="underdog-card">
       <div class="underdog-title">⚔ Top Underdog Wins</div>
-      <div class="underdog-list">${rows}</div>
+      <div class="underdog-list">${rows||'<div style="color:var(--text3);font-size:13px">No data yet.</div>'}</div>
     </div>
     <div class="underdog-card">
       <div class="underdog-title">Most active zones – last hour</div>
       ${busyHtml}
-    </div>
-  </div>`;
-  const searchHtml = `<div class="controls" style="gap:8px;flex-wrap:wrap;margin-bottom:1rem">
+    </div>`;
+
+  const sw = document.getElementById('lb-search-wrap');
+  sw.style.display = 'block';
+  sw.innerHTML = `<div class="controls" style="gap:8px;flex-wrap:wrap;margin-bottom:1rem">
     <div class="search-wrap" style="max-width:160px;flex-shrink:0">
       <span class="search-icon">🔍</span>
       <input class="search-input" id="lb-search" type="text" placeholder="Search…">
@@ -467,21 +468,9 @@ function renderUnderdogCard(){
       <div class="tf ${lbPageSize===50?'active':''}" data-lbsize="50">50</div>
     </div>
   </div>`;
-
-  if(existing){
-    existing.outerHTML = html;
-    // Search nach underdog einfügen falls noch nicht vorhanden
-    if(!document.getElementById('lb-search-wrap')){
-      document.getElementById('underdog-wrap').insertAdjacentHTML('afterend', `<div id="lb-search-wrap">${searchHtml}</div>`);
-      document.getElementById('lb-search').addEventListener('input',e=>{lbSearch=e.target.value;lbPage=1;renderLeaderboard();});
-    }
-  } else {
-    const body = document.getElementById('leaderboard-body');
-    body.insertAdjacentHTML('beforebegin', html);
-    body.insertAdjacentHTML('beforebegin', `<div id="lb-search-wrap">${searchHtml}</div>`);
-    document.getElementById('lb-search').addEventListener('input',e=>{lbSearch=e.target.value;lbPage=1;renderLeaderboard();});
-  }
+  document.getElementById('lb-search').addEventListener('input',e=>{lbSearch=e.target.value;lbPage=1;renderLeaderboard();});
 }
+
 
 function renderLeaderboard(){
   if(!DATA||!DATA.leaderboard){
