@@ -111,7 +111,7 @@ def compute_stats(con, since_dt):
     daily = cur.execute("""
         SELECT date(started_at) as day, count(*) as cnt
         FROM fights
-        WHERE started_at >= ?
+        WHERE size = 1 AND started_at >= ?
         GROUP BY day ORDER BY day ASC
     """, ((datetime.now(timezone.utc) - timedelta(days=7)).isoformat(),)).fetchall()
 
@@ -125,7 +125,7 @@ def compute_stats(con, since_dt):
                 CAST(strftime('%H', started_at) AS INTEGER) as hour,
                 count(*) as cnt
             FROM fights
-            WHERE date(started_at) = ? AND zone_id IS NOT NULL
+            WHERE size = 1 AND date(started_at) = ? AND zone_id IS NOT NULL
             GROUP BY zone_id, hour
             ORDER BY hour ASC
         """, (date_filter,)).fetchall()
@@ -148,7 +148,7 @@ def compute_stats(con, since_dt):
     busy_zones_rows = cur.execute("""
         SELECT zone_id, count(*) as cnt
         FROM fights
-        WHERE started_at >= ? AND zone_id IS NOT NULL
+        WHERE size = 1 AND started_at >= ? AND zone_id IS NOT NULL
         GROUP BY zone_id
         ORDER BY cnt DESC
         LIMIT 5
@@ -159,7 +159,7 @@ def compute_stats(con, since_dt):
     ]
 
     # ── Summary ──
-    total_all = cur.execute("SELECT count(*) FROM fights").fetchone()[0]
+    total_all = cur.execute("SELECT count(*) FROM fights WHERE size = 1").fetchone()[0]
     # Aktuelle Uhrzeit als Referenz für fairen Vergleich
     now_time = datetime.now(timezone.utc)
     current_time_str = now_time.strftime('%H:%M:%S')
@@ -178,7 +178,7 @@ def compute_stats(con, since_dt):
         SELECT count(DISTINCT p.name)
         FROM fight_players p
         JOIN fights f ON f.id = p.fight_id
-        WHERE f.started_at >= datetime('now','-1 day')
+        WHERE f.size = 1 AND f.started_at >= datetime('now','-1 day')
     """).fetchone()[0]
 
     # ── Class Stats ──
@@ -190,7 +190,7 @@ def compute_stats(con, since_dt):
         FROM fight_players p
         JOIN fights f ON f.id = p.fight_id
         JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
-        WHERE f.started_at >= ?
+        WHERE f.size = 1 AND f.started_at >= ?
         GROUP BY p.class_id
         ORDER BY fights DESC
     """, (since_str,)).fetchall()
@@ -240,10 +240,11 @@ def compute_stats(con, since_dt):
         JOIN fight_teams tw ON tw.fight_id = f.id AND tw.side = pw.side AND tw.won = 1
         JOIN fight_players pl ON pl.fight_id = f.id
         JOIN fight_teams tl ON tl.fight_id = f.id AND tl.side = pl.side AND tl.won = 0
+        WHERE f.size = 1
     """
 
     # Nach Zeitfenster (30d)
-    rows_time = cur.execute(MATCHUP_SQL + " WHERE f.started_at >= ?", (since_str,)).fetchall()
+    rows_time = cur.execute(MATCHUP_SQL + " AND f.started_at >= ?", (since_str,)).fetchall()
     matchups = build_matchups_from_rows(rows_time)
 
     # Nach letzten N Fights PRO Klassen-Kombination
@@ -280,7 +281,7 @@ def compute_stats(con, since_dt):
     # ── Häufigste Matchups (für verschiedene Zeitfenster) ──
     def build_common_matchups(days):
         cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
-        rows = cur.execute(MATCHUP_SQL + " WHERE f.started_at >= ? ORDER BY f.started_at DESC", (cutoff,)).fetchall()
+        rows = cur.execute(MATCHUP_SQL + " AND f.started_at >= ? ORDER BY f.started_at DESC", (cutoff,)).fetchall()
         data = build_matchups_from_rows(rows)
         top = sorted(data, key=lambda x: x["fights"], reverse=True)[:8]
         return [{
@@ -308,7 +309,7 @@ def compute_stats(con, since_dt):
         FROM fight_players p
         JOIN fights f ON f.id = p.fight_id
         JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
-        WHERE f.started_at >= ?
+        WHERE f.size = 1 AND f.started_at >= ?
         GROUP BY p.name
         HAVING fights >= ?
         ORDER BY wins * 1.0 / fights DESC
@@ -324,7 +325,7 @@ def compute_stats(con, since_dt):
         JOIN fights f ON f.id = p.fight_id
         JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
         JOIN fight_players opp ON opp.fight_id = f.id AND opp.side != p.side
-        WHERE f.started_at >= ? AND opp.realm_pts IS NOT NULL
+        WHERE f.size = 1 AND f.started_at >= ? AND opp.realm_pts IS NOT NULL
         GROUP BY p.name, t.won
     """, (since_str,)).fetchall()
 
@@ -366,7 +367,7 @@ def compute_stats(con, since_dt):
         FROM fight_players p
         JOIN fights f ON f.id = p.fight_id
         JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
-        WHERE f.started_at >= ?
+        WHERE f.size = 1 AND f.started_at >= ?
         GROUP BY p.class_id, p.name
         ORDER BY p.class_id, wins * 1.0 / count(DISTINCT f.id) DESC
     """, (since_str,)).fetchall()
@@ -400,7 +401,7 @@ def compute_stats(con, since_dt):
         JOIN fights f ON f.id = p.fight_id
         JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
         JOIN fight_players opp ON opp.fight_id = f.id AND opp.side != p.side
-        WHERE f.started_at >= ?
+        WHERE f.size = 1 AND f.started_at >= ?
     """, (since_str,)).fetchall()
 
     from collections import defaultdict, Counter
@@ -521,7 +522,7 @@ def compute_stats(con, since_dt):
             SELECT p.class_id, count(DISTINCT p.name) as players
             FROM fight_players p
             JOIN fights f ON f.id = p.fight_id
-            WHERE f.started_at >= ?
+            WHERE f.size = 1 AND f.started_at >= ?
             GROUP BY p.class_id
             ORDER BY players DESC
         """, (cutoff,)).fetchall()
