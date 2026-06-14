@@ -105,7 +105,6 @@
   .page-btn:hover{color:var(--text2);border-color:var(--border2)}
   .page-btn.active{background:var(--hib);color:#0d0f0e;border-color:var(--hib);font-weight:600}
   .page-btn:disabled{opacity:0.3;cursor:default}
-  .page-info{font-size:11px;color:var(--text3);font-family:'Cinzel',serif;padding:0 4px}
   .page-info{font-size:11px;color:var(--text3);font-family:'Cinzel',serif}
   /* Matrix */
   .matrix-note{font-size:12px;color:var(--text3);margin-bottom:12px;letter-spacing:0.04em}
@@ -478,15 +477,9 @@ function renderUnderdogCard(){
     }
   } else {
     const body = document.getElementById('leaderboard-body');
-    if (!document.getElementById('underdog-wrap')) {
-      body.insertAdjacentHTML('beforebegin', html);
-    } else {
-      document.getElementById('underdog-wrap').outerHTML = html;
-    }
-    if (!document.getElementById('lb-search-wrap')) {
-      body.insertAdjacentHTML('beforebegin', `<div id="lb-search-wrap">${searchHtml}</div>`);
-      document.getElementById('lb-search').addEventListener('input',e=>{lbSearch=e.target.value;lbPage=1;renderLeaderboard();});
-    }
+    body.insertAdjacentHTML('beforebegin', html);
+    body.insertAdjacentHTML('beforebegin', `<div id="lb-search-wrap">${searchHtml}</div>`);
+    document.getElementById('lb-search').addEventListener('input',e=>{lbSearch=e.target.value;lbPage=1;renderLeaderboard();});
   }
 }
 
@@ -534,7 +527,7 @@ function renderLeaderboard(){
     const wr=p.winrate;
     const rankCls=rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'rank-num';
     const safeName2 = p.name.replace(/'/g,String.fromCharCode(92)+String.fromCharCode(39));
-    tbody+=`<tr class='cs-row' style='cursor:pointer' onclick="toggleProfile('${safeName2}')"
+    tbody+=`<tr class='cs-row' style='cursor:pointer' onclick="toggleProfile('${safeName2}')">
       <td><span class="${rankCls}">${rank}</span></td>
       <td><div class="class-cell">
         ${classIconHtml(p.class_id)}
