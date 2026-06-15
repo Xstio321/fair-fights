@@ -310,7 +310,7 @@ def export_ranking(con, fight_history=None, push=True):
 
     if push:
         try:
-            subprocess.run(["git", "add", JSON_PATH, "fight_history.json", PODIUM_PATH], check=True)
+            import os; files=[JSON_PATH,"fight_history.json"]+([PODIUM_PATH] if os.path.exists(PODIUM_PATH) else []); subprocess.run(["git","add"]+files, check=True)
             subprocess.run(["git", "commit", "-m", "update ranking"], check=True)
             subprocess.run(["git", "push"], check=True)
             print("  ✓ GitHub Push erfolgreich")
