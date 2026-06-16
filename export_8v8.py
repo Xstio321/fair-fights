@@ -1,27 +1,28 @@
 """
-8v8 Leaderboard Export
-Berechnet Spieler-Statistiken für 8v8 Fights und exportiert als JSON.
+8v8 Leaderboard Export – liest fights_8v8.db, schreibt data_8v8.json
+Gruppen-Leaderboard: eine Zeile pro Gruppe (Leader), Dropdown zeigt Einzelspieler
 """
 
 import sqlite3
 import json
 import subprocess
 from datetime import datetime, timezone, timedelta
+from collections import defaultdict
 
-DB_PATH   = "fights.db"
+DB_PATH   = "fights_8v8.db"
 JSON_PATH = "data_8v8.json"
 MIN_FIGHTS = 3
 
 CLASSES = {
-    1:"Paladin",2:"Armsman",3:"Scout",4:"Minstrel",5:"Theurgist",
-    6:"Cleric",7:"Wizard",8:"Sorcerer",9:"Infiltrator",10:"Friar",
-    11:"Mercenary",12:"Necromancer",13:"Cabalist",19:"Reaver",33:"Heretic",63:"Occultist",
-    21:"Thane",22:"Warrior",23:"Shadowblade",24:"Skald",25:"Hunter",
-    26:"Healer",27:"Spiritmaster",28:"Shaman",29:"Runemaster",
-    30:"Bonedancer",31:"Berserker",32:"Savage",34:"Valkyrie",59:"Warlock",
-    39:"Bainshee",40:"Eldritch",41:"Enchanter",42:"Mentalist",
-    43:"Blademaster",44:"Hero",45:"Champion",46:"Warden",47:"Druid",
-    48:"Bard",49:"Nightshade",50:"Ranger",55:"Animist",56:"Valewalker",58:"Vampiir",
+    1:"Paladin",2:"Armsman",3:"Scout",4:"Minstrel",5:"Theurgist",6:"Cleric",
+    7:"Wizard",8:"Sorcerer",9:"Infiltrator",10:"Friar",11:"Mercenary",12:"Necromancer",
+    13:"Cabalist",19:"Reaver",33:"Heretic",63:"Occultist",
+    21:"Thane",22:"Warrior",23:"Shadowblade",24:"Skald",25:"Hunter",26:"Healer",
+    27:"Spiritmaster",28:"Shaman",29:"Runemaster",30:"Bonedancer",31:"Berserker",
+    32:"Savage",34:"Valkyrie",59:"Warlock",
+    39:"Bainshee",40:"Eldritch",41:"Enchanter",42:"Mentalist",43:"Blademaster",
+    44:"Hero",45:"Champion",46:"Warden",47:"Druid",48:"Bard",49:"Nightshade",
+    50:"Ranger",55:"Animist",56:"Valewalker",58:"Vampiir",
 }
 CLASS_REALM = {
     1:1,2:1,3:1,4:1,5:1,6:1,7:1,8:1,9:1,10:1,11:1,12:1,13:1,19:1,33:1,63:1,
@@ -81,7 +82,7 @@ def compute_stats(con):
     cur = con.cursor()
 
     def build_leaderboard(days=None):
-        where = "WHERE f.size = 8"
+        where = "WHERE 1=1"
         params = []
         if days:
             cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
@@ -89,54 +90,80 @@ def compute_stats(con):
             params.append(cutoff)
 
         rows = cur.execute(f"""
-            SELECT p.name, p.class_id, max(p.realm_pts) as rp,
+            SELECT g.leader, g.realm,
                    count(DISTINCT f.id) as fights,
-                   sum(t.won) as wins,
-                   max(f.started_at) as last_fight,
-                   avg(p.dmg_done) as avg_dmg,
-                   avg(p.heal_done) as avg_heal,
-                   avg(p.dmg_taken) as avg_taken
-            FROM fight_players p
-            JOIN fights f ON f.id = p.fight_id
-            JOIN fight_teams t ON t.fight_id = f.id AND t.side = p.side
+                   sum(g.won) as wins,
+                   max(f.started_at) as last_fight
+            FROM fight_groups g
+            JOIN fights f ON f.id = g.fight_id
             {where}
-            GROUP BY p.name
+            GROUP BY g.leader
             HAVING fights >= ?
             ORDER BY wins * 1.0 / fights DESC
         """, params + [MIN_FIGHTS]).fetchall()
 
         result = []
-        for row in rows:
-            name, cid, rp, fights, wins, last_fight, avg_dmg, avg_heal, avg_taken = row
+        for leader, realm, fights, wins, last_fight in rows:
             wins = wins or 0
             losses = fights - wins
             result.append({
-                "name":       name,
-                "class_id":   cid,
-                "class_name": CLASSES.get(cid, f"Class {cid}"),
-                "realm":      CLASS_REALM.get(cid, 0),
-                "realm_name": REALM_NAMES.get(CLASS_REALM.get(cid, 0), ""),
-                "rr":         rp_to_rr(rp),
+                "leader":     leader,
+                "realm":      realm or 0,
+                "realm_name": REALM_NAMES.get(realm or 0, ""),
                 "fights":     fights,
                 "wins":       wins,
                 "losses":     losses,
                 "winrate":    round(wins / fights * 100) if fights > 0 else 0,
                 "wilson":     wilson_score(wins, fights),
-                "avg_dmg":    round(avg_dmg) if avg_dmg else None,
-                "avg_heal":   round(avg_heal) if avg_heal else None,
-                "avg_taken":  round(avg_taken) if avg_taken else None,
                 "last_fight": last_fight,
             })
         return result
 
-    # Summary
-    total = cur.execute("SELECT count(*) FROM fights WHERE size = 8").fetchone()[0]
-    today = cur.execute("SELECT count(*) FROM fights WHERE size = 8 AND date(started_at) = date('now')").fetchone()[0]
-    yesterday = cur.execute("SELECT count(*) FROM fights WHERE size = 8 AND date(started_at) = date('now','-1 day')").fetchone()[0]
+    def build_fight_history():
+        # Pro Gruppe (leader) die letzten 20 Fights mit allen Spielern
+        rows = cur.execute("""
+            SELECT g.leader, g.side, g.won, f.id, f.started_at, f.zone_id,
+                   p.name, p.class_id, p.realm_pts, p.dmg_done, p.heal_done, p.dmg_taken
+            FROM fight_groups g
+            JOIN fights f ON f.id = g.fight_id
+            JOIN fight_players p ON p.fight_id = f.id AND p.side = g.side
+            ORDER BY g.leader, f.started_at DESC
+        """).fetchall()
+
+        group_fights = defaultdict(lambda: defaultdict(lambda: {
+            "fight_id": None, "started_at": None, "zone_id": None,
+            "won": None, "players": []
+        }))
+
+        for leader, side, won, fid, started_at, zone_id, name, cid, rp, dmg, heal, taken in rows:
+            gf = group_fights[leader][fid]
+            gf["fight_id"] = fid
+            gf["started_at"] = started_at
+            gf["zone_id"] = zone_id
+            gf["won"] = won
+            gf["players"].append({
+                "name":       name,
+                "class_id":   cid,
+                "class_name": CLASSES.get(cid, f"Class {cid}"),
+                "rr":         rp_to_rr(rp),
+                "dmg_done":   dmg or 0,
+                "heal_done":  heal or 0,
+                "dmg_taken":  taken or 0,
+            })
+
+        result = {}
+        for leader, fights in group_fights.items():
+            sorted_fights = sorted(fights.values(), key=lambda x: x["started_at"] or "", reverse=True)[:20]
+            result[leader] = sorted_fights
+        return result
+
+    total = cur.execute("SELECT count(*) FROM fights").fetchone()[0]
+    today = cur.execute("SELECT count(*) FROM fights WHERE date(started_at) = date('now')").fetchone()[0]
+    yesterday = cur.execute("SELECT count(*) FROM fights WHERE date(started_at) = date('now','-1 day')").fetchone()[0]
     active = cur.execute("""
-        SELECT count(DISTINCT p.name) FROM fight_players p
-        JOIN fights f ON f.id = p.fight_id
-        WHERE f.size = 8 AND f.started_at >= datetime('now', '-1 day')
+        SELECT count(DISTINCT leader) FROM fight_groups g
+        JOIN fights f ON f.id = g.fight_id
+        WHERE f.started_at >= datetime('now', '-1 day')
     """).fetchone()[0]
 
     return {
@@ -145,12 +172,13 @@ def compute_stats(con):
             "fights_today":     today,
             "fights_yesterday": yesterday,
             "total_fights":     total,
-            "active_players":   active,
+            "active_groups":    active,
         },
         "leaderboard":    build_leaderboard(30),
         "leaderboard_1d": build_leaderboard(1),
         "leaderboard_3d": build_leaderboard(3),
         "leaderboard_7d": build_leaderboard(7),
+        "fight_history":  build_fight_history(),
     }
 
 def export(push=True):
@@ -160,7 +188,7 @@ def export(push=True):
 
     with open(JSON_PATH, "w") as f:
         json.dump(data, f, separators=(",", ":"))
-    print(f"  ✓ {JSON_PATH} geschrieben ({len(data['leaderboard'])} Spieler)")
+    print(f"  ✓ {JSON_PATH} geschrieben ({len(data['leaderboard'])} Gruppen)")
 
     if push:
         try:
