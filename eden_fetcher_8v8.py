@@ -182,7 +182,7 @@ def run_once(session, con):
             log.info(f"  ✓ Neuer 8v8 Fight: {fight_id}")
 
     log.info(f"Fertig. {new_count} neue 8v8 Fights gespeichert.")
-    subprocess.run(["python", "export_8v8.py"], check=False)
+    subprocess.run(["python", "elo_calculator_8v8.py"], check=False)
 
 def run_loop():
     session = make_session()

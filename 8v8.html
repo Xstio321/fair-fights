@@ -3,336 +3,558 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>8v8 Leaderboard – DAoC Freeshard</title>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet">
+<title>8v8 ELO Ranking – DAoC Freeshard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet">
 <style>
-:root{
-  --bg:#0b0d0b;--bg1:#111410;--bg2:#181c15;--bg3:#1f2419;--bg4:#272d20;
-  --border:rgba(148,168,100,0.10);--border2:rgba(148,168,100,0.20);
-  --text:#dde4c8;--text2:#8fa070;--text3:#4d5c38;
-  --amber:#c8a84a;--gold2:#7a6220;
-  --hib:#78b244;--mid:#4888c0;--alb:#c04848;
-  --green:#78b244;--red:#c04848;--r:5px;
-}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:'Crimson Pro',Georgia,serif;font-size:16px;min-height:100vh}
-body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
-  background:radial-gradient(ellipse 70% 50% at 50% -5%,rgba(120,178,68,0.06) 0%,transparent 60%)}
-.wrap{max-width:1280px;margin:0 auto;padding:2rem 2.5rem 5rem;position:relative;z-index:1}
+  :root {
+    --bg:#0d0f0e;--bg2:#13160f;--bg3:#1a1e16;--bg4:#222620;
+    --border:rgba(160,180,120,0.12);--border2:rgba(160,180,120,0.22);
+    --text:#e8ead4;--text2:#9fa882;--text3:#5c6348;
+    --gold:#c9a84c;--gold2:#8a6d28;
+    --hib:#7ab648;--hib2:#4a7a22;--hib3:#2a4a10;--hib-dim:rgba(122,182,72,0.12);
+    --mid:#4a8fc4;--mid2:#2a5a8a;--mid3:#122840;
+    --alb:#c44a4a;--alb2:#8a2a2a;--alb3:#401212;
+    --green:#7ab648;--amber:#c9a84c;--red:#c44a4a;--radius:6px;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Crimson Pro',Georgia,serif;font-size:16px;line-height:1.6;min-height:100vh}
+  body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(122,182,72,0.07) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 80% 100%,rgba(74,143,196,0.05) 0%,transparent 50%);pointer-events:none;z-index:0}
+  .wrap{max-width:1280px;margin:0 auto;padding:2rem 2.5rem 4rem;position:relative;z-index:1}
 
-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:2.5rem;padding-bottom:1.25rem;border-bottom:0.5px solid var(--border2)}
-.logo{display:flex;align-items:center;gap:12px}
-.logo-mark{width:38px;height:38px;background:var(--bg2);border:0.5px solid var(--border2);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:18px}
-.logo-title{font-family:'Cinzel',serif;font-size:20px;font-weight:700;letter-spacing:0.06em}
-.logo-sub{font-size:10px;color:var(--text3);letter-spacing:0.12em;text-transform:uppercase;font-family:'Cinzel',serif}
-.nav-links{display:flex;gap:8px}
-.nav-link{font-family:'Cinzel',serif;font-size:11px;color:var(--text3);text-decoration:none;padding:4px 12px;border:0.5px solid var(--border2);border-radius:20px;letter-spacing:0.06em;transition:color 0.15s}
-.nav-link:hover{color:var(--text2)}
+  header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:0.5px solid var(--border2)}
+  .logo-lockup{display:flex;align-items:center;gap:14px}
+  .logo-shield{width:42px;height:42px;background:linear-gradient(135deg,var(--bg3) 0%,var(--bg4) 100%);border:1px solid var(--border2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--amber)}
+  .logo-text{font-family:'Cinzel',serif;font-size:22px;font-weight:600;color:var(--text);letter-spacing:0.05em;line-height:1.2}
+  .logo-sub{font-size:11px;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;font-family:'Cinzel',serif}
+  .nav-link{font-family:'Cinzel',serif;font-size:12px;color:var(--text3);text-decoration:none;padding:5px 12px;border:0.5px solid var(--border2);border-radius:20px;transition:all 0.15s}
+  .nav-link:hover{color:var(--text2);border-color:var(--border2)}
 
-.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:2rem}
-.s-card{background:var(--bg1);border:0.5px solid var(--border);border-radius:var(--r);padding:0.875rem 1rem;text-align:center}
-.s-label{font-size:9px;color:var(--text3);letter-spacing:0.12em;text-transform:uppercase;font-family:'Cinzel',serif;margin-bottom:4px}
-.s-value{font-family:'Cinzel',serif;font-size:28px;font-weight:700;color:var(--text);line-height:1}
-.s-sub{font-size:10px;color:var(--text3);margin-top:3px}
+  .info-box{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;margin-bottom:1.5rem;display:flex;gap:24px;flex-wrap:wrap}
+  .info-item{display:flex;flex-direction:column;gap:2px}
+  .info-label{font-size:10px;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;font-family:'Cinzel',serif}
+  .info-value{font-family:'Cinzel',serif;font-size:20px;font-weight:600;color:var(--text)}
+  .info-sub{font-size:11px;color:var(--text3)}
 
-.controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:1.25rem}
-.time-filters{display:flex;gap:3px}
-.tf{font-family:'Cinzel',serif;font-size:10px;letter-spacing:0.06em;color:var(--text3);padding:3px 11px;border:0.5px solid var(--border2);border-radius:20px;cursor:pointer;transition:all 0.15s;user-select:none}
-.tf:hover{color:var(--text2)}
-.tf.active{background:var(--hib);color:var(--bg);border-color:var(--hib);font-weight:600}
-.search-wrap{position:relative}
-.search-wrap input{background:var(--bg2);border:0.5px solid var(--border2);border-radius:20px;padding:4px 12px 4px 28px;font-size:12px;font-family:'Cinzel',serif;color:var(--text);outline:none;width:140px}
-.search-wrap input::placeholder{color:var(--text3)}
-.search-wrap::before{content:'⌕';position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--text3);pointer-events:none}
+  .controls{display:flex;align-items:center;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap}
+  .search-wrap{position:relative;max-width:160px}
+  .search-input{width:100%;background:var(--bg2);border:0.5px solid var(--border2);border-radius:20px;padding:6px 14px 6px 32px;font-size:12px;color:var(--text);font-family:'Cinzel',serif;outline:none;transition:border-color 0.15s}
+  .search-input::placeholder{color:var(--text3)}
+  .search-input:focus{border-color:var(--amber)}
+  .search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--text3);pointer-events:none}
+  .time-filters{display:flex;gap:4px}
+  .tf{padding:4px 12px;font-size:11px;border:0.5px solid var(--border2);border-radius:20px;cursor:pointer;color:var(--text3);background:transparent;transition:all 0.15s;font-family:'Cinzel',serif;letter-spacing:0.06em;user-select:none}
+  .tf:hover{color:var(--text2)}
+  .tf.active{background:var(--amber);color:#0d0f0e;border-color:var(--amber);font-weight:600}
 
-table{width:100%;border-collapse:collapse}
-thead th{font-size:9px;font-weight:400;font-family:'Cinzel',serif;color:var(--text3);letter-spacing:0.12em;text-transform:uppercase;text-align:left;padding:7px 10px;border-bottom:0.5px solid var(--border2);white-space:nowrap;cursor:pointer;user-select:none}
-thead th:hover{color:var(--text2)}
-th.r,td.r{text-align:right}
-th.asc::after{content:' ↑'}th.desc::after{content:' ↓'}
-tbody td{padding:9px 10px;font-size:14px;border-bottom:0.5px solid var(--border);transition:background 0.1s}
-tbody tr.data-row:hover td{background:var(--bg1);cursor:pointer}
+  table{width:100%;border-collapse:collapse}
+  thead th{font-size:10px;font-weight:400;color:var(--text3);text-align:left;padding:8px 10px;border-bottom:0.5px solid var(--border2);letter-spacing:0.1em;text-transform:uppercase;font-family:'Cinzel',serif;white-space:nowrap;cursor:pointer;user-select:none}
+  thead th:hover{color:var(--text2)}
+  th.r,td.r{text-align:right}
+  th.sort-asc::after{content:' ↑'}
+  th.sort-desc::after{content:' ↓'}
+  tbody td{padding:10px;font-size:14px;color:var(--text);border-bottom:0.5px solid var(--border);transition:background 0.1s}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover td{background:var(--bg2)}
 
-.realm-alb{color:var(--alb)}.realm-mid{color:var(--mid)}.realm-hib{color:var(--hib)}
-.wr-wrap{display:flex;align-items:center;gap:7px;justify-content:flex-end}
-.wr-bar{width:52px;height:3px;background:var(--bg4);border-radius:2px;overflow:hidden;flex-shrink:0}
-.wr-fill{height:100%;border-radius:2px}
-.fill-g{background:var(--green)}.fill-a{background:var(--amber)}.fill-r{background:var(--red)}
-.wr-val{font-family:'Cinzel',serif;font-size:13px;font-weight:600;min-width:36px;text-align:right}
-.col-g{color:var(--green)}.col-a{color:var(--amber)}.col-r{color:var(--red)}.col-2{color:var(--text2)}.col-3{color:var(--text3)}
-.mono{font-family:'Cinzel',serif}
-.rank{font-family:'Cinzel',serif;font-size:13px}
-.rank-1{color:var(--amber);font-weight:700}.rank-2{color:var(--text2);font-weight:600}.rank-3{color:#906030;font-weight:600}.rank-n{color:var(--text3)}
+  .rank-cell{font-family:'Cinzel',serif;font-size:14px;font-weight:600;min-width:32px}
+  .rank-1{color:var(--amber)}
+  .rank-2{color:var(--text2)}
+  .rank-3{color:#a07040}
+  .rank-other{color:var(--text3)}
 
-/* Fight History Dropdown */
-.fh-wrap{display:none;background:var(--bg2);border-top:0.5px solid var(--border2)}
-.fh-wrap.open{display:block}
-.fh-fight{padding:12px 16px;border-bottom:0.5px solid var(--border)}
-.fh-fight:last-child{border-bottom:none}
-.fh-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.fh-result-w{font-family:'Cinzel',serif;font-size:11px;font-weight:700;color:var(--green);padding:2px 8px;border:1px solid var(--green);border-radius:3px}
-.fh-result-l{font-family:'Cinzel',serif;font-size:11px;font-weight:700;color:var(--red);padding:2px 8px;border:1px solid var(--red);border-radius:3px}
-.fh-date{font-size:11px;color:var(--text3);font-family:'Cinzel',serif}
-.fh-players{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
-.fh-player{display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--bg3);border-radius:3px}
-.fh-player-name{font-size:12px;font-weight:600;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fh-player-stats{font-size:10px;color:var(--text3);font-family:'Cinzel',serif;white-space:nowrap}
-.fh-note{font-size:10px;color:var(--text3);font-family:'Cinzel',serif;padding:8px 16px;text-align:center}
-.fh-pages{display:flex;align-items:center;justify-content:center;gap:4px;padding:8px}
-.fh-pg{font-family:'Cinzel',serif;font-size:10px;padding:3px 9px;border:0.5px solid var(--border2);border-radius:3px;color:var(--text3);cursor:pointer;background:transparent}
-.fh-pg.on{background:var(--hib);color:var(--bg);border-color:var(--hib);font-weight:600}
-.fh-pg:disabled{opacity:0.3;cursor:default}
+  .player-cell{display:flex;align-items:center;gap:10px}
+  .player-name{font-size:14px;font-weight:600;color:var(--text)}
+  .player-sub{font-size:11px;color:var(--text3);margin-top:1px}
+  .realm-hib{color:var(--hib)}.realm-mid{color:var(--mid)}.realm-alb{color:var(--alb)}
+  .rr-badge{color:var(--amber);font-family:'Cinzel',serif;font-size:12px}
 
-.pagination{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:1.25rem}
-.page-btn{padding:4px 11px;font-size:11px;border:0.5px solid var(--border2);border-radius:4px;cursor:pointer;color:var(--text3);background:transparent;font-family:'Cinzel',serif;transition:all 0.15s}
-.page-btn:hover{color:var(--text2)}
-.page-btn.active{background:var(--hib);color:var(--bg);border-color:var(--hib);font-weight:600}
-.page-btn:disabled{opacity:0.3;cursor:default}
-.page-info{font-size:11px;color:var(--text3);font-family:'Cinzel',serif;padding:0 4px}
-.empty{text-align:center;padding:3rem;color:var(--text3);font-family:'Cinzel',serif;font-size:12px;letter-spacing:0.1em}
-footer{margin-top:3rem;padding-top:1.25rem;border-top:0.5px solid var(--border);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
-footer span{font-size:10px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.06em}
+  .rating-cell{font-family:'Cinzel',serif;font-size:16px;font-weight:600}
+  .rating-up{color:var(--green)}
+  .rating-mid{color:var(--amber)}
+  .rating-down{color:var(--red)}
+
+  .peak-cell{font-family:'Cinzel',serif;font-size:13px;color:var(--text3)}
+  .wl-cell{font-size:13px;font-family:'Cinzel',serif}
+  .w-count{color:var(--green)}.l-count{color:var(--red)}
+  .wr-num{font-size:13px;font-weight:600;font-family:'Cinzel',serif}
+  .wr-green{color:var(--green)}.wr-amber{color:var(--amber)}.wr-red{color:var(--red)}
+  .bar-bg{width:56px;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden;flex-shrink:0}
+  .bar-fill{height:100%;border-radius:2px}
+  .bar-green{background:var(--green)}.bar-amber{background:var(--amber)}.bar-red{background:var(--red)}
+  .winrate-bar{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+
+  .pagination{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:1.25rem}
+  .page-btn{padding:4px 12px;font-size:11px;border:0.5px solid var(--border2);border-radius:4px;cursor:pointer;color:var(--text3);background:transparent;font-family:'Cinzel',serif;transition:all 0.15s}
+  .page-btn:hover{color:var(--text2)}
+  .page-btn.active{background:var(--amber);color:#0d0f0e;border-color:var(--amber);font-weight:600}
+  .page-btn:disabled{opacity:0.3;cursor:default}
+  .page-info{font-size:11px;color:var(--text3);font-family:'Cinzel',serif}
+
+  .elo-info{background:rgba(201,168,76,0.08);border:0.5px solid rgba(201,168,76,0.2);border-radius:var(--radius);padding:1.25rem 1.5rem;margin-bottom:1.5rem}
+  .elo-info-title{font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--amber);margin-bottom:1rem}
+  .elo-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}
+  .elo-info-section h4{font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text2);margin-bottom:0.5rem}
+  .elo-info-section p{font-size:13px;color:var(--text3);line-height:1.7;font-family:'Crimson Pro',Georgia,serif}
+  .elo-info-section p strong{color:var(--amber);font-family:'Cinzel',serif}
+  .elo-formula{background:var(--bg3);border:0.5px solid var(--border);border-radius:4px;padding:8px 14px;margin-top:8px;font-family:'Cinzel',serif;font-size:12px;color:var(--text2);letter-spacing:0.04em}
+  @media(max-width:700px){.elo-info-grid{grid-template-columns:1fr}}
+
+  .loading{text-align:center;padding:3rem;color:var(--text3);font-family:'Cinzel',serif;font-size:13px}
+  footer{margin-top:3rem;padding-top:1.5rem;border-top:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+  .footer-text{font-size:11px;color:var(--text3);letter-spacing:0.06em;font-family:'Cinzel',serif}
+  .footer-note{font-size:11px;color:var(--text3);font-style:italic}
+
+  .fh-wrap{display:none;background:var(--bg2);border-top:0.5px solid var(--line2)}
+  .fh-wrap.open{display:block}
+  .fh-table{width:100%;border-collapse:collapse}
+  .fh-table th{font-size:9px;font-weight:400;color:var(--ink3);text-align:left;padding:6px 10px;border-bottom:0.5px solid var(--line2);letter-spacing:0.1em;text-transform:uppercase;font-family:'Cinzel',serif;white-space:nowrap;background:var(--bg2)}
+  .fh-table td{padding:7px 10px;font-size:13px;color:var(--ink);border-bottom:0.5px solid var(--line)}
+  .fh-table tr:last-child td{border-bottom:none}
+  .fh-win{color:var(--green);font-family:'Cinzel',serif;font-weight:600}
+  .fh-loss{color:var(--red);font-family:'Cinzel',serif;font-weight:600}
+  .fh-plus{color:var(--green);font-family:'Cinzel',serif}
+  .fh-minus{color:var(--red);font-family:'Cinzel',serif}
+  .fh-pages{display:flex;align-items:center;justify-content:center;gap:4px;padding:8px}
+  .podium-card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.5rem}
+  .podium-title{font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:1rem}
+  .podium-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .podium-place{text-align:center;padding:12px 8px;background:var(--bg3);border:0.5px solid var(--border);border-radius:4px}
+  .podium-medal{font-size:22px;margin-bottom:6px}
+  .podium-name{font-family:'Cinzel',serif;font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px}
+  .podium-rating{font-family:'Cinzel',serif;font-size:11px;color:var(--amber)}
+  @media(max-width:600px){
+    header{flex-direction:column;gap:10px}
+    .info-box{gap:16px}
+    .controls{flex-wrap:wrap}
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
-<header>
-  <div class="logo">
-    <div class="logo-mark">⚔</div>
-    <div>
-      <div class="logo-title">8v8 Leaderboard</div>
-      <div class="logo-sub">Group PvP · DAoC Freeshard</div>
+  <header>
+    <div class="logo-lockup">
+      <div class="logo-shield">★</div>
+      <div>
+        <div class="logo-text">8v8 ELO Ranking</div>
+        <div class="logo-sub">Group Rating · DAoC Freeshard</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <a href="index.html" class="nav-link">← Fair Fights</a>
+      <a href="ranking.html" class="nav-link">1v1 ELO</a>
+    </div>
+  </header>
+
+  <div class="elo-info">
+    <div class="elo-info-title">About this Ranking</div>
+    <div class="elo-info-grid">
+      <div class="elo-info-section">
+        <h4>What is ELO?</h4>
+        <p>ELO is a method for calculating the relative skill of <strong>groups</strong> based on 8v8 fight outcomes. Every group starts at <strong>1000</strong> points. After each fight, points are transferred from the losing group to the winning group — the amount depends on the rating difference between both groups.</p>
+      </div>
+      <div class="elo-info-section">
+        <h4>How are points calculated?</h4>
+        <p>Before each fight, the system calculates an expected win probability for both groups based on their current ratings. Beating a <strong>stronger group</strong> earns more points than beating a weaker one. Losing to a <strong>weaker group</strong> costs more points than losing to a stronger one.</p>
+        <div class="elo-formula">New Rating = Rating + K × (Result − Expected)</div>
+      </div>
+      <div class="elo-info-section">
+        <h4>K-Factor</h4>
+        <p>The K-factor controls how quickly ratings change. New groups (fewer than <strong>30 fights</strong>) use K=<strong>32</strong>, so their rating adjusts quickly to reflect their true skill. Veteran groups (30+ fights) use K=<strong>16</strong> for more stability. A minimum of <strong>5 fights</strong> is required to appear in this ranking.</p>
+      </div>
+      <div class="elo-info-section">
+        <h4>Data source &amp; group identity</h4>
+        <p>All ratings are based exclusively on registered <strong>8v8 Fair Fights</strong> (exactly 8 players per side). Each group is identified by its <strong>first listed player (the leader)</strong>. This system only produces meaningful ratings when the <strong>same group setup plays together consistently</strong> — constantly swapping players will split your fight history across different "leaders" and prevent an accurate rating from forming.</p>
+      </div>
+      <div class="elo-info-section">
+        <h4>Monthly Reset</h4>
+        <p>All 8v8 ratings reset to <strong>1000</strong> on the <strong>1st of each month</strong> at server time 00:00. The top 3 groups of the previous month are honored with medals next to their name and displayed in the Champions card above the ranking.</p>
+      </div>
     </div>
   </div>
-  <div class="nav-links">
-    <a href="index.html" class="nav-link">← Fair Fights</a>
-    <a href="ranking.html" class="nav-link">ELO Ranking</a>
+
+  <div id="podium-wrap"></div>
+
+  <div class="info-box" id="info-box">
+    <div class="info-item">
+      <div class="info-label">Groups ranked</div>
+      <div class="info-value" id="info-players">–</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Top rating</div>
+      <div class="info-value" id="info-top">–</div>
+      <div class="info-sub" id="info-top-name">–</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Avg rating</div>
+      <div class="info-value" id="info-avg">–</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Updated</div>
+      <div class="info-value" style="font-size:14px;padding-top:4px" id="info-updated">–</div>
+    </div>
   </div>
-</header>
 
-<div class="summary">
-  <div class="s-card"><div class="s-label">Fights today</div><div class="s-value" id="s-today">–</div><div class="s-sub" id="s-delta">–</div></div>
-  <div class="s-card"><div class="s-label">Active groups</div><div class="s-value" id="s-groups">–</div><div class="s-sub">last 24h</div></div>
-  <div class="s-card"><div class="s-label">Total 8v8 fights</div><div class="s-value" id="s-total">–</div><div class="s-sub">all time</div></div>
-  <div class="s-card"><div class="s-label">Updated</div><div class="s-value" id="s-updated">–</div></div>
-</div>
+  <div class="controls">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" id="search" type="text" placeholder="Search group…">
+    </div>
 
-<div class="controls">
-  <div class="search-wrap"><input type="text" id="search" placeholder="Search group…"></div>
-  <div class="time-filters" id="tf-days">
-    <div class="tf active" data-d="1">24h</div>
-    <div class="tf" data-d="3">3d</div>
-    <div class="tf" data-d="7">7d</div>
-    <div class="tf" data-d="30">30d</div>
+    <div class="time-filters" id="tf-realm">
+      <div class="tf" data-realm="1" style="color:var(--alb)">Albion</div>
+      <div class="tf" data-realm="2" style="color:var(--mid)">Midgard</div>
+      <div class="tf" data-realm="3" style="color:var(--hib)">Hibernia</div>
+    </div>
+    <div class="time-filters" id="tf-size">
+      <div class="tf" data-size="25">25</div>
+      <div class="tf active" data-size="50">50</div>
+      <div class="tf" data-size="100">100</div>
+    </div>
   </div>
-  <div class="time-filters" id="tf-size">
-    <div class="tf active" data-s="10">10</div>
-    <div class="tf" data-s="30">30</div>
-    <div class="tf" data-s="50">50</div>
-  </div>
-</div>
 
-<div id="lb-body"><div class="empty">Loading…</div></div>
-<div id="lb-pages"></div>
+  <div id="ranking-body"><div class="loading">Loading ranking…</div></div>
+  <div id="ranking-pagination"></div>
 
-<footer>
-  <span>8v8 Leaderboard · DAoC Freeshard</span>
-  <span id="footer-upd">–</span>
-</footer>
+  <footer>
+    <div class="footer-text">ELO Ranking · DAoC Freeshard</div>
+    <div class="footer-note" id="footer-updated">–</div>
+  </footer>
 </div>
 
 <script>
 const REALM_HIB=[39,40,41,42,43,44,45,46,47,48,49,50,55,56,58];
 const REALM_MID=[21,22,23,24,25,26,27,28,29,30,31,32,34,59];
 const REALM_ALB=[1,2,3,4,5,6,7,8,9,10,11,12,13,19,33,63];
-const CLASS_NAMES={1:'Paladin',2:'Armsman',3:'Scout',4:'Minstrel',5:'Theurgist',6:'Cleric',7:'Wizard',8:'Sorcerer',9:'Infiltrator',10:'Friar',11:'Mercenary',12:'Necromancer',13:'Cabalist',19:'Reaver',33:'Heretic',63:'Occultist',21:'Thane',22:'Warrior',23:'Shadowblade',24:'Skald',25:'Hunter',26:'Healer',27:'Spiritmaster',28:'Shaman',29:'Runemaster',30:'Bonedancer',31:'Berserker',32:'Savage',34:'Valkyrie',59:'Warlock',39:'Bainshee',40:'Eldritch',41:'Enchanter',42:'Mentalist',43:'Blademaster',44:'Hero',45:'Champion',46:'Warden',47:'Druid',48:'Bard',49:'Nightshade',50:'Ranger',55:'Animist',56:'Valewalker',58:'Vampiir'};
-const RF={1:'brightness(0) saturate(100%) invert(40%) sepia(50%) saturate(500%) hue-rotate(320deg) brightness(85%)',2:'brightness(0) saturate(100%) invert(50%) sepia(50%) saturate(400%) hue-rotate(175deg) brightness(85%)',3:'brightness(0) saturate(100%) invert(52%) sepia(50%) saturate(300%) hue-rotate(55deg) brightness(88%)'};
-function realmCss(r){return r===1?'alb':r===2?'mid':r===3?'hib':''}
-function realmLabel(r){return r===1?'Albion':r===2?'Midgard':r===3?'Hibernia':''}
-function icon(cid,size=22){
-  const n=CLASS_NAMES[cid];
-  const realm=REALM_HIB.includes(cid)?3:REALM_MID.includes(cid)?2:REALM_ALB.includes(cid)?1:0;
-  const f=RF[realm]||'';
-  if(!n) return `<div style="width:${size}px;height:${size}px;background:var(--bg3);border-radius:50%"></div>`;
-  return `<img src="icons/${n}_class_icon.webp" width="${size}" height="${size}" style="object-fit:contain;filter:${f}" alt="${n}">`;
-}
-function wrCls(w){return w>=55?'col-g':w>=45?'col-a':'col-r'}
-function barCls(w){return w>=55?'fill-g':w>=45?'fill-a':'fill-r'}
-function timeAgo(d){
-  const s=Math.floor((Date.now()-d.getTime())/1000);
-  if(s<60)return s+'s ago';if(s<3600)return Math.floor(s/60)+'m ago';
-  if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago';
+const CLASS_ICONS = {
+  1:'Paladin',2:'Armsman',3:'Scout',4:'Minstrel',5:'Theurgist',
+  6:'Cleric',7:'Wizard',8:'Sorcerer',9:'Infiltrator',10:'Friar',
+  11:'Mercenary',12:'Necromancer',13:'Cabalist',19:'Reaver',
+  33:'Heretic',63:'Occultist',
+  21:'Thane',22:'Warrior',23:'Shadowblade',24:'Skald',25:'Hunter',
+  26:'Healer',27:'Spiritmaster',28:'Shaman',29:'Runemaster',
+  30:'Bonedancer',31:'Berserker',32:'Savage',34:'Valkyrie',59:'Warlock',
+  39:'Bainshee',40:'Eldritch',41:'Enchanter',42:'Mentalist',
+  43:'Blademaster',44:'Hero',45:'Champion',46:'Warden',47:'Druid',
+  48:'Bard',49:'Nightshade',50:'Ranger',55:'Animist',56:'Valewalker',58:'Vampiir',
+};
+const REALM_FILTER_MAP = {1:REALM_ALB, 2:REALM_MID, 3:REALM_HIB};
+
+function realmCss(c){return REALM_HIB.includes(c)?'hib':REALM_MID.includes(c)?'mid':REALM_ALB.includes(c)?'alb':'neu'}
+function realmName(c){return REALM_HIB.includes(c)?'Hibernia':REALM_MID.includes(c)?'Midgard':REALM_ALB.includes(c)?'Albion':''}
+function initials(n){return n?n.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase():'?'}
+function ratingColor(r){return r>=1100?'rating-up':r>=950?'rating-mid':'rating-down'}
+function wrCss(w){return w>=55?'wr-green':w>=45?'wr-amber':'wr-red'}
+function barCss(w){return w>=55?'bar-green':w>=45?'bar-amber':'bar-red'}
+
+function classIconHtml(classId, size=28){
+  const name = CLASS_ICONS[classId];
+  const rlm = realmCss(classId);
+  const REALM_FILTER_CSS = {
+    alb:'brightness(0) saturate(100%) invert(40%) sepia(50%) saturate(500%) hue-rotate(320deg) brightness(85%)',
+    mid:'brightness(0) saturate(100%) invert(50%) sepia(50%) saturate(400%) hue-rotate(175deg) brightness(85%)',
+    hib:'brightness(0) saturate(100%) invert(52%) sepia(50%) saturate(300%) hue-rotate(55deg) brightness(88%)',
+    neu:'brightness(0) saturate(0%) invert(50%)',
+  };
+  if(!name) return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:var(--bg3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:10px;font-family:Cinzel,serif;color:var(--text3)">${initials(name||'?')}</div>`;
+  return `<img src="icons/${name}_class_icon.webp" style="width:${size}px;height:${size}px;object-fit:contain;filter:${REALM_FILTER_CSS[rlm]||''}" alt="${name}">`;
 }
 
-let DATA=null, days=1, pageSize=10, page=1, sortKey='wilson', sortDir=-1, search='';
-let openGroup=null, fhPage={};
+let DATA = null;
+let FIGHT_HISTORY = null;
+let FH_LOADING = false;
+let openProfile = null;  // player name
+let profilePage = {};    // name -> page number
 
-function getList(){
-  const key=days===1?'leaderboard_1d':days===3?'leaderboard_3d':days===7?'leaderboard_7d':'leaderboard';
-  let list=[...(DATA[key]||[])];
-  if(search){const q=search.toLowerCase();list=list.filter(g=>g.leader.toLowerCase().includes(q));}
-  list.sort((a,b)=>{let va=a[sortKey]??-1,vb=b[sortKey]??-1;return(va>vb?1:va<vb?-1:0)*sortDir;});
+async function loadFightHistory() {
+  if (FIGHT_HISTORY) return FIGHT_HISTORY;
+  if (FH_LOADING) {
+    await new Promise(r => { const i = setInterval(()=>{ if(FIGHT_HISTORY){ clearInterval(i); r(); }}, 50); });
+    return FIGHT_HISTORY;
+  }
+  FH_LOADING = true;
+  try {
+    const r = await fetch('fight_history_8v8.json?t=' + Date.now());
+    FIGHT_HISTORY = await r.json();
+  } catch(e) { FIGHT_HISTORY = {}; }
+  FH_LOADING = false;
+  return FIGHT_HISTORY;
+}
+let sortKey = 'rating';
+let sortDir = -1;
+
+let filterRealm = 0;
+let pageSize = 50;
+let page = 1;
+let searchTerm = '';
+
+function getFiltered(){
+  if(!DATA) return [];
+  let list = [...DATA.ranking];
+
+
+  if(filterRealm > 0){
+    list = list.filter(p => p.realm === filterRealm);
+  }
+  if(searchTerm){
+    const q = searchTerm.toLowerCase();
+    list = list.filter(p => p.name.toLowerCase().includes(q));
+  }
+
+  list.sort((a,b)=>{
+    let va=a[sortKey], vb=b[sortKey];
+    if(va===null||va===undefined) va=-1;
+    if(vb===null||vb===undefined) vb=-1;
+    return (va-vb)*sortDir;
+  });
+
   return list;
 }
 
-function buildFightHistory(leader){
-  const fights=(DATA.fight_history||{})[leader];
-  if(!fights||!fights.length) return '<div class="fh-note">No fight history yet.</div>';
-  const FHP=5;
-  const p=fhPage[leader]||1;
-  const total=fights.length;
-  const pages=Math.max(1,Math.ceil(total/FHP));
-  const items=fights.slice((p-1)*FHP,p*FHP);
-
-  const html=items.map(f=>{
-    const d=new Date(f.started_at).toLocaleDateString('en',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-    const res=f.won?'<span class="fh-result-w">W</span>':'<span class="fh-result-l">L</span>';
-    const players=(f.players||[]).map(pl=>`
-      <div class="fh-player">
-        ${icon(pl.class_id,18)}
-        <div style="flex:1;min-width:0">
-          <div class="fh-player-name">${pl.name}</div>
-          <div class="fh-player-stats">${pl.class_name} · ${pl.rr}</div>
-          <div class="fh-player-stats">${(pl.dmg_done||0).toLocaleString()} dmg · ${(pl.heal_done||0).toLocaleString()} heal</div>
-        </div>
-      </div>`).join('');
-    return `<div class="fh-fight">
-      <div class="fh-header">${res}<span class="fh-date">${d}</span></div>
-      <div class="fh-players">${players}</div>
-    </div>`;
-  }).join('');
-
-  let pag='';
-  if(pages>1){
-    pag='<div class="fh-pages">';
-    pag+=`<button class="fh-pg" onclick="fhGo('${leader.replace(/'/g,"\\'")}',${p-1})" ${p===1?'disabled':''}>&#8249;</button>`;
-    for(let i=1;i<=pages;i++) pag+=`<button class="fh-pg ${i===p?'on':''}" onclick="fhGo('${leader.replace(/'/g,"\\'")}',${i})">${i}</button>`;
-    pag+=`<button class="fh-pg" onclick="fhGo('${leader.replace(/'/g,"\\'")}',${p+1})" ${p===pages?'disabled':''}>&#8250;</button>`;
-    pag+=`<span style="font-size:10px;color:var(--text3);font-family:'Cinzel',serif;padding:0 8px">${total} fights</span></div>`;
-  }
-  return html+pag;
-}
-
-function fhGo(leader,p){fhPage[leader]=p;render();}
-
-function toggleGroup(leader){
-  openGroup=openGroup===leader?null:leader;
-  if(openGroup&&!fhPage[leader]) fhPage[leader]=1;
-  render();
-  setTimeout(()=>{
-    const el=document.querySelector('.fh-wrap.open');
-    if(el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
-  },50);
-}
-
-function render(){
-  const list=getList();
-  const total=list.length;
-  const pages=Math.max(1,Math.ceil(total/pageSize));
-  if(page>pages)page=1;
-  const items=list.slice((page-1)*pageSize,page*pageSize);
+function renderRanking(){
+  const podiumNames = DATA && DATA.last_month_podium ? DATA.last_month_podium.map(p=>p.name) : [];
+  const list = getFiltered();
+  const total = list.length;
+  const totalPages = Math.max(1, Math.ceil(total/pageSize));
+  if(page > totalPages) page = 1;
+  const items = list.slice((page-1)*pageSize, page*pageSize);
 
   if(!items.length){
-    document.getElementById('lb-body').innerHTML='<div class="empty">No groups found.</div>';
-    document.getElementById('lb-pages').innerHTML='';
+    document.getElementById('ranking-body').innerHTML = '<div class="loading">No players found.</div>';
+    document.getElementById('ranking-pagination').innerHTML = '';
     return;
   }
 
-  const cols=[
-    {k:'_r',l:'#',cls:''},
-    {k:null,l:'Group',cls:''},
-    {k:'fights',l:'Fights',cls:'r'},
-    {k:'wilson',l:'Wilson Score',cls:'r'},
-    {k:'winrate',l:'Win Rate',cls:'r'},
-    {k:'wins',l:'W / L',cls:'r'},
+  const cols = [
+    {key:'rank',    label:'#',        cls:''},
+    {key:null,      label:'Player',   cls:''},
+    {key:'rating',  label:'ELO',      cls:'r sortable'},
+    {key:'peak',    label:'Peak',     cls:'r sortable'},
+    {key:'fights',  label:'Fights',   cls:'r sortable'},
+    {key:'winrate', label:'Win Rate', cls:'r sortable'},
+    {key:'wins',    label:'W / L',    cls:'r sortable'},
   ];
 
-  let th='<thead><tr>';
+  let thead = '<thead><tr>';
   cols.forEach(c=>{
-    const suf=c.k===sortKey?(sortDir===-1?' desc':' asc'):'';
-    const clk=c.k&&c.k!=='_r'?`onclick="sortBy('${c.k}')"`:'';
-    th+=`<th class="${c.cls}${suf}" ${clk}>${c.l}</th>`;
+    let extra = '';
+    if(c.key === sortKey) extra = sortDir===-1?' sort-desc':' sort-asc';
+    const click = c.key ? `onclick="sortBy('${c.key}')"` : '';
+    thead += `<th class="${c.cls}${extra}" ${click}>${c.label}</th>`;
   });
-  th+='</tr></thead>';
+  thead += '</tr></thead>';
 
-  let tb='<tbody>';
-  items.forEach((g,i)=>{
-    const rank=(page-1)*pageSize+i+1;
-    const rlm=realmCss(g.realm);
-    const wr=g.winrate;
-    const rc=rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'rank-n';
-    const isOpen=openGroup===g.leader;
-    const safe=g.leader.replace(/'/g,"\\'");
-    tb+=`<tr class="data-row" onclick="toggleGroup('${safe}')">
-      <td><span class="rank ${rc}">${rank}</span></td>
-      <td>
-        <div style="font-size:14px;font-weight:600;color:var(--text)">${g.leader}</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:1px" class="${rlm?'realm-'+rlm:''}">${realmLabel(g.realm)}</div>
-      </td>
-      <td class="r mono col-2">${g.fights}</td>
-      <td class="r"><span class="wr-val ${wrCls(g.wilson??0)}">${g.wilson??'–'}</span></td>
-      <td class="r"><div class="wr-wrap">
-        <span class="wr-val ${wrCls(wr)}">${wr}%</span>
-        <div class="wr-bar"><div class="wr-fill ${barCls(wr)}" style="width:${wr}%"></div></div>
+  let tbody = '<tbody>';
+  items.forEach((p, i) => {
+    const rank = (page-1)*pageSize + i + 1;
+    const rlm = p.realm===1?'alb':p.realm===2?'mid':p.realm===3?'hib':'';
+    const wr = p.winrate;
+    const rankCls = rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'rank-other';
+    const isOpen = openProfile === p.name;
+    const safeName = p.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    tbody += `<tr class="row-click" onclick="toggleProfile('${safeName}')">
+      <td><span class="rank-cell ${rankCls}">${rank}</span></td>
+      <td><div class="player-cell">
+        <div style="width:30px;height:30px;border-radius:50%;background:var(--bg3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;font-family:Cinzel,serif;color:var(--text2)">${initials(p.name)}</div>
+        <div>
+          <div class="player-name">${p.name}${podiumNames[0]===p.name?' &#11088;':podiumNames[1]===p.name?' &#129352;':podiumNames[2]===p.name?' &#129353;':''} <span style="font-size:9px;color:var(--text3);margin-left:4px;display:inline-block;transition:transform 0.15s;transform:${isOpen?'rotate(90deg)':'rotate(0)'}">&#9658;</span></div>
+          <div class="player-sub"><span class="realm-${rlm}">${p.realm_name||''}</span></div>
+        </div>
       </div></td>
-      <td class="r mono"><span class="col-g">${g.wins}W</span> / <span class="col-r">${g.losses}L</span></td>
+      <td class="r"><span class="rating-cell ${ratingColor(p.rating)}">${Math.round(p.rating)}</span></td>
+      <td class="r"><span class="peak-cell">${Math.round(p.peak)}</span></td>
+      <td class="r"><span style="color:var(--text2);font-family:'Cinzel',serif;font-size:13px">${p.fights}</span></td>
+      <td class="r"><div class="winrate-bar">
+        <span class="wr-num ${wrCss(wr)}">${wr}%</span>
+        <div class="bar-bg"><div class="bar-fill ${barCss(wr)}" style="width:${wr}%"></div></div>
+      </div></td>
+      <td class="r"><span class="wl-cell"><span class="w-count">${p.wins}W</span> / <span class="l-count">${p.losses}L</span></span></td>
     </tr>
-    <tr><td colspan="6" style="padding:0;border:none">
-      <div class="fh-wrap${isOpen?' open':''}">${isOpen?buildFightHistory(g.leader):''}</div>
+    <tr><td colspan="7" style="padding:0;border:none">
+      <div class="fh-wrap${isOpen?' open':''}">${isOpen?buildFightHistory(p.name):''}</div>
     </td></tr>`;
   });
-  tb+='</tbody>';
-  document.getElementById('lb-body').innerHTML=`<table>${th}${tb}</table>`;
+  tbody += '</tbody>';
 
-  if(pages<=1){document.getElementById('lb-pages').innerHTML='';return;}
-  let pag=`<div class="pagination">`;
-  pag+=`<button class="page-btn" onclick="goPage(${page-1})" ${page===1?'disabled':''}>&#8249;</button>`;
-  for(let i=1;i<=pages;i++){
-    if(pages>7&&i>2&&i<pages-1&&Math.abs(i-page)>1){if(i===3||i===pages-2)pag+=`<span class="page-info">…</span>`;continue;}
-    pag+=`<button class="page-btn ${i===page?'active':''}" onclick="goPage(${i})">${i}</button>`;
-  }
-  pag+=`<button class="page-btn" onclick="goPage(${page+1})" ${page===pages?'disabled':''}>&#8250;</button>`;
-  pag+=`<span class="page-info">${total} groups</span></div>`;
-  document.getElementById('lb-pages').innerHTML=pag;
+  document.getElementById('ranking-body').innerHTML = `<table>${thead}${tbody}</table>`;
+  renderPagination(totalPages, total);
 }
 
-function goPage(p){page=p;render();}
-function sortBy(k){sortDir=sortKey===k?sortDir*-1:-1;sortKey=k;page=1;render();}
+function renderPagination(totalPages, total){
+  if(totalPages<=1){document.getElementById('ranking-pagination').innerHTML='';return;}
+  let html = '<div class="pagination">';
+  html += `<button class="page-btn" onclick="goPage(${page-1})" ${page===1?'disabled':''}>‹</button>`;
+  for(let i=1;i<=totalPages;i++){
+    if(totalPages>7 && i>2 && i<totalPages-1 && Math.abs(i-page)>1){
+      if(i===3||i===totalPages-2) html+=`<span class="page-info">…</span>`;
+      continue;
+    }
+    html += `<button class="page-btn ${i===page?'active':''}" onclick="goPage(${i})">${i}</button>`;
+  }
+  html += `<button class="page-btn" onclick="goPage(${page+1})" ${page===totalPages?'disabled':''}>›</button>`;
+  html += `<span class="page-info">${total} players</span>`;
+  html += '</div>';
+  document.getElementById('ranking-pagination').innerHTML = html;
+}
 
-document.getElementById('search').addEventListener('input',e=>{search=e.target.value;page=1;render();});
-document.getElementById('tf-days').addEventListener('click',e=>{
-  const btn=e.target.closest('[data-d]');if(!btn)return;
-  document.querySelectorAll('#tf-days .tf').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');days=parseInt(btn.dataset.d);page=1;render();
+function goPage(p){ page=p; renderRanking(); }
+
+async function toggleProfile(name) {
+  if (openProfile === name) {
+    openProfile = null;
+    renderRanking();
+    return;
+  }
+  openProfile = name;
+  if (!profilePage[name]) profilePage[name] = 1;
+  renderRanking();
+  if (!FIGHT_HISTORY) {
+    await loadFightHistory();
+    renderRanking();
+  }
+  setTimeout(()=>{
+    const el = document.querySelector('.fh-wrap.open');
+    if(el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }, 50);
+}
+
+function buildFightHistory(name) {
+  const PAGE_SIZE = 5;
+  const fights = FIGHT_HISTORY?.[name];
+  if (!fights) return '<div style="padding:12px;color:var(--text3);font-family:Cinzel,serif;font-size:12px">' + (FIGHT_HISTORY ? 'No fight history.' : 'Loading…') + '</div>';
+
+  const page = profilePage[name] || 1;
+  const total = fights.length;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const items = fights.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE);
+
+  let cards = items.map(f => {
+    const d = new Date(f.date).toLocaleDateString('en', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+    const res = f.result === 'W'
+      ? '<span class="fh-win">W</span>'
+      : '<span class="fh-loss">L</span>';
+    const chg = f.elo_change >= 0
+      ? `<span class="fh-plus">+${f.elo_change}</span>`
+      : `<span class="fh-minus">${f.elo_change}</span>`;
+    const players = (f.players||[]).map(pl => `
+      <div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--bg3);border-radius:3px">
+        ${classIconHtml(pl.class_id, 18)}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${pl.name}</div>
+          <div style="font-size:10px;color:var(--text3);font-family:Cinzel,serif">${pl.class_name} · ${pl.rr}</div>
+        </div>
+      </div>`).join('');
+    return `<div style="padding:12px 16px;border-bottom:0.5px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        ${res}
+        <span style="font-size:11px;color:var(--text3);font-family:Cinzel,serif">${d}</span>
+        <span style="font-size:11px;color:var(--text3);font-family:Cinzel,serif">vs ${f.opponent}</span>
+        <span style="margin-left:auto;font-family:Cinzel,serif;font-size:12px">${Math.round(f.elo_before)} → ${chg} → ${Math.round(f.elo_after)}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px">${players}</div>
+    </div>`;
+  }).join('');
+
+  let pag = '';
+  if (pages > 1) {
+    pag = '<div class="fh-pages">';
+    pag += `<button class="page-btn" onclick="fhPage('${name}',${page-1})" ${page===1?'disabled':''}>‹</button>`;
+    for(let i=1;i<=pages;i++){
+      if(pages>7&&i>2&&i<pages-1&&Math.abs(i-page)>1){ if(i===3||i===pages-2) pag+=`<span class="page-info">…</span>`; continue; }
+      pag+=`<button class="page-btn ${i===page?'active':''}" onclick="fhPage('${name}',${i})">${i}</button>`;
+    }
+    pag += `<button class="page-btn" onclick="fhPage('${name}',${page+1})" ${page===pages?'disabled':''}>›</button>`;
+    pag += `<span class="page-info">${total} fights</span></div>`;
+  }
+
+  return cards + pag;
+}
+
+function fhPage(name, p) {
+  profilePage[name] = p;
+  renderRanking();
+  setTimeout(()=>{
+    const el = document.querySelector('.fh-wrap.open');
+    if(el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
+  },30);
+}
+
+function sortBy(key){
+  if(sortKey===key){ sortDir*=-1; } else { sortKey=key; sortDir=-1; }
+  page=1;
+  renderRanking();
+}
+
+// Filters
+document.getElementById('search').addEventListener('input', e=>{
+  searchTerm = e.target.value;
+  page = 1;
+  renderRanking();
 });
-document.getElementById('tf-size').addEventListener('click',e=>{
-  const btn=e.target.closest('[data-s]');if(!btn)return;
-  document.querySelectorAll('#tf-size .tf').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');pageSize=parseInt(btn.dataset.s);page=1;render();
+
+document.querySelectorAll('.time-filters').forEach(group=>{
+  group.querySelectorAll('.tf').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      group.querySelectorAll('.tf').forEach(b=>b.classList.remove('active'));
+
+
+      const realm = btn.dataset.realm;
+      if(realm){
+        const r = parseInt(realm);
+        if(filterRealm === r){ filterRealm=0; }
+        else { btn.classList.add('active'); filterRealm=r; }
+        page=1; renderRanking(); return;
+      }
+      const size = btn.dataset.size;
+      if(size){
+        btn.classList.add('active');
+        pageSize = parseInt(size);
+        page=1; renderRanking(); return;
+      }
+    });
+  });
 });
 
 async function loadData(){
   try{
-    const r=await fetch('data_8v8.json?t='+Date.now());
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    DATA=await r.json();
-    const s=DATA.summary;
-    document.getElementById('s-today').textContent=s.fights_today||0;
-    const d=(s.fights_today||0)-(s.fights_yesterday||0);
-    document.getElementById('s-delta').textContent=(d>=0?'+':'')+d+' vs yesterday';
-    document.getElementById('s-groups').textContent=s.active_groups||0;
-    document.getElementById('s-total').textContent=(s.total_fights||0).toLocaleString();
-    const upd=new Date(DATA.generated_at);
-    document.getElementById('s-updated').textContent=timeAgo(upd);
-    document.getElementById('footer-upd').textContent='Updated: '+upd.toLocaleString();
-    render();
+    const r = await fetch('ranking_8v8.json?t='+Date.now());
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    DATA = await r.json();
+
+    const list = DATA.ranking;
+    document.getElementById('info-players').textContent = DATA.total_groups;
+    if(list.length){
+      document.getElementById('info-top').textContent = Math.round(list[0].rating);
+      document.getElementById('info-top-name').textContent = list[0].name;
+      const avg = Math.round(list.reduce((s,p)=>s+p.rating,0)/list.length);
+      document.getElementById('info-avg').textContent = avg;
+    }
+    const upd = new Date(DATA.generated_at);
+    document.getElementById('info-updated').textContent = upd.toLocaleTimeString();
+    document.getElementById('footer-updated').textContent = 'Updated: '+upd.toLocaleString();
+
+    // Podium des Vormonats
+    const podium = DATA.last_month_podium || [];
+    const pw = document.getElementById('podium-wrap');
+    if(podium.length >= 1){
+      const medals = ['&#11088;','&#129352;','&#129353;'];
+      const ml = DATA.last_month ? new Date(DATA.last_month+'-01').toLocaleDateString('en',{month:'long',year:'numeric'}) : 'Last Month';
+      pw.innerHTML = '<div class="podium-card"><div class="podium-title">'+ml+' Champions</div><div class="podium-grid">'+
+        podium.slice(0,3).map(function(p,i){
+          return '<div class="podium-place"><div class="podium-medal">'+medals[i]+'</div><div class="podium-name">'+p.name+'</div><div class="podium-rating">'+Math.round(p.rating)+' ELO</div></div>';
+        }).join('')+'</div></div>';
+    } else { pw.innerHTML=''; }
+
+    renderRanking();
   }catch(e){
-    document.getElementById('lb-body').innerHTML='<div class="empty">&#9888; Could not load 8v8 data.</div>';
+    console.error(e);
+    document.getElementById('ranking-body').innerHTML = '<div class="loading">⚠ Could not load ranking data.</div>';
   }
 }
 
 loadData();
-setInterval(loadData,5*60*1000);
+setInterval(loadData, 5*60*1000);
 </script>
 </body>
 </html>
