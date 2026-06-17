@@ -90,11 +90,13 @@
   .top-fights{font-size:11px;color:var(--text3);min-width:64px;text-align:right}
 
   .error-msg{padding:1.2rem;text-align:center;color:var(--text3);font-size:13px}
+  .loading{padding:1.2rem;text-align:center;color:var(--text3);font-size:13px}
 
   footer{text-align:center;color:var(--text3);font-size:12px;padding-top:1.5rem;border-top:0.5px solid var(--border)}
 
-  /* ── Class Stats tab ── */
-  .time-filters{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:1.25rem}
+  /* ── Shared table / filter styles ── */
+  .time-filters{display:flex;gap:4px;flex-wrap:wrap}
+  .controls{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:8px}
   .tf{padding:5px 13px;font-size:11px;border:0.5px solid var(--border2);border-radius:20px;cursor:pointer;color:var(--text3);background:transparent;transition:all 0.15s;font-family:'Cinzel',serif;letter-spacing:0.06em;user-select:none}
   .tf:hover{color:var(--text2)}
   .tf.active{background:var(--hib);color:#0d0f0e;border-color:var(--hib);font-weight:600}
@@ -111,6 +113,8 @@
   .class-cell{display:flex;align-items:center;gap:10px}
   .class-icon{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;font-family:'Cinzel',serif;border:1px solid}
   .class-name{font-size:15px;color:var(--text)}
+  .player-name{font-size:15px;color:var(--text);font-weight:600}
+  .player-sub{font-size:11px;color:var(--text3)}
   .realm-badge{font-size:11px;letter-spacing:0.04em}
   .realm-hib{color:var(--hib)}.realm-mid{color:var(--mid)}.realm-alb{color:var(--alb)}
   .rr-badge{font-size:12px;color:var(--amber);font-family:'Cinzel',serif}
@@ -123,6 +127,10 @@
   .fights-num{color:var(--text2);font-size:14px;font-family:'Cinzel',serif}
   .wl-cell{font-size:13px;font-family:'Cinzel',serif}
   .w-count{color:var(--green)}.l-count{color:var(--red)}
+  .rank-num{font-size:13px;color:var(--text3);font-family:'Cinzel',serif;min-width:24px}
+  .rank-1{color:var(--amber);font-weight:600}
+  .rank-2{color:var(--text2);font-weight:600}
+  .rank-3{color:#a07040;font-weight:600}
   .drill-row td{padding:0!important;border:none!important}
   .drill-panel{display:none;background:var(--bg3);border-top:0.5px solid var(--border2)}
   .drill-panel.open{display:block}
@@ -135,7 +143,31 @@
   .expand-icon{font-size:10px;color:var(--text3);margin-left:6px;transition:transform 0.15s;display:inline-block}
   .expand-icon.open{transform:rotate(90deg)}
 
-  /* Underdog badges in drilldown */
+  /* Search */
+  .search-wrap{position:relative;flex:1;max-width:260px}
+  .search-input{width:100%;background:var(--bg2);border:0.5px solid var(--border2);border-radius:20px;padding:5px 14px 5px 32px;font-size:12px;color:var(--text);font-family:'Cinzel',serif;outline:none;transition:border-color 0.15s}
+  .search-input::placeholder{color:var(--text3)}
+  .search-input:focus{border-color:var(--hib)}
+  .search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--text3);pointer-events:none}
+
+  /* Pagination */
+  .pagination{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:1.25rem}
+  .page-btn{padding:4px 11px;font-size:11px;border:0.5px solid var(--border2);border-radius:4px;cursor:pointer;color:var(--text3);background:transparent;font-family:'Cinzel',serif;transition:all 0.15s}
+  .page-btn:hover{color:var(--text2);border-color:var(--border2)}
+  .page-btn.active{background:var(--hib);color:#0d0f0e;border-color:var(--hib);font-weight:600}
+  .page-btn:disabled{opacity:0.3;cursor:default}
+  .page-info{font-size:11px;color:var(--text3);font-family:'Cinzel',serif}
+
+  /* Player profile dropdown */
+  .player-profile{display:none;background:var(--bg3);border-top:0.5px solid var(--border2)}
+  .player-profile.open{display:block}
+  .profile-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:14px 10px}
+  .profile-section-title{font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px}
+  .profile-item{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;font-size:12px}
+  .profile-item-name{color:var(--text2);font-family:'Cinzel',serif}
+  .profile-item-count{color:var(--text3);font-family:'Cinzel',serif;font-size:11px}
+
+  /* Underdog badges in profile + drilldown */
   .underdog-cell{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end}
   .underdog-badge{font-size:11px;font-family:'Cinzel',serif;padding:2px 8px;border-radius:10px;background:var(--hib-dim);color:var(--hib);border:0.5px solid var(--hib2);white-space:nowrap}
   .underdog-none{color:var(--text3);font-size:12px}
@@ -145,6 +177,7 @@
     .stats-grid{grid-template-columns:repeat(2,1fr)}
     .nav-grid{grid-template-columns:1fr}
     .hero-title{font-size:30px}
+    .profile-grid{grid-template-columns:repeat(2,1fr)}
   }
 </style>
 </head>
@@ -164,6 +197,7 @@
 
   <div class="page-tabs">
     <button class="page-tab active" data-page="home">Home</button>
+    <button class="page-tab" data-page="leaderboard">Leaderboard</button>
     <button class="page-tab" data-page="classstats">Class Stats</button>
   </div>
 
@@ -200,7 +234,7 @@
     <div class="panel-section">
       <div class="panel-header">
         <div class="panel-title">Top Duelists</div>
-        <button class="panel-link" onclick="switchPage('classstats')">Class stats →</button>
+        <button class="panel-link" onclick="switchPage('leaderboard')">Full leaderboard →</button>
       </div>
       <div class="top-list" id="top-list">
         <div class="error-msg">Loading…</div>
@@ -208,12 +242,12 @@
     </div>
 
     <div class="nav-grid">
-      <a href="index.html#leaderboard" class="nav-card">
+      <div class="nav-card" onclick="switchPage('leaderboard')">
         <span class="nav-card-arrow">→</span>
         <span class="nav-card-icon">🏆</span>
         <div class="nav-card-title">Leaderboard</div>
-        <div class="nav-card-desc">Full player rankings by win rate, Wilson score, and realm rank.</div>
-      </a>
+        <div class="nav-card-desc">Full player rankings by win rate, Wilson score, and realm rank — including underdog wins.</div>
+      </div>
       <a href="index.html#matchups" class="nav-card">
         <span class="nav-card-arrow">→</span>
         <span class="nav-card-icon">⚔️</span>
@@ -224,7 +258,7 @@
         <span class="nav-card-arrow">→</span>
         <span class="nav-card-icon">📊</span>
         <div class="nav-card-title">Class Stats</div>
-        <div class="nav-card-desc">Performance breakdown for every class, with player drill-down and underdog wins.</div>
+        <div class="nav-card-desc">Performance breakdown for every class, with player drill-down.</div>
       </div>
       <a href="index.html#activity" class="nav-card">
         <span class="nav-card-arrow">→</span>
@@ -237,21 +271,54 @@
     <footer>Fair Fights is an independent, unofficial fan project. Not affiliated with the server it tracks.</footer>
   </div>
 
+  <!-- ── LEADERBOARD PANEL ── -->
+  <div class="page-panel" id="page-leaderboard">
+    <div class="controls" style="gap:8px;flex-wrap:wrap;margin-bottom:1rem">
+      <div class="search-wrap" style="max-width:160px;flex-shrink:0">
+        <span class="search-icon">🔍</span>
+        <input class="search-input" id="lb-search" type="text" placeholder="Search…">
+      </div>
+      <div class="time-filters" id="tf-leaderboard">
+        <div class="tf active" data-days="1">24h</div>
+        <div class="tf" data-days="3">3d</div>
+        <div class="tf" data-days="7">7d</div>
+        <div class="tf" data-days="30">30d</div>
+      </div>
+      <div class="time-filters" id="tf-lb-size">
+        <div class="tf active" data-lbsize="10">10</div>
+        <div class="tf" data-lbsize="30">30</div>
+        <div class="tf" data-lbsize="50">50</div>
+      </div>
+    </div>
+    <div id="leaderboard-body"><div class="loading">Loading…</div></div>
+    <div id="leaderboard-pagination"></div>
+  </div>
+
   <!-- ── CLASS STATS PANEL ── -->
   <div class="page-panel" id="page-classstats">
-    <div class="time-filters" id="tf-classstats">
+    <div class="time-filters" id="tf-classstats" style="margin-bottom:1.25rem">
       <button class="tf active" data-csdays="1">Today</button>
       <button class="tf" data-csdays="3">3 Days</button>
       <button class="tf" data-csdays="7">7 Days</button>
       <button class="tf" data-csdays="0">All Time</button>
     </div>
-    <div id="classstats-body"><div class="error-msg">Loading…</div></div>
+    <div id="classstats-body"><div class="loading">Loading…</div></div>
   </div>
 
 </div>
 
 <script>
 let DATA = null;
+let PROFILES = null;
+
+let lbPage = 1;
+let lbPageSize = 10;
+let lbSortKey = 'wilson';
+let lbSortDir = -1;
+let lbDays = 1;
+let lbSearch = '';
+let lbProfileOpen = null;
+
 let csDays = 1;
 let csSortKey = 'fights';
 let csSortDir = -1;
@@ -343,7 +410,268 @@ document.querySelectorAll('.page-tab').forEach(tab => {
   tab.addEventListener('click', () => switchPage(tab.dataset.page));
 });
 
-// ── Class Stats time filter ──
+// ══════════════════════════════════════════════
+// LEADERBOARD
+// ══════════════════════════════════════════════
+function getFilteredLb(){
+  let lb;
+  if(lbDays===1)       lb=[...DATA.leaderboard_1d||[]];
+  else if(lbDays===3)  lb=[...DATA.leaderboard_3d||[]];
+  else if(lbDays===7)  lb=[...DATA.leaderboard_7d||[]];
+  else                 lb=[...DATA.leaderboard||[]];
+  if(lbSearch){
+    const q=lbSearch.toLowerCase();
+    lb=lb.filter(p=>p.name.toLowerCase().includes(q)||p.class_name.toLowerCase().includes(q));
+  }
+  lb.sort((a,b)=>{
+    let va=a[lbSortKey],vb=b[lbSortKey];
+    if(va===null||va===undefined)va=-1;
+    if(vb===null||vb===undefined)vb=-1;
+    return(va-vb)*lbSortDir;
+  });
+  return lb;
+}
+
+function renderLeaderboard(){
+  if(!DATA||!DATA.leaderboard){
+    document.getElementById('leaderboard-body').innerHTML='<div class="loading">No data yet.</div>';
+    return;
+  }
+  const lb=getFilteredLb();
+  const totalPages=Math.max(1,Math.ceil(lb.length/lbPageSize));
+  if(lbPage>totalPages)lbPage=1;
+  const start=(lbPage-1)*lbPageSize;
+  const page=lb.slice(start,start+lbPageSize);
+
+  if(lb.length===0){
+    document.getElementById('leaderboard-body').innerHTML='<div class="loading">No players found.</div>';
+    document.getElementById('leaderboard-pagination').innerHTML='';
+    return;
+  }
+
+  const cols=[
+    {key:null,           label:'#',          cls:''},
+    {key:null,           label:'Player',     cls:''},
+    {key:'fights',       label:'Fights',     cls:'r sortable'},
+    {key:'wilson',       label:'Wilson Score', cls:'r sortable'},
+    {key:'winrate',      label:'Win Rate',   cls:'r sortable'},
+    {key:'wins',         label:'W / L',      cls:'r sortable'},
+    {key:'avg_win_rr',   label:'Avg RR (W)', cls:'r'},
+    {key:'avg_loss_rr',  label:'Avg RR (L)', cls:'r'},
+  ];
+
+  let thead='<thead><tr>';
+  cols.forEach(c=>{
+    let extra='';
+    if(c.key===lbSortKey) extra=lbSortDir===-1?' sort-desc':' sort-asc';
+    const click=c.key?`onclick="sortLb('${c.key}')"`:'' ;
+    thead+=`<th class="${c.cls}${extra}" ${click}>${c.label}</th>`;
+  });
+  thead+='</tr></thead>';
+
+  let tbody='<tbody>';
+  page.forEach((p,i)=>{
+    const rank=start+i+1;
+    const rlm=realmCss(p.class_id);
+    const wr=p.winrate;
+    const rankCls=rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'rank-num';
+    const safeName2 = p.name.replace(/'/g,String.fromCharCode(92)+String.fromCharCode(39));
+    tbody+=`<tr class='cs-row' style='cursor:pointer' onclick="toggleProfile('${safeName2}')">
+      <td><span class="${rankCls}">${rank}</span></td>
+      <td><div class="class-cell">
+        ${classIconHtml(p.class_id)}
+        <div>
+          <div class="player-name">${p.name}</div>
+          <div class="player-sub"><span class="realm-${rlm}">${realmName(p.class_id)}</span> · ${p.class_name} · <span class="rr-badge">${p.rr}</span></div>
+        </div>
+      </div></td>
+      <td class="r"><span class="fights-num">${p.fights}</span></td>
+      <td class="r"><span class="wr-num ${wrCss(p.wilson??0)}" title="Wilson Score – statistically adjusted win rate">${p.wilson!=null?p.wilson:"–"}</span></td>
+      <td class="r"><div class="winrate-bar">
+        <span class="wr-num ${wrCss(wr)}">${wr}%</span>
+        <div class="bar-bg"><div class="bar-fill ${barCss(wr)}" style="width:${wr}%"></div></div>
+      </div></td>
+      <td class="r"><span class="wl-cell"><span class="w-count">${p.wins}W</span> / <span class="l-count">${p.losses}L</span></span></td>
+      <td class="r"><span class="rr-badge" style="color:var(--green)">${p.avg_win_rr||'–'}</span></td>
+      <td class="r"><span class="rr-badge" style="color:var(--red)">${p.avg_loss_rr||'–'}</span></td>
+    </tr>
+    <tr><td colspan="8" style="padding:0;border:none">
+      <div class="player-profile${lbProfileOpen===p.name?' open':''}" id="profile-${rank}">
+        ${lbProfileOpen===p.name?buildPlayerProfile(p.name):''}
+      </div>
+    </td></tr>`;
+  });
+  tbody+='</tbody>';
+
+  document.getElementById('leaderboard-body').innerHTML=`<table>${thead}${tbody}</table>`;
+  renderPagination(totalPages, lb.length);
+}
+
+function renderPagination(totalPages, total){
+  if(totalPages<=1){document.getElementById('leaderboard-pagination').innerHTML='';return;}
+  let html=`<div class="pagination">`;
+  html+=`<button class="page-btn" onclick="goPage(${lbPage-1})" ${lbPage===1?'disabled':''}>‹</button>`;
+  for(let i=1;i<=totalPages;i++){
+    if(totalPages>7&&i>2&&i<totalPages-1&&Math.abs(i-lbPage)>1){
+      if(i===3||i===totalPages-2) html+=`<span class="page-info">…</span>`;
+      continue;
+    }
+    html+=`<button class="page-btn ${i===lbPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
+  }
+  html+=`<button class="page-btn" onclick="goPage(${lbPage+1})" ${lbPage===totalPages?'disabled':''}>›</button>`;
+  html+=`<span class="page-info">${total} players</span>`;
+  html+=`</div>`;
+  document.getElementById('leaderboard-pagination').innerHTML=html;
+}
+
+function buildPlayerProfile(name){
+  const pp = PROFILES && PROFILES[name];
+  if(!pp) return '<div style="padding:12px;color:var(--text3);font-size:12px;font-family:Cinzel,serif">No profile data yet.</div>';
+
+  const statsKey = lbDays===1?'profile_stats_1d':lbDays===3?'profile_stats_3d':lbDays===7?'profile_stats_7d':null;
+  const ts = statsKey && DATA[statsKey] ? DATA[statsKey][name] : null;
+  const wonVsData  = ts ? ts.won_vs  : pp.won_vs;
+  const lostVsData = ts ? ts.lost_vs : pp.lost_vs;
+  const avgDmg     = ts != null ? ts.avg_dmg   : pp.avg_dmg;
+  const avgHeal    = ts != null ? ts.avg_heal  : pp.avg_heal;
+  const avgTaken   = ts != null ? ts.avg_taken : pp.avg_taken;
+  const statsPeriod = lbDays===1?'24h':lbDays===3?'3d':lbDays===7?'7d':'30d';
+
+  let zonesHtml = pp.top_zones.length
+    ? pp.top_zones.map(z=>`<div class="profile-item">
+        <span class="profile-item-name">${z.name}</span>
+        <span class="profile-item-count">${z.count}</span>
+      </div>`).join('')
+    : '<div style="color:var(--text3);font-size:11px">No data</div>';
+
+  const maxH = Math.max(...(pp.top_hours||[]).map(h=>h.count), 1);
+  const hourMap = Object.fromEntries((pp.top_hours||[]).map(h=>[h.hour, h.count]));
+  let hoursHtml = '<div style="display:flex;align-items:flex-end;gap:2px;height:36px">';
+  for(let h=0;h<24;h++){
+    const cnt = hourMap[h]||0;
+    const ht = cnt>0 ? Math.max(3, Math.round((cnt/maxH)*34)) : 2;
+    const color = cnt>0?'var(--hib)':'var(--bg4)';
+    hoursHtml += `<div title="${String(h).padStart(2,'0')}:00 – ${cnt} fights" style="flex:1;height:${ht}px;border-radius:1px 1px 0 0;background:${color}"></div>`;
+  }
+  hoursHtml += '</div><div style="display:flex;justify-content:space-between;margin-top:3px">';
+  [0,6,12,18,23].forEach(h=>{
+    hoursHtml += `<span style="font-size:8px;color:var(--text3);font-family:'Cinzel',serif">${String(h).padStart(2,'0')}</span>`;
+  });
+  hoursHtml += '</div>';
+
+  let wonHtml = wonVsData.length
+    ? wonVsData.map(v=>`<div class="profile-item">
+        <div style="flex:1">
+          <span class="profile-item-name">${v.class_name}</span>
+          ${v.avg_rr?`<span style="font-size:10px;color:var(--text3);margin-left:4px">avg ${v.avg_rr}</span>`:''}
+        </div>
+        <span class="profile-item-count" style="color:var(--green)">${v.count}W</span>
+      </div>`).join('')
+    : '<div style="color:var(--text3);font-size:11px">No data</div>';
+
+  let lostHtml = lostVsData.length
+    ? lostVsData.map(v=>`<div class="profile-item">
+        <div style="flex:1">
+          <span class="profile-item-name">${v.class_name}</span>
+          ${v.avg_rr?`<span style="font-size:10px;color:var(--text3);margin-left:4px">avg ${v.avg_rr}</span>`:''}
+        </div>
+        <span class="profile-item-count" style="color:var(--red)">${v.count}L</span>
+      </div>`).join('')
+    : '<div style="color:var(--text3);font-size:11px">No data</div>';
+
+  const statsHtml = `
+    <div style="display:flex;gap:24px;padding:8px 10px;border-top:0.5px solid var(--border2)">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+        <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase">Avg Dmg</span>
+        <span style="font-size:14px;font-family:'Cinzel',serif;color:var(--alb);font-weight:600">${avgDmg!=null?avgDmg.toLocaleString():'–'}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+        <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase">Avg Heal</span>
+        <span style="font-size:14px;font-family:'Cinzel',serif;color:var(--mid);font-weight:600">${avgHeal!=null?avgHeal.toLocaleString():'–'}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+        <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase">Avg Taken</span>
+        <span style="font-size:14px;font-family:'Cinzel',serif;color:var(--text2);font-weight:600">${avgTaken!=null?avgTaken.toLocaleString():'–'}</span>
+      </div>
+    </div>`;
+
+  // ── Underdog Wins block (1 vs X) ──
+  const underdogHtml = `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-top:0.5px solid var(--border2)">
+      <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase;flex-shrink:0">Underdog Wins</span>
+      ${underdogCellHtml(pp.underdog_wins)}
+    </div>`;
+
+  return `<div class="profile-grid">
+    <div>
+      <div class="profile-section-title">⚔ Most active zones</div>
+      ${zonesHtml}
+    </div>
+    <div>
+      <div class="profile-section-title">Peak hours</div>
+      ${hoursHtml}
+    </div>
+    <div>
+      <div class="profile-section-title">✓ Most wins vs</div>
+      ${wonHtml}
+    </div>
+    <div>
+      <div class="profile-section-title">✗ Most losses vs</div>
+      ${lostHtml}
+    </div>
+  </div>
+  ${statsHtml}
+  ${underdogHtml}
+  <div style="padding:4px 10px 8px;font-size:10px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.06em">Zones & peak hours / underdog wins: all-time · Wins/losses/dmg: last ${statsPeriod}</div>`;
+}
+
+function toggleProfile(name){
+  if(lbProfileOpen === name){
+    lbProfileOpen = null;
+  } else {
+    lbProfileOpen = name;
+    PROFILES = DATA.player_profiles || {};
+  }
+  renderLeaderboard();
+  setTimeout(()=>{
+    const open = document.querySelector('.player-profile.open');
+    if(open) open.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }, 50);
+}
+
+function goPage(p){lbPage=p;renderLeaderboard();}
+function sortLb(key){
+  if(lbSortKey===key){lbSortDir*=-1;}else{lbSortKey=key;lbSortDir=-1;}
+  lbPage=1;renderLeaderboard();
+}
+
+document.getElementById('lb-search').addEventListener('input', e=>{
+  lbSearch=e.target.value; lbPage=1; renderLeaderboard();
+});
+
+document.getElementById('tf-leaderboard').addEventListener('click', e=>{
+  const btn = e.target.closest('.tf');
+  if(!btn) return;
+  document.querySelectorAll('#tf-leaderboard .tf').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  lbDays = parseInt(btn.dataset.days);
+  lbPage = 1;
+  renderLeaderboard();
+});
+
+document.getElementById('tf-lb-size').addEventListener('click', e=>{
+  const btn = e.target.closest('.tf');
+  if(!btn) return;
+  document.querySelectorAll('#tf-lb-size .tf').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  lbPageSize = parseInt(btn.dataset.lbsize);
+  lbPage = 1;
+  renderLeaderboard();
+});
+
+// ══════════════════════════════════════════════
+// CLASS STATS
+// ══════════════════════════════════════════════
 document.getElementById('tf-classstats').addEventListener('click', e => {
   const btn = e.target.closest('[data-csdays]');
   if (!btn) return;
@@ -489,7 +817,9 @@ function sortDrill(classId,key){
   },10);
 }
 
-// ── Home panel rendering ──
+// ══════════════════════════════════════════════
+// HOME
+// ══════════════════════════════════════════════
 function renderHome(){
   document.getElementById('stat-today').textContent = DATA.summary.fights_today.toLocaleString();
   document.getElementById('stat-active').textContent = DATA.summary.active_players.toLocaleString();
@@ -525,18 +855,23 @@ function renderHome(){
   }
 }
 
-// ── Load data ──
+// ══════════════════════════════════════════════
+// LOAD DATA
+// ══════════════════════════════════════════════
 async function loadData(){
   try{
     const r = await fetch('data.json?t='+Date.now());
     if(!r.ok) throw new Error('HTTP '+r.status);
     DATA = await r.json();
     renderHome();
+    renderLeaderboard();
     renderClassStats();
   } catch(e){
     console.error(e);
-    document.getElementById('top-list').innerHTML = '<div class="error-msg">⚠ Could not load fight data.</div>';
-    document.getElementById('classstats-body').innerHTML = '<div class="error-msg">⚠ Could not load fight data.</div>';
+    ['top-list','leaderboard-body','classstats-body'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el)el.innerHTML='<div class="error-msg">⚠ Could not load fight data.</div>';
+    });
   }
 }
 
