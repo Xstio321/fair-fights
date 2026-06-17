@@ -108,7 +108,7 @@
   .page-info{font-size:11px;color:var(--text3);font-family:'Cinzel',serif}
   /* Matrix */
   .matrix-note{font-size:12px;color:var(--text3);margin-bottom:12px;letter-spacing:0.04em}
-  .matrix-wrap{overflow-x:auto}
+  .matrix-wrap{overflow:auto;max-height:70vh}
   .matrix-table{border-collapse:collapse;font-size:12px}
   .matrix-table th{font-size:9px;padding:4px 6px;font-weight:400;color:var(--text3);background:var(--bg2);letter-spacing:0.06em;text-transform:uppercase;font-family:'Cinzel',serif;border:0.5px solid var(--border);height:36px;vertical-align:middle;white-space:nowrap;position:sticky;top:0;z-index:1;transition:background 0.1s}
   .matrix-table td{padding:4px 8px;text-align:center;border:0.5px solid var(--border);font-family:'Cinzel',serif;font-size:11px;transition:background 0.1s;height:36px;vertical-align:middle;white-space:nowrap;cursor:default}
@@ -302,11 +302,6 @@
 let DATA = null;
 let PROFILES = null;
 
-function loadProfiles() {
-  PROFILES = DATA.player_profiles || {};
-  return PROFILES;
-}
-const PAGE_SIZE = 50;
 let lbPage = 1;
 let lbPageSize = 10;
 let lbSortKey = 'wilson';
@@ -361,7 +356,6 @@ function classIconHtml(classId, size=30) {
 function realmCss(c){return REALM_HIB.includes(c)?'hib':REALM_MID.includes(c)?'mid':REALM_ALB.includes(c)?'alb':'neu'}
 function realmName(c){return REALM_HIB.includes(c)?'Hibernia':REALM_MID.includes(c)?'Midgard':REALM_ALB.includes(c)?'Albion':''}
 function initials(n){return n.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase()}
-function fmtDur(s){return s?s+'s':'–'}
 function fmtNum(n){return n?n.toLocaleString():'0'}
 function wrCss(w){return w>=55?'wr-green':w>=45?'wr-amber':'wr-red'}
 function barCss(w){return w>=55?'bar-green':w>=45?'bar-amber':'bar-red'}
@@ -1332,7 +1326,7 @@ document.querySelectorAll('.time-filters').forEach(group=>{
       const matchup = btn.dataset.matchup;
       if(matchup){
         // Matchup Filter: beide Gruppen deaktivieren, dann nur diesen aktivieren
-        document.querySelectorAll('#tf-matchups-time .tf, #tf-matchups-count .tf')
+        document.querySelectorAll('#tf-matchups-count .tf')
           .forEach(b=>b.classList.remove('active'));
         btn.classList.add('active');
         matchupFilter = matchup;
