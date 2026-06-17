@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fair Fights – DAoC Freeshard 1v1 Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0d0f0e;--bg2:#13160f;--bg3:#1a1e16;--bg4:#222620;
+    --border:rgba(160,180,120,0.12);--border2:rgba(160,180,120,0.22);
+    --text:#e8ead4;--text2:#9fa882;--text3:#5c6348;
+    --gold:#c9a84c;--gold2:#8a6d28;
+    --hib:#7ab648;--hib2:#4a7a22;--hib3:#2a4a10;--hib-dim:rgba(122,182,72,0.12);
+    --mid:#4a8fc4;--mid2:#2a5a8a;--mid3:#122840;
+    --alb:#c44a4a;--alb2:#8a2a2a;--alb3:#401212;
+    --green:#7ab648;--amber:#c9a84c;--red:#c44a4a;--radius:6px;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Crimson Pro',Georgia,serif;font-size:16px;line-height:1.6;min-height:100vh}
+  body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(122,182,72,0.07) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 80% 100%,rgba(74,143,196,0.05) 0%,transparent 50%);pointer-events:none;z-index:0}
+  .wrap{max-width:1280px;margin:0 auto;padding:2rem 2.5rem 4rem;position:relative;z-index:1}
+
+  header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:0.5px solid var(--border2)}
+  .logo-lockup{display:flex;align-items:center;gap:14px}
+  .logo-shield{width:42px;height:42px;background:linear-gradient(135deg,var(--bg3) 0%,var(--bg4) 100%);border:1px solid var(--border2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--hib)}
+  .logo-text{font-family:'Cinzel',serif;font-size:22px;font-weight:600;color:var(--text);letter-spacing:0.05em;line-height:1.2}
+  .logo-sub{font-size:12px;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;font-family:'Cinzel',serif;font-weight:400}
+  .live-badge{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--hib);padding:5px 12px;border:0.5px solid var(--hib2);border-radius:20px;background:var(--hib-dim);font-family:'Cinzel',serif;letter-spacing:0.08em;margin-top:4px}
+  .live-dot{width:7px;height:7px;background:var(--hib);border-radius:50%;animation:pulse 2s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+  /* ── Page tabs ── */
+  .page-tabs{display:flex;gap:0;margin-bottom:2rem;border-bottom:0.5px solid var(--border2)}
+  .page-tab{padding:10px 20px;font-size:13px;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.15s;font-family:'Cinzel',serif;letter-spacing:0.05em;user-select:none;background:none;border-top:none;border-left:none;border-right:none}
+  .page-tab:hover{color:var(--text2)}
+  .page-tab.active{color:var(--hib);border-bottom-color:var(--hib)}
+  .page-panel{display:none}
+  .page-panel.active{display:block}
+
+  /* ── Hero ── */
+  .hero{text-align:center;padding:1.5rem 0 2.5rem;margin-bottom:2.5rem;border-bottom:0.5px solid var(--border2)}
+  .hero-eyebrow{font-family:'Cinzel',serif;font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:var(--text3);margin-bottom:0.9rem}
+  .hero-title{font-family:'Cinzel',serif;font-size:42px;font-weight:600;color:var(--text);letter-spacing:0.02em;margin-bottom:0.6rem}
+  .hero-title .accent{color:var(--hib)}
+  .hero-sub{font-size:16px;color:var(--text2);max-width:560px;margin:0 auto 0.4rem}
+  .hero-since{font-size:12px;color:var(--text3);letter-spacing:0.04em}
+
+  /* ── Stats ── */
+  .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:2.5rem}
+  .stat-card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:1.1rem;text-align:center;transition:border-color 0.2s}
+  .stat-card:hover{border-color:var(--border2)}
+  .stat-label{font-size:11px;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;font-family:'Cinzel',serif;margin-bottom:6px}
+  .stat-value{font-family:'Cinzel',serif;font-size:26px;font-weight:600;color:var(--text);line-height:1}
+  .stat-sub{font-size:11px;color:var(--text3);margin-top:4px}
+
+  /* ── Section nav cards ── */
+  .nav-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:2.5rem}
+  .nav-card{display:block;background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:1.4rem 1.5rem;text-decoration:none;transition:border-color 0.2s,background 0.2s;position:relative;overflow:hidden;cursor:pointer}
+  .nav-card:hover{border-color:var(--hib2);background:var(--bg3)}
+  .nav-card-icon{font-size:22px;margin-bottom:0.7rem;display:block}
+  .nav-card-title{font-family:'Cinzel',serif;font-size:16px;font-weight:600;color:var(--text);letter-spacing:0.03em;margin-bottom:0.35rem}
+  .nav-card-desc{font-size:13px;color:var(--text3);line-height:1.5}
+  .nav-card-arrow{position:absolute;right:1.4rem;top:1.4rem;color:var(--text3);font-size:14px;transition:transform 0.2s,color 0.2s}
+  .nav-card:hover .nav-card-arrow{color:var(--hib);transform:translateX(3px)}
+
+  /* ── Highlight panel (top players preview) ── */
+  .panel-section{margin-bottom:2.5rem}
+  .panel-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:1rem}
+  .panel-title{font-family:'Cinzel',serif;font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3)}
+  .panel-link{font-size:13px;color:var(--hib);text-decoration:none;font-family:'Cinzel',serif;letter-spacing:0.04em;background:none;border:none;cursor:pointer}
+  .panel-link:hover{text-decoration:underline}
+
+  .top-list{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);overflow:hidden}
+  .top-row{display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:0.5px solid var(--border)}
+  .top-row:last-child{border-bottom:none}
+  .top-rank{font-family:'Cinzel',serif;font-size:14px;color:var(--text3);width:20px;flex-shrink:0}
+  .top-rank.r1{color:var(--amber);font-weight:600}
+  .top-rank.r2{color:var(--text2);font-weight:600}
+  .top-rank.r3{color:#a07040;font-weight:600}
+  .top-class-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0;font-family:'Cinzel',serif;border:1px solid}
+  .av-hib{background:var(--hib3);color:var(--hib);border-color:var(--hib2)}
+  .av-mid{background:var(--mid3);color:var(--mid);border-color:var(--mid2)}
+  .av-alb{background:var(--alb3);color:var(--alb);border-color:var(--alb2)}
+  .top-name{font-size:15px;font-weight:600;color:var(--text);flex:1}
+  .top-class{font-size:12px;color:var(--text3);margin-left:8px;font-weight:400}
+  .top-wr{font-family:'Cinzel',serif;font-size:14px;font-weight:600;color:var(--green);min-width:48px;text-align:right}
+  .top-fights{font-size:11px;color:var(--text3);min-width:64px;text-align:right}
+
+  .error-msg{padding:1.2rem;text-align:center;color:var(--text3);font-size:13px}
+
+  footer{text-align:center;color:var(--text3);font-size:12px;padding-top:1.5rem;border-top:0.5px solid var(--border)}
+
+  /* ── Class Stats tab ── */
+  .time-filters{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:1.25rem}
+  .tf{padding:5px 13px;font-size:11px;border:0.5px solid var(--border2);border-radius:20px;cursor:pointer;color:var(--text3);background:transparent;transition:all 0.15s;font-family:'Cinzel',serif;letter-spacing:0.06em;user-select:none}
+  .tf:hover{color:var(--text2)}
+  .tf.active{background:var(--hib);color:#0d0f0e;border-color:var(--hib);font-weight:600}
+  table{width:100%;border-collapse:collapse}
+  thead th{font-size:10px;font-weight:400;color:var(--text3);text-align:left;padding:8px 10px;border-bottom:0.5px solid var(--border2);letter-spacing:0.1em;text-transform:uppercase;font-family:'Cinzel',serif;white-space:nowrap}
+  th.r,td.r{text-align:right}
+  th.sortable{cursor:pointer;user-select:none}
+  th.sortable:hover{color:var(--text2)}
+  th.sort-asc::after{content:' ↑'}
+  th.sort-desc::after{content:' ↓'}
+  tbody td{padding:10px;font-size:15px;color:var(--text);border-bottom:0.5px solid var(--border);transition:background 0.1s}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover td{background:var(--bg2)}
+  .class-cell{display:flex;align-items:center;gap:10px}
+  .class-icon{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;font-family:'Cinzel',serif;border:1px solid}
+  .class-name{font-size:15px;color:var(--text)}
+  .realm-badge{font-size:11px;letter-spacing:0.04em}
+  .realm-hib{color:var(--hib)}.realm-mid{color:var(--mid)}.realm-alb{color:var(--alb)}
+  .rr-badge{font-size:12px;color:var(--amber);font-family:'Cinzel',serif}
+  .winrate-bar{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+  .bar-bg{width:60px;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden;flex-shrink:0}
+  .bar-fill{height:100%;border-radius:2px}
+  .bar-green{background:var(--green)}.bar-amber{background:var(--amber)}.bar-red{background:var(--red)}
+  .wr-num{font-size:14px;font-weight:600;min-width:40px;text-align:right;font-family:'Cinzel',serif}
+  .wr-green{color:var(--green)}.wr-amber{color:var(--amber)}.wr-red{color:var(--red)}
+  .fights-num{color:var(--text2);font-size:14px;font-family:'Cinzel',serif}
+  .wl-cell{font-size:13px;font-family:'Cinzel',serif}
+  .w-count{color:var(--green)}.l-count{color:var(--red)}
+  .drill-row td{padding:0!important;border:none!important}
+  .drill-panel{display:none;background:var(--bg3);border-top:0.5px solid var(--border2)}
+  .drill-panel.open{display:block}
+  .drill-panel table{margin:0}
+  .drill-panel thead th{background:var(--bg3);font-size:10px;padding:6px 10px}
+  .drill-panel tbody td{padding:6px 10px;font-size:13px;background:var(--bg3)}
+  .drill-panel tbody tr:hover td{background:var(--bg4)}
+  .cs-row{cursor:pointer}
+  .cs-row:hover td{background:var(--bg2)!important}
+  .expand-icon{font-size:10px;color:var(--text3);margin-left:6px;transition:transform 0.15s;display:inline-block}
+  .expand-icon.open{transform:rotate(90deg)}
+
+  /* Underdog badges in drilldown */
+  .underdog-cell{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end}
+  .underdog-badge{font-size:11px;font-family:'Cinzel',serif;padding:2px 8px;border-radius:10px;background:var(--hib-dim);color:var(--hib);border:0.5px solid var(--hib2);white-space:nowrap}
+  .underdog-none{color:var(--text3);font-size:12px}
+
+  @media (max-width:760px){
+    .wrap{padding:1.25rem 1.25rem 3rem}
+    .stats-grid{grid-template-columns:repeat(2,1fr)}
+    .nav-grid{grid-template-columns:1fr}
+    .hero-title{font-size:30px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo-lockup">
+      <div class="logo-shield">⚔</div>
+      <div>
+        <div class="logo-text">Fair Fights</div>
+        <div class="logo-sub">Eden · 1v1 Tracker</div>
+      </div>
+    </div>
+    <div class="live-badge"><span class="live-dot"></span>Live</div>
+  </header>
+
+  <div class="page-tabs">
+    <button class="page-tab active" data-page="home">Home</button>
+    <button class="page-tab" data-page="classstats">Class Stats</button>
+  </div>
+
+  <!-- ── HOME PANEL ── -->
+  <div class="page-panel active" id="page-home">
+
+    <section class="hero">
+      <div class="hero-eyebrow">DAoC Freeshard · Eden</div>
+      <h1 class="hero-title">Who's <span class="accent">winning</span> the duels?</h1>
+      <p class="hero-sub">Every 1v1 fight on Eden, tracked automatically and ranked fairly.</p>
+      <p class="hero-since" id="tracking-since">Collecting data since —</p>
+    </section>
+
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Fights Today</div>
+        <div class="stat-value" id="stat-today">–</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Active Players</div>
+        <div class="stat-value" id="stat-active">–</div>
+        <div class="stat-sub">last 24h</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Fights</div>
+        <div class="stat-value" id="stat-total">–</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Updated</div>
+        <div class="stat-value" id="stat-updated" style="font-size:16px">–</div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-header">
+        <div class="panel-title">Top Duelists</div>
+        <button class="panel-link" onclick="switchPage('classstats')">Class stats →</button>
+      </div>
+      <div class="top-list" id="top-list">
+        <div class="error-msg">Loading…</div>
+      </div>
+    </div>
+
+    <div class="nav-grid">
+      <a href="index.html#leaderboard" class="nav-card">
+        <span class="nav-card-arrow">→</span>
+        <span class="nav-card-icon">🏆</span>
+        <div class="nav-card-title">Leaderboard</div>
+        <div class="nav-card-desc">Full player rankings by win rate, Wilson score, and realm rank.</div>
+      </a>
+      <a href="index.html#matchups" class="nav-card">
+        <span class="nav-card-arrow">→</span>
+        <span class="nav-card-icon">⚔️</span>
+        <div class="nav-card-title">Class Matchups</div>
+        <div class="nav-card-desc">Win rates between every class pairing, filterable by realm.</div>
+      </a>
+      <div class="nav-card" onclick="switchPage('classstats')">
+        <span class="nav-card-arrow">→</span>
+        <span class="nav-card-icon">📊</span>
+        <div class="nav-card-title">Class Stats</div>
+        <div class="nav-card-desc">Performance breakdown for every class, with player drill-down and underdog wins.</div>
+      </div>
+      <a href="index.html#activity" class="nav-card">
+        <span class="nav-card-arrow">→</span>
+        <span class="nav-card-icon">🗺️</span>
+        <div class="nav-card-title">Zone Activity</div>
+        <div class="nav-card-desc">Where the fights are happening, hour by hour across RvR zones.</div>
+      </a>
+    </div>
+
+    <footer>Fair Fights is an independent, unofficial fan project. Not affiliated with the server it tracks.</footer>
+  </div>
+
+  <!-- ── CLASS STATS PANEL ── -->
+  <div class="page-panel" id="page-classstats">
+    <div class="time-filters" id="tf-classstats">
+      <button class="tf active" data-csdays="1">Today</button>
+      <button class="tf" data-csdays="3">3 Days</button>
+      <button class="tf" data-csdays="7">7 Days</button>
+      <button class="tf" data-csdays="0">All Time</button>
+    </div>
+    <div id="classstats-body"><div class="error-msg">Loading…</div></div>
+  </div>
+
+</div>
+
+<script>
+let DATA = null;
+let csDays = 1;
+let csSortKey = 'fights';
+let csSortDir = -1;
+let drillSort = {};
+
+const REALM_HIB=[39,40,41,42,43,44,45,46,47,48,49,50,55,56,58];
+const REALM_MID=[21,22,23,24,25,26,27,28,29,30,31,32,34,59];
+const REALM_ALB=[1,2,3,4,5,6,7,8,9,10,11,12,13,19,33,63];
+
+const CLASS_ICONS = {
+  1:'Paladin',2:'Armsman',3:'Scout',4:'Minstrel',5:'Theurgist',
+  6:'Cleric',7:'Wizard',8:'Sorcerer',9:'Infiltrator',10:'Friar',
+  11:'Mercenary',12:'Necromancer',13:'Cabalist',19:'Reaver',
+  33:'Heretic',63:'Occultist',
+  21:'Thane',22:'Warrior',23:'Shadowblade',24:'Skald',25:'Hunter',
+  26:'Healer',27:'Spiritmaster',28:'Shaman',29:'Runemaster',
+  30:'Bonedancer',31:'Berserker',32:'Savage',34:'Valkyrie',59:'Warlock',
+  39:'Bainshee',40:'Eldritch',41:'Enchanter',42:'Mentalist',
+  43:'Blademaster',44:'Hero',45:'Champion',46:'Warden',47:'Druid',
+  48:'Bard',49:'Nightshade',50:'Ranger',55:'Animist',56:'Valewalker',58:'Vampiir',
+};
+
+const REALM_FILTER = {
+  1: 'brightness(0) saturate(100%) invert(40%) sepia(50%) saturate(500%) hue-rotate(320deg) brightness(85%)',
+  2: 'brightness(0) saturate(100%) invert(50%) sepia(50%) saturate(400%) hue-rotate(175deg) brightness(85%)',
+  3: 'brightness(0) saturate(100%) invert(52%) sepia(50%) saturate(300%) hue-rotate(55deg) brightness(88%)',
+};
+
+function classIconHtml(classId, size=30) {
+  const name = CLASS_ICONS[classId];
+  const realm = REALM_HIB.includes(classId)?3:REALM_MID.includes(classId)?2:REALM_ALB.includes(classId)?1:0;
+  const filter = REALM_FILTER[realm] || '';
+  if(!name) return `<div class="class-icon av-${realmCss(classId)}" style="width:${size}px;height:${size}px">${initials(name||'?')}</div>`;
+  return `<img src="icons/${name}_class_icon.webp" style="width:${size}px;height:${size}px;object-fit:contain;filter:${filter}" alt="${name}">`;
+}
+function realmCss(c){return REALM_HIB.includes(c)?'hib':REALM_MID.includes(c)?'mid':REALM_ALB.includes(c)?'alb':'neu'}
+function realmName(c){return REALM_HIB.includes(c)?'Hibernia':REALM_MID.includes(c)?'Midgard':REALM_ALB.includes(c)?'Albion':''}
+function initials(n){return (n||'?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase()}
+function wrCss(w){return w>=55?'wr-green':w>=45?'wr-amber':'wr-red'}
+function barCss(w){return w>=55?'bar-green':w>=45?'bar-amber':'bar-red'}
+
+function classAvatarClass(realm){
+  if(realm===1) return 'av-alb';
+  if(realm===2) return 'av-mid';
+  if(realm===3) return 'av-hib';
+  return 'av-hib';
+}
+function classInitials(name){
+  return (name||'?').slice(0,2).toUpperCase();
+}
+function timeAgo(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  const diffMs = Date.now() - d.getTime();
+  const mins = Math.floor(diffMs/60000);
+  if(mins < 1) return 'just now';
+  if(mins < 60) return mins+'m ago';
+  const hrs = Math.floor(mins/60);
+  if(hrs < 24) return hrs+'h ago';
+  return Math.floor(hrs/24)+'d ago';
+}
+function formatSince(iso){
+  if(!iso) return 'Collecting data since —';
+  const d = new Date(iso);
+  return 'Collecting data since '+d.toLocaleDateString(undefined,{day:'numeric',month:'long',year:'numeric'});
+}
+
+// ── Underdog wins formatting ──
+// Erwartetes Format pro Spieler: {"2": 3, "3": 4, "4": 1}
+// -> Anzeige als Badges: "1v2 ×3"  "1v3 ×4"  "1v4 ×1"
+function underdogCellHtml(underdogWins){
+  if(!underdogWins || Object.keys(underdogWins).length === 0){
+    return '<span class="underdog-none">–</span>';
+  }
+  const entries = Object.entries(underdogWins)
+    .map(([opp, wins]) => [parseInt(opp), wins])
+    .sort((a, b) => a[0] - b[0]);
+  return '<div class="underdog-cell">' + entries.map(([opp, wins]) =>
+    `<span class="underdog-badge">1v${opp} ×${wins}</span>`
+  ).join('') + '</div>';
+}
+
+// ── Page switching ──
+function switchPage(page){
+  document.querySelectorAll('.page-tab').forEach(t => t.classList.toggle('active', t.dataset.page === page));
+  document.querySelectorAll('.page-panel').forEach(p => p.classList.toggle('active', p.id === 'page-'+page));
+}
+document.querySelectorAll('.page-tab').forEach(tab => {
+  tab.addEventListener('click', () => switchPage(tab.dataset.page));
+});
+
+// ── Class Stats time filter ──
+document.getElementById('tf-classstats').addEventListener('click', e => {
+  const btn = e.target.closest('[data-csdays]');
+  if (!btn) return;
+  document.querySelectorAll('#tf-classstats .tf').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  csDays = parseInt(btn.dataset.csdays);
+  renderClassStats();
+});
+
+function sortCs(key){
+  csSortDir = (csSortKey === key) ? csSortDir * -1 : -1;
+  csSortKey = key;
+  renderClassStats();
+}
+
+function renderClassStats(){
+  if(!DATA){ return; }
+  let stats;
+  if(csDays===1)       stats=DATA.class_stats_1d||[];
+  else if(csDays===3)  stats=DATA.class_stats_3d||[];
+  else if(csDays===7)  stats=DATA.class_stats_7d||[];
+  else                 stats=DATA.class_stats||[];
+
+  if(!stats.length){
+    document.getElementById('classstats-body').innerHTML='<div class="error-msg">No data for this time period.</div>';
+    return;
+  }
+
+  const sorted=[...stats].sort((a,b)=>{
+    let va=a[csSortKey],vb=b[csSortKey];
+    if(va===null||va===undefined)va=-1;
+    if(vb===null||vb===undefined)vb=-1;
+    return(va-vb)*csSortDir;
+  });
+
+  const cols=[
+    {key:null,      label:'Class',    cls:''},
+    {key:'fights',  label:'Fights',   cls:'r sortable'},
+    {key:'winrate', label:'Win rate', cls:'r sortable'},
+  ];
+
+  let thead='<thead><tr>';
+  cols.forEach(c=>{
+    let extra='';
+    if(c.key===csSortKey) extra=csSortDir===-1?' sort-desc':' sort-asc';
+    const click=c.key?`onclick="sortCs('${c.key}')"`:'' ;
+    thead+=`<th class="${c.cls}${extra}" ${click}>${c.label}</th>`;
+  });
+  thead+='</tr></thead>';
+
+  let tbody='<tbody>';
+  sorted.forEach(c=>{
+    const rlm=realmCss(c.class_id);
+    const wr=c.winrate;
+    const players=(DATA.class_players&&DATA.class_players[c.class_id])||[];
+
+    tbody+=`<tr class="cs-row" onclick="toggleDrill(${c.class_id})">
+      <td><div class="class-cell">
+        ${classIconHtml(c.class_id)}
+        <div>
+          <div class="class-name">${c.class_name}<span class="expand-icon" id="ei-${c.class_id}">▶</span></div>
+          <div class="realm-badge realm-${rlm}">${realmName(c.class_id)}</div>
+        </div>
+      </div></td>
+      <td class="r"><span class="fights-num">${c.fights}</span></td>
+      <td class="r"><div class="winrate-bar">
+        <span class="wr-num ${wrCss(wr)}">${wr}%</span>
+        <div class="bar-bg"><div class="bar-fill ${barCss(wr)}" style="width:${wr}%"></div></div>
+      </div></td>
+    </tr>`;
+
+    const ds=drillSort[c.class_id]||{key:'wilson',dir:-1};
+    const sortedP=[...players].sort((a,b)=>{
+      let va=a[ds.key],vb=b[ds.key];
+      if(va===null||va===undefined)va=-1;
+      if(vb===null||vb===undefined)vb=-1;
+      return(va-vb)*ds.dir;
+    });
+
+    const drillCols=[
+      {key:'name',    label:'Player',   cls:''},
+      {key:'fights',  label:'Fights',   cls:'r sortable'},
+      {key:'wilson',  label:'Wilson Score', cls:'r sortable'},
+      {key:'winrate', label:'Win rate', cls:'r sortable'},
+      {key:'wins',    label:'W / L',    cls:'r sortable'},
+      {key:null,      label:'Underdog Wins', cls:'r'},
+    ];
+    let drillHead='<thead><tr>';
+    drillCols.forEach(dc=>{
+      let ex='';
+      if(dc.key===ds.key)ex=ds.dir===-1?' sort-desc':' sort-asc';
+      const cl=dc.key?`onclick="sortDrill(${c.class_id},'${dc.key}')"`:'' ;
+      drillHead+=`<th class="${dc.cls}${ex}" ${cl}>${dc.label}</th>`;
+    });
+    drillHead+='</tr></thead>';
+
+    let drillRows='';
+    sortedP.forEach((p)=>{
+      const wr2=p.winrate;
+      drillRows+=`<tr>
+        <td><span style="font-weight:600">${p.name}</span>
+          <span class="rr-badge" style="margin-left:6px">${p.rr}</span>
+        </td>
+        <td class="r"><span class="fights-num">${p.fights}</span></td>
+        <td class="r"><span class="wr-num ${wrCss(p.wilson??0)}" title="Wilson Score">${p.wilson!=null?p.wilson:"–"}</span></td>
+        <td class="r"><div class="winrate-bar">
+          <span class="wr-num ${wrCss(wr2)}">${wr2}%</span>
+          <div class="bar-bg"><div class="bar-fill ${barCss(wr2)}" style="width:${wr2}%"></div></div>
+        </div></td>
+        <td class="r"><span class="wl-cell"><span class="w-count">${p.wins}W</span> / <span class="l-count">${p.losses}L</span></span></td>
+        <td class="r">${underdogCellHtml(p.underdog_wins)}</td>
+      </tr>`;
+    });
+
+    tbody+=`<tr class="drill-row">
+      <td colspan="3">
+        <div class="drill-panel" id="drill-${c.class_id}">
+          <table>${drillHead}<tbody>${drillRows}</tbody></table>
+        </div>
+      </td>
+    </tr>`;
+  });
+
+  document.getElementById('classstats-body').innerHTML=`<table>${thead}${tbody}</table>`;
+}
+
+function toggleDrill(classId){
+  const panel=document.getElementById('drill-'+classId);
+  const icon=document.getElementById('ei-'+classId);
+  if(!panel)return;
+  panel.classList.toggle('open');
+  icon.classList.toggle('open');
+}
+
+function sortDrill(classId,key){
+  const ds=drillSort[classId]||{key:'winrate',dir:-1};
+  drillSort[classId]={key:key, dir:ds.key===key?ds.dir*-1:-1};
+  renderClassStats();
+  setTimeout(()=>{
+    const panel=document.getElementById('drill-'+classId);
+    const icon=document.getElementById('ei-'+classId);
+    if(panel){panel.classList.add('open');icon.classList.add('open');}
+  },10);
+}
+
+// ── Home panel rendering ──
+function renderHome(){
+  document.getElementById('stat-today').textContent = DATA.summary.fights_today.toLocaleString();
+  document.getElementById('stat-active').textContent = DATA.summary.active_players.toLocaleString();
+  document.getElementById('stat-total').textContent = DATA.summary.total_fights.toLocaleString();
+  document.getElementById('tracking-since').textContent = formatSince(DATA.summary.tracking_since);
+
+  const updated = new Date(DATA.generated_at);
+  document.getElementById('stat-updated').textContent = timeAgo(DATA.generated_at);
+  document.getElementById('stat-updated').title = updated.toLocaleString();
+
+  const top = (DATA.leaderboard || [])
+    .filter(p => p.fights >= 5)
+    .slice()
+    .sort((a, b) => b.wilson - a.wilson)
+    .slice(0, 5);
+
+  const listEl = document.getElementById('top-list');
+  if(top.length === 0){
+    listEl.innerHTML = '<div class="error-msg">No ranked players yet.</div>';
+  } else {
+    listEl.innerHTML = top.map((p, i) => {
+      const rankClass = i===0?'r1':i===1?'r2':i===2?'r3':'';
+      const av = classAvatarClass(p.realm);
+      return `
+        <div class="top-row">
+          <div class="top-rank ${rankClass}">${i+1}</div>
+          <div class="top-class-icon ${av}">${classInitials(p.class_name)}</div>
+          <div class="top-name">${p.name}<span class="top-class">${p.class_name}</span></div>
+          <div class="top-fights">${p.fights} fights</div>
+          <div class="top-wr">${p.winrate}%</div>
+        </div>`;
+    }).join('');
+  }
+}
+
+// ── Load data ──
+async function loadData(){
+  try{
+    const r = await fetch('data.json?t='+Date.now());
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    DATA = await r.json();
+    renderHome();
+    renderClassStats();
+  } catch(e){
+    console.error(e);
+    document.getElementById('top-list').innerHTML = '<div class="error-msg">⚠ Could not load fight data.</div>';
+    document.getElementById('classstats-body').innerHTML = '<div class="error-msg">⚠ Could not load fight data.</div>';
+  }
+}
+
+loadData();
+setInterval(loadData, 5*60*1000);
+</script>
+</body>
+</html>
