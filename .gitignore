@@ -28,4 +28,4 @@
 
 # Falls CSS/JS als eigene Dateien existieren (Namen ggf. anpassen)
 !*.css
-!*.js
+!*.js!home.html
