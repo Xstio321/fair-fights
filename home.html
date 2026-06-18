@@ -205,92 +205,92 @@
   </header>
 
   <div class="page-tabs">
-    <button class="page-tab active" data-page="statistics">Statistics</button>
+    <button class="page-tab active" data-page="overview">Overview</button>
+    <button class="page-tab" data-page="statistics">Statistics</button>
     <button class="page-tab" data-page="leaderboard">Leaderboard</button>
   </div>
 
+  <!-- ── OVERVIEW PANEL ── -->
+  <div class="page-panel active" id="page-overview">
+
+    <section class="hero">
+      <div class="hero-eyebrow">DAoC Freeshard · Eden</div>
+      <h1 class="hero-title">Who's <span class="accent">winning</span> the duels?</h1>
+      <p class="hero-sub">Every 1v1 fight on Eden, tracked automatically and ranked fairly.</p>
+      <p class="hero-since" id="tracking-since">Collecting data since —</p>
+    </section>
+
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Fights Today</div>
+        <div class="stat-value" id="stat-today">–</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Active Players</div>
+        <div class="stat-value" id="stat-active">–</div>
+        <div class="stat-sub">last 24h</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Fights</div>
+        <div class="stat-value" id="stat-total">–</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Updated</div>
+        <div class="stat-value" id="stat-updated" style="font-size:16px">–</div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-header">
+        <div class="panel-title">Top Duelists</div>
+        <button class="panel-link" onclick="switchPage('leaderboard')">Full leaderboard →</button>
+      </div>
+      <div class="top-list" id="top-list">
+        <div class="error-msg">Loading…</div>
+      </div>
+    </div>
+
+    <div class="nav-grid">
+      <div class="nav-card" onclick="switchPage('leaderboard')">
+        <span class="nav-card-arrow">→</span>
+        <span class="nav-card-icon">🏆</span>
+        <div class="nav-card-title">Leaderboard</div>
+        <div class="nav-card-desc">Full player rankings by win rate, Wilson score, and realm rank — including underdog wins.</div>
+      </div>
+      <div class="nav-card" onclick="switchSub('matchups')">
+        <span class="nav-card-arrow">→</span>
+        <span class="nav-card-icon">⚔️</span>
+        <div class="nav-card-title">Class Matchups</div>
+        <div class="nav-card-desc">Win rates between every class pairing, filterable by realm.</div>
+      </div>
+      <div class="nav-card" onclick="switchSub('classstats')">
+        <span class="nav-card-arrow">→</span>
+        <span class="nav-card-icon">📊</span>
+        <div class="nav-card-title">Class Stats</div>
+        <div class="nav-card-desc">Performance breakdown for every class, with player drill-down.</div>
+      </div>
+      <div class="nav-card" onclick="switchSub('activity')">
+        <span class="nav-card-arrow">→</span>
+        <span class="nav-card-icon">🗺️</span>
+        <div class="nav-card-title">Zone Activity</div>
+        <div class="nav-card-desc">Where the fights are happening, hour by hour across RvR zones.</div>
+      </div>
+    </div>
+
+    <footer>Fair Fights is an independent, unofficial fan project. Not affiliated with the server it tracks.</footer>
+  </div>
+
   <!-- ── STATISTICS PANEL ── -->
-  <div class="page-panel active" id="page-statistics">
+  <div class="page-panel" id="page-statistics">
 
     <div class="sub-tabs">
-      <button class="sub-tab active" data-sub="overview">Overview</button>
-      <button class="sub-tab" data-sub="classstats">Class Stats</button>
+      <button class="sub-tab active" data-sub="classstats">Class Stats</button>
       <button class="sub-tab" data-sub="matchups">Matchups</button>
       <button class="sub-tab" data-sub="activity">Activity</button>
     </div>
 
-    <!-- Overview -->
-    <div class="sub-panel active" id="sub-overview">
-
-      <section class="hero">
-        <div class="hero-eyebrow">DAoC Freeshard · Eden</div>
-        <h1 class="hero-title">Who's <span class="accent">winning</span> the duels?</h1>
-        <p class="hero-sub">Every 1v1 fight on Eden, tracked automatically and ranked fairly.</p>
-        <p class="hero-since" id="tracking-since">Collecting data since —</p>
-      </section>
-
-      <div class="stats-grid" id="stats-grid">
-        <div class="stat-card">
-          <div class="stat-label">Fights Today</div>
-          <div class="stat-value" id="stat-today">–</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Active Players</div>
-          <div class="stat-value" id="stat-active">–</div>
-          <div class="stat-sub">last 24h</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Total Fights</div>
-          <div class="stat-value" id="stat-total">–</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Updated</div>
-          <div class="stat-value" id="stat-updated" style="font-size:16px">–</div>
-        </div>
-      </div>
-
-      <div class="panel-section">
-        <div class="panel-header">
-          <div class="panel-title">Top Duelists</div>
-          <button class="panel-link" onclick="switchPage('leaderboard')">Full leaderboard →</button>
-        </div>
-        <div class="top-list" id="top-list">
-          <div class="error-msg">Loading…</div>
-        </div>
-      </div>
-
-      <div class="nav-grid">
-        <div class="nav-card" onclick="switchPage('leaderboard')">
-          <span class="nav-card-arrow">→</span>
-          <span class="nav-card-icon">🏆</span>
-          <div class="nav-card-title">Leaderboard</div>
-          <div class="nav-card-desc">Full player rankings by win rate, Wilson score, and realm rank — including underdog wins.</div>
-        </div>
-        <div class="nav-card" onclick="switchSub('matchups')">
-          <span class="nav-card-arrow">→</span>
-          <span class="nav-card-icon">⚔️</span>
-          <div class="nav-card-title">Class Matchups</div>
-          <div class="nav-card-desc">Win rates between every class pairing, filterable by realm.</div>
-        </div>
-        <div class="nav-card" onclick="switchSub('classstats')">
-          <span class="nav-card-arrow">→</span>
-          <span class="nav-card-icon">📊</span>
-          <div class="nav-card-title">Class Stats</div>
-          <div class="nav-card-desc">Performance breakdown for every class, with player drill-down.</div>
-        </div>
-        <div class="nav-card" onclick="switchSub('activity')">
-          <span class="nav-card-arrow">→</span>
-          <span class="nav-card-icon">🗺️</span>
-          <div class="nav-card-title">Zone Activity</div>
-          <div class="nav-card-desc">Where the fights are happening, hour by hour across RvR zones.</div>
-        </div>
-      </div>
-
-      <footer>Fair Fights is an independent, unofficial fan project. Not affiliated with the server it tracks.</footer>
-    </div>
-
     <!-- Class Stats -->
-    <div class="sub-panel" id="sub-classstats">
+    <div class="sub-panel active" id="sub-classstats">
       <div class="time-filters" id="tf-classstats" style="margin-bottom:1.25rem">
         <button class="tf active" data-csdays="1">Today</button>
         <button class="tf" data-csdays="3">3 Days</button>
