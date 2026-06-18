@@ -33,12 +33,21 @@
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
 
   /* ── Page tabs ── */
-  .page-tabs{display:flex;gap:0;margin-bottom:2rem;border-bottom:0.5px solid var(--border2)}
+  .page-tabs{display:flex;gap:0;margin-bottom:1.5rem;border-bottom:0.5px solid var(--border2)}
   .page-tab{padding:10px 20px;font-size:13px;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.15s;font-family:'Cinzel',serif;letter-spacing:0.05em;user-select:none;background:none;border-top:none;border-left:none;border-right:none}
   .page-tab:hover{color:var(--text2)}
   .page-tab.active{color:var(--hib);border-bottom-color:var(--hib)}
   .page-panel{display:none}
   .page-panel.active{display:block}
+
+  /* ── Sub tabs (within Statistics) ── */
+  .sub-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:2rem}
+  .sub-tab{padding:7px 16px;font-size:12px;color:var(--text2);cursor:pointer;border:0.5px solid var(--border2);border-radius:20px;transition:all 0.15s;font-family:'Cinzel',serif;letter-spacing:0.04em;user-select:none;background:var(--bg2)}
+  .sub-tab:hover{border-color:var(--hib2);color:var(--text)}
+  .sub-tab.active{background:var(--hib);color:#0d0f0e;border-color:var(--hib);font-weight:600}
+  .sub-panel{display:none}
+  .sub-panel.active{display:block}
+  .coming-soon{padding:3rem 1rem;text-align:center;color:var(--text3);font-size:14px;background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius)}
 
   /* ── Hero ── */
   .hero{text-align:center;padding:1.5rem 0 2.5rem;margin-bottom:2.5rem;border-bottom:0.5px solid var(--border2)}
@@ -196,79 +205,111 @@
   </header>
 
   <div class="page-tabs">
-    <button class="page-tab active" data-page="home">Home</button>
+    <button class="page-tab active" data-page="statistics">Statistics</button>
     <button class="page-tab" data-page="leaderboard">Leaderboard</button>
-    <button class="page-tab" data-page="classstats">Class Stats</button>
   </div>
 
-  <!-- ── HOME PANEL ── -->
-  <div class="page-panel active" id="page-home">
+  <!-- ── STATISTICS PANEL ── -->
+  <div class="page-panel active" id="page-statistics">
 
-    <section class="hero">
-      <div class="hero-eyebrow">DAoC Freeshard · Eden</div>
-      <h1 class="hero-title">Who's <span class="accent">winning</span> the duels?</h1>
-      <p class="hero-sub">Every 1v1 fight on Eden, tracked automatically and ranked fairly.</p>
-      <p class="hero-since" id="tracking-since">Collecting data since —</p>
-    </section>
-
-    <div class="stats-grid" id="stats-grid">
-      <div class="stat-card">
-        <div class="stat-label">Fights Today</div>
-        <div class="stat-value" id="stat-today">–</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Active Players</div>
-        <div class="stat-value" id="stat-active">–</div>
-        <div class="stat-sub">last 24h</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Total Fights</div>
-        <div class="stat-value" id="stat-total">–</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Updated</div>
-        <div class="stat-value" id="stat-updated" style="font-size:16px">–</div>
-      </div>
+    <div class="sub-tabs">
+      <button class="sub-tab active" data-sub="overview">Overview</button>
+      <button class="sub-tab" data-sub="classstats">Class Stats</button>
+      <button class="sub-tab" data-sub="matchups">Matchups</button>
+      <button class="sub-tab" data-sub="activity">Activity</button>
     </div>
 
-    <div class="panel-section">
-      <div class="panel-header">
-        <div class="panel-title">Top Duelists</div>
-        <button class="panel-link" onclick="switchPage('leaderboard')">Full leaderboard →</button>
+    <!-- Overview -->
+    <div class="sub-panel active" id="sub-overview">
+
+      <section class="hero">
+        <div class="hero-eyebrow">DAoC Freeshard · Eden</div>
+        <h1 class="hero-title">Who's <span class="accent">winning</span> the duels?</h1>
+        <p class="hero-sub">Every 1v1 fight on Eden, tracked automatically and ranked fairly.</p>
+        <p class="hero-since" id="tracking-since">Collecting data since —</p>
+      </section>
+
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Fights Today</div>
+          <div class="stat-value" id="stat-today">–</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Active Players</div>
+          <div class="stat-value" id="stat-active">–</div>
+          <div class="stat-sub">last 24h</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Fights</div>
+          <div class="stat-value" id="stat-total">–</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Updated</div>
+          <div class="stat-value" id="stat-updated" style="font-size:16px">–</div>
+        </div>
       </div>
-      <div class="top-list" id="top-list">
-        <div class="error-msg">Loading…</div>
+
+      <div class="panel-section">
+        <div class="panel-header">
+          <div class="panel-title">Top Duelists</div>
+          <button class="panel-link" onclick="switchPage('leaderboard')">Full leaderboard →</button>
+        </div>
+        <div class="top-list" id="top-list">
+          <div class="error-msg">Loading…</div>
+        </div>
       </div>
+
+      <div class="nav-grid">
+        <div class="nav-card" onclick="switchPage('leaderboard')">
+          <span class="nav-card-arrow">→</span>
+          <span class="nav-card-icon">🏆</span>
+          <div class="nav-card-title">Leaderboard</div>
+          <div class="nav-card-desc">Full player rankings by win rate, Wilson score, and realm rank — including underdog wins.</div>
+        </div>
+        <div class="nav-card" onclick="switchSub('matchups')">
+          <span class="nav-card-arrow">→</span>
+          <span class="nav-card-icon">⚔️</span>
+          <div class="nav-card-title">Class Matchups</div>
+          <div class="nav-card-desc">Win rates between every class pairing, filterable by realm.</div>
+        </div>
+        <div class="nav-card" onclick="switchSub('classstats')">
+          <span class="nav-card-arrow">→</span>
+          <span class="nav-card-icon">📊</span>
+          <div class="nav-card-title">Class Stats</div>
+          <div class="nav-card-desc">Performance breakdown for every class, with player drill-down.</div>
+        </div>
+        <div class="nav-card" onclick="switchSub('activity')">
+          <span class="nav-card-arrow">→</span>
+          <span class="nav-card-icon">🗺️</span>
+          <div class="nav-card-title">Zone Activity</div>
+          <div class="nav-card-desc">Where the fights are happening, hour by hour across RvR zones.</div>
+        </div>
+      </div>
+
+      <footer>Fair Fights is an independent, unofficial fan project. Not affiliated with the server it tracks.</footer>
     </div>
 
-    <div class="nav-grid">
-      <div class="nav-card" onclick="switchPage('leaderboard')">
-        <span class="nav-card-arrow">→</span>
-        <span class="nav-card-icon">🏆</span>
-        <div class="nav-card-title">Leaderboard</div>
-        <div class="nav-card-desc">Full player rankings by win rate, Wilson score, and realm rank — including underdog wins.</div>
+    <!-- Class Stats -->
+    <div class="sub-panel" id="sub-classstats">
+      <div class="time-filters" id="tf-classstats" style="margin-bottom:1.25rem">
+        <button class="tf active" data-csdays="1">Today</button>
+        <button class="tf" data-csdays="3">3 Days</button>
+        <button class="tf" data-csdays="7">7 Days</button>
+        <button class="tf" data-csdays="0">All Time</button>
       </div>
-      <a href="index.html#matchups" class="nav-card">
-        <span class="nav-card-arrow">→</span>
-        <span class="nav-card-icon">⚔️</span>
-        <div class="nav-card-title">Class Matchups</div>
-        <div class="nav-card-desc">Win rates between every class pairing, filterable by realm.</div>
-      </a>
-      <div class="nav-card" onclick="switchPage('classstats')">
-        <span class="nav-card-arrow">→</span>
-        <span class="nav-card-icon">📊</span>
-        <div class="nav-card-title">Class Stats</div>
-        <div class="nav-card-desc">Performance breakdown for every class, with player drill-down.</div>
-      </div>
-      <a href="index.html#activity" class="nav-card">
-        <span class="nav-card-arrow">→</span>
-        <span class="nav-card-icon">🗺️</span>
-        <div class="nav-card-title">Zone Activity</div>
-        <div class="nav-card-desc">Where the fights are happening, hour by hour across RvR zones.</div>
-      </a>
+      <div id="classstats-body"><div class="loading">Loading…</div></div>
     </div>
 
-    <footer>Fair Fights is an independent, unofficial fan project. Not affiliated with the server it tracks.</footer>
+    <!-- Matchups -->
+    <div class="sub-panel" id="sub-matchups">
+      <div class="coming-soon">Matchup matrix is being rebuilt for the new layout — coming soon.</div>
+    </div>
+
+    <!-- Activity -->
+    <div class="sub-panel" id="sub-activity">
+      <div class="coming-soon">Zone activity charts are being rebuilt for the new layout — coming soon.</div>
+    </div>
+
   </div>
 
   <!-- ── LEADERBOARD PANEL ── -->
@@ -292,17 +333,6 @@
     </div>
     <div id="leaderboard-body"><div class="loading">Loading…</div></div>
     <div id="leaderboard-pagination"></div>
-  </div>
-
-  <!-- ── CLASS STATS PANEL ── -->
-  <div class="page-panel" id="page-classstats">
-    <div class="time-filters" id="tf-classstats" style="margin-bottom:1.25rem">
-      <button class="tf active" data-csdays="1">Today</button>
-      <button class="tf" data-csdays="3">3 Days</button>
-      <button class="tf" data-csdays="7">7 Days</button>
-      <button class="tf" data-csdays="0">All Time</button>
-    </div>
-    <div id="classstats-body"><div class="loading">Loading…</div></div>
   </div>
 
 </div>
@@ -401,13 +431,23 @@ function underdogCellHtml(underdogWins){
   ).join('') + '</div>';
 }
 
-// ── Page switching ──
+// ── Page switching (Statistics / Leaderboard) ──
 function switchPage(page){
   document.querySelectorAll('.page-tab').forEach(t => t.classList.toggle('active', t.dataset.page === page));
   document.querySelectorAll('.page-panel').forEach(p => p.classList.toggle('active', p.id === 'page-'+page));
 }
 document.querySelectorAll('.page-tab').forEach(tab => {
   tab.addEventListener('click', () => switchPage(tab.dataset.page));
+});
+
+// ── Sub-tab switching (within Statistics) ──
+function switchSub(sub){
+  switchPage('statistics');
+  document.querySelectorAll('.sub-tab').forEach(t => t.classList.toggle('active', t.dataset.sub === sub));
+  document.querySelectorAll('.sub-panel').forEach(p => p.classList.toggle('active', p.id === 'sub-'+sub));
+}
+document.querySelectorAll('.sub-tab').forEach(tab => {
+  tab.addEventListener('click', () => switchSub(tab.dataset.sub));
 });
 
 // ══════════════════════════════════════════════
