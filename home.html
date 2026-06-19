@@ -121,6 +121,24 @@
             </div>
             <!-- ── LEADERBOARD PANEL ── -->
             <div class="page-panel" id="page-leaderboard">
+                <div class="highlight-grid">
+                    <div class="highlight-card">
+                        <div class="highlight-card-title">⚔️ Top Underdog · 7d</div>
+                        <div id="lb-cat-underdog"><div class="loading">Loading…</div></div>
+                    </div>
+                    <div class="highlight-card">
+                        <div class="highlight-card-title">🔥 Longest Win Streak · 7d</div>
+                        <div id="lb-cat-streak"><div class="loading">Loading…</div></div>
+                    </div>
+                    <div class="highlight-card">
+                        <div class="highlight-card-title">💥 Most Damage Done · 7d</div>
+                        <div id="lb-cat-damage"><div class="loading">Loading…</div></div>
+                    </div>
+                    <div class="highlight-card">
+                        <div class="highlight-card-title">✚ Most Healing Done · 7d</div>
+                        <div id="lb-cat-healing"><div class="loading">Loading…</div></div>
+                    </div>
+                </div>
                 <div class="controls" style="gap:8px;flex-wrap:wrap;margin-bottom:1rem">
                     <div class="search-wrap" style="max-width:160px;flex-shrink:0">
                         <span class="search-icon">🔍</span>
@@ -274,6 +292,70 @@ function getFilteredLb(){
     return(va-vb)*lbSortDir;
   });
   return lb;
+}
+
+function renderLeaderboardCategories(){
+  if(!DATA) return;
+
+  // Top Underdog 7d
+  const underdogEl = document.getElementById('lb-cat-underdog');
+  const underdogList = (DATA.top_underdog_7d || []).slice(0, 5);
+  if(!underdogList.length){
+    underdogEl.innerHTML = highlightEmpty('No underdog wins in the last 7 days.');
+  } else {
+    underdogEl.innerHTML = underdogList.map((p, i) => `
+      <div class="highlight-row">
+        <span class="highlight-rank ${rankClassFor(i)}">${i+1}</span>
+        ${classIconHtml(p.class_id, 22)}
+        <span class="highlight-name">${p.name}</span>
+        <span class="highlight-value">1v${p.max_opponents}</span>
+      </div>`).join('');
+  }
+
+  // Longest Win Streak 7d
+  const streakEl = document.getElementById('lb-cat-streak');
+  const streakList = (DATA.top_streak_7d || []).slice(0, 5);
+  if(!streakList.length){
+    streakEl.innerHTML = highlightEmpty('No streak data for the last 7 days.');
+  } else {
+    streakEl.innerHTML = streakList.map((p, i) => `
+      <div class="highlight-row">
+        <span class="highlight-rank ${rankClassFor(i)}">${i+1}</span>
+        ${classIconHtml(p.class_id, 22)}
+        <span class="highlight-name">${p.name}</span>
+        <span class="highlight-value">${p.streak}W</span>
+      </div>`).join('');
+  }
+
+  // Most Damage Done 7d
+  const damageEl = document.getElementById('lb-cat-damage');
+  const damageList = (DATA.top_damage_7d || []).slice(0, 5);
+  if(!damageList.length){
+    damageEl.innerHTML = highlightEmpty('No damage data for the last 7 days.');
+  } else {
+    damageEl.innerHTML = damageList.map((p, i) => `
+      <div class="highlight-row">
+        <span class="highlight-rank ${rankClassFor(i)}">${i+1}</span>
+        ${classIconHtml(p.class_id, 22)}
+        <span class="highlight-name">${p.name}</span>
+        <span class="highlight-value">${p.value.toLocaleString()}</span>
+      </div>`).join('');
+  }
+
+  // Most Healing Done 7d
+  const healingEl = document.getElementById('lb-cat-healing');
+  const healingList = (DATA.top_healing_7d || []).slice(0, 5);
+  if(!healingList.length){
+    healingEl.innerHTML = highlightEmpty('No healing data for the last 7 days.');
+  } else {
+    healingEl.innerHTML = healingList.map((p, i) => `
+      <div class="highlight-row">
+        <span class="highlight-rank ${rankClassFor(i)}">${i+1}</span>
+        ${classIconHtml(p.class_id, 22)}
+        <span class="highlight-name">${p.name}</span>
+        <span class="highlight-value">${p.value.toLocaleString()}</span>
+      </div>`).join('');
+  }
 }
 
 function renderLeaderboard(){
@@ -835,6 +917,7 @@ async function loadData(){
     if(!r.ok) throw new Error('HTTP '+r.status);
     DATA = await r.json();
     renderHome();
+    renderLeaderboardCategories();
     renderLeaderboard();
     renderClassStats();
   } catch(e){
