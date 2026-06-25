@@ -40,6 +40,10 @@
   .legend-btn.inactive{opacity:0.3}
   .chart-svg-wrap{width:100%;overflow-x:auto}
   @media(max-width:760px){.activity-grid{grid-template-columns:1fr}.activity-card-full{grid-column:1}}
+
+  .tf.active-alb { background: var(--alb); color: #0d0f0e; border-color: var(--alb); font-weight: 600; }
+  .tf.active-mid { background: var(--mid); color: #0d0f0e; border-color: var(--mid); font-weight: 600; }
+  .tf.active-hib { background: var(--hib); color: #0d0f0e; border-color: var(--hib); font-weight: 600; }
 </style>
     </head>
     <body>
@@ -954,12 +958,12 @@ function toggleMxAll(){
 function setColRealmFilter(realm){
   if(matchupColRealmFilter === realm){
     matchupColRealmFilter = null;
-    document.querySelectorAll('#tf-matchups-col-realm .tf').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('#tf-matchups-col-realm .tf').forEach(b=>b.classList.remove('active','active-alb','active-mid','active-hib'));
   } else {
     matchupColRealmFilter = realm;
-    document.querySelectorAll('#tf-matchups-col-realm .tf').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('#tf-matchups-col-realm .tf').forEach(b=>b.classList.remove('active','active-alb','active-mid','active-hib'));
     const btn = document.querySelector(`#tf-matchups-col-realm .tf[data-colrealm="${realm}"]`);
-    if(btn) btn.classList.add('active');
+    if(btn) btn.classList.add(`active-${realm}`);
   }
   renderMatchups();
 }
@@ -972,12 +976,12 @@ function setRealmFilter(realm){
   if(matchupRealmFilter === realm){
     matchupRealmFilter = null;
     matchupHiddenClasses.clear();
-    document.querySelectorAll('#tf-matchups-realm .tf').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('#tf-matchups-realm .tf').forEach(b=>b.classList.remove('active','active-alb','active-mid','active-hib'));
   } else {
     matchupRealmFilter = realm;
-    document.querySelectorAll('#tf-matchups-realm .tf').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('#tf-matchups-realm .tf').forEach(b=>b.classList.remove('active','active-alb','active-mid','active-hib'));
     const btn = document.querySelector(`#tf-matchups-realm .tf[data-realm="${realm}"]`);
-    if(btn) btn.classList.add('active');
+    if(btn) btn.classList.add(`active-${realm}`);
     matchupHiddenClasses.clear();
     [...classSet].forEach(c=>{
       if(parseInt(CLASS_REALM_MAP[String(c)]) !== realmIdFor(realm)) matchupHiddenClasses.add(c);
