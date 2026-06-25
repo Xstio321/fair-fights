@@ -98,6 +98,10 @@
                         <div class="highlight-card-title">💀 Most Kills — Last Hour</div>
                         <div id="hl-kills"><div class="loading">Loading…</div></div>
                     </div>
+                    <div class="highlight-card">
+                        <div class="highlight-card-title">⚔️ Top Matchups · 24h</div>
+                        <div id="hl-matchups"><div class="loading">Loading…</div></div>
+                    </div>
                     <div class="highlight-card clickable" onclick="openDrilldown('classes')">
                         <div class="highlight-card-title">🛡️ Top Classes Played<span class="highlight-card-arrow">→</span></div>
                         <div id="hl-classes"><div class="loading">Loading…</div></div>
@@ -168,6 +172,12 @@
                 </div>
                 <!-- Activity -->
                 <div class="sub-panel" id="sub-activity">
+                    <div class="time-filters" id="tf-activity" style="margin-bottom:1.25rem">
+                        <div class="tf active" data-adays="1">24h</div>
+                        <div class="tf" data-adays="3">3d</div>
+                        <div class="tf" data-adays="7">7d</div>
+                        <div class="tf" data-adays="30">30d</div>
+                    </div>
                     <div id="activity-body"><div class="loading">Loading…</div></div>
                 </div>
             </div>
@@ -825,6 +835,7 @@ function renderHome(){
   renderHighlightZone();
   renderHighlightKills();
   renderHighlightClasses();
+  renderHighlightMatchups();
 }
 
 function highlightEmpty(msg){
@@ -902,6 +913,29 @@ function renderHighlightKills(){
       <span class="highlight-name">${p.name}</span>
       <span class="highlight-value">${p.kills}</span>
     </div>`).join('');
+}
+
+function renderHighlightMatchups(){
+  const list = ((DATA.top_matchups_by_window && DATA.top_matchups_by_window['24h']) || []).slice(0, 5);
+  const el = document.getElementById('hl-matchups');
+  if(!el) return;
+  if(!list.length){ el.innerHTML = highlightEmpty('No matchup data yet.'); return; }
+  const maxFights = list[0].fights;
+  el.innerHTML = list.map((m, i) => {
+    const barW = maxFights > 0 ? m.fights / maxFights * 100 : 0;
+    const wrCls = m.winrate_a >= 55 ? 'wr-green' : m.winrate_a <= 45 ? 'wr-red' : 'wr-amber';
+    return `<div class="highlight-row" style="gap:6px">
+      <span class="highlight-rank ${rankClassFor(i)}">${i+1}</span>
+      ${classIconHtml(m.class_a_id, 20)}
+      <span style="font-size:9px;color:var(--text3)">vs</span>
+      ${classIconHtml(m.class_b_id, 20)}
+      <span class="highlight-name" style="font-size:12px">${m.class_a_name}<span style="color:var(--text3);font-size:10px;margin:0 3px">vs</span>${m.class_b_name}</span>
+      <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
+        <div class="pct-bar-bg" style="width:36px"><div class="pct-bar-fill" style="width:${barW}%"></div></div>
+        <span class="highlight-value" style="font-size:11px;min-width:28px;text-align:right">${m.fights}</span>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 
@@ -1079,6 +1113,19 @@ function renderMatchups(){
 // ACTIVITY
 // ══════════════════════════════════════════════
 let zoneChartHidden = new Set();
+let activityWindow = '1d'; // Zeitfenster für Heatmap und Active Players
+
+document.addEventListener('click', e => {
+  const btn = e.target.closest('#tf-activity [data-adays]');
+  if(btn){
+    document.querySelectorAll('#tf-activity .tf').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    activityWindow = btn.dataset.adays === '1' ? '1d'
+      : btn.dataset.adays === '3' ? '3d'
+      : btn.dataset.adays === '7' ? '7d' : '30d';
+    renderActivity();
+  }
+});
 
 const ALL_RVR_ZONES = [
   "Ellan Vannin","Odin's Gate","Jamtland Mountains","Yggdra Forest","Uppland",
@@ -1235,11 +1282,77 @@ function renderActivity(){
       </div>
     </div>`;
 
+  // ── Heatmap (Fights per Weekday × Hour) ──
+  const heatmapData = (DATA.heatmap_by_window && DATA.heatmap_by_window[activityWindow]) || [];
+  const DAY_LABELS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  let heatmapHtml = '<div style="color:var(--text3);font-size:13px">No data.</div>';
+  if(heatmapData.length === 7){
+    const maxHeat = Math.max(...heatmapData.flat(), 1);
+    const cellW = 100 / 25; // 24 Stunden + 1 Label-Spalte
+    heatmapHtml = `<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:500px">
+      <thead><tr>
+        <th style="width:32px"></th>
+        ${Array.from({length:24},(_,h)=>`<th style="font-size:8px;color:var(--text3);font-family:Cinzel,serif;padding:2px;text-align:center;font-weight:400">${String(h).padStart(2,'0')}</th>`).join('')}
+      </tr></thead>
+      <tbody>
+        ${heatmapData.map((row,d)=>`<tr>
+          <td style="font-size:9px;color:var(--text3);font-family:Cinzel,serif;padding:2px 6px 2px 0;white-space:nowrap">${DAY_LABELS[d]}</td>
+          ${row.map(v=>{
+            const intensity = v/maxHeat;
+            const bg = v===0 ? 'var(--bg3)'
+              : `rgba(122,182,72,${(0.1+intensity*0.85).toFixed(2)})`;
+            return `<td style="background:${bg};width:${cellW}%;height:18px;border:0.5px solid var(--bg)" title="${DAY_LABELS[d]} ${row.indexOf(v).toString().padStart(2,'0')}:00 – ${v} fights"></td>`;
+          }).join('')}
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:6px;justify-content:flex-end">
+      <span style="font-size:9px;color:var(--text3);font-family:Cinzel,serif">Low</span>
+      ${[0.1,0.3,0.5,0.7,0.9].map(i=>`<div style="width:16px;height:8px;border-radius:2px;background:rgba(122,182,72,${i.toFixed(1)})"></div>`).join('')}
+      <span style="font-size:9px;color:var(--text3);font-family:Cinzel,serif">High</span>
+    </div></div>`;
+  }
+
+  // ── Active Players per Hour Liniendiagramm ──
+  const playersPerHour = (DATA.active_players_per_hour_by_window && DATA.active_players_per_hour_by_window[activityWindow]) || [];
+  let playersChartHtml = '<div style="color:var(--text3);font-size:13px">No data.</div>';
+  if(playersPerHour.length === 24){
+    const maxP = Math.max(...playersPerHour.map(d=>d.count), 1);
+    const W=860,H=180,PL=30,PR=10,PT=8,PB=24;
+    const iW=W-PL-PR, iH=H-PT-PB;
+    const xPos=h=>PL+(h/23)*iW, yPos=v=>PT+iH-(v/maxP)*iH;
+    const pts = playersPerHour.map(d=>[xPos(d.hour), yPos(d.count)]);
+    const path = smoothPath(pts);
+    let xLbls='', yLbls='';
+    [0,3,6,9,12,15,18,21,23].forEach(h=>{
+      const x=xPos(h);
+      xLbls+=`<text x="${x.toFixed(1)}" y="${H-4}" text-anchor="middle" font-size="9" fill="var(--text3)" font-family="Cinzel,serif">${String(h).padStart(2,'0')}:00</text>`;
+      xLbls+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${PT+iH}" stroke="var(--border)" stroke-width="0.5"/>`;
+    });
+    for(let v=0;v<=maxP;v+=Math.ceil(maxP/3)){
+      const y=yPos(v);
+      yLbls+=`<text x="${PL-3}" y="${y.toFixed(1)}" text-anchor="end" dominant-baseline="middle" font-size="9" fill="var(--text3)" font-family="Cinzel,serif">${v}</text>`;
+      yLbls+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${PL+iW}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="0.5"/>`;
+    }
+    playersChartHtml = `<div class="chart-svg-wrap"><svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%">
+      ${yLbls}${xLbls}
+      <path d="${path}" fill="none" stroke="var(--mid)" stroke-width="2.5" stroke-linecap="round"/>
+    </svg></div>`;
+  }
+
   document.getElementById('activity-body').innerHTML = `
     <div class="activity-grid">
       <div class="activity-card activity-card-full">
         <div class="activity-card-title">Zone activity – today & yesterday</div>
         ${zoneChartHtml}
+      </div>
+      <div class="activity-card activity-card-full">
+        <div class="activity-card-title">Fights heatmap – by weekday & hour</div>
+        ${heatmapHtml}
+      </div>
+      <div class="activity-card activity-card-full">
+        <div class="activity-card-title">Active players per hour</div>
+        ${playersChartHtml}
       </div>
       <div class="activity-card">
         <div class="activity-card-title">Most played classes per realm</div>
