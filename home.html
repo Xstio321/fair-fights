@@ -102,7 +102,7 @@
                         <div class="highlight-card-title">⚔️ Top Matchups · 24h<span class="highlight-card-arrow">→</span></div>
                         <div id="hl-matchups"><div class="loading">Loading…</div></div>
                     </div>
-                    <div class="highlight-card clickable" onclick="openDrilldown('classes')">
+                    <div class="highlight-card clickable" onclick="switchSub('classstats')">
                         <div class="highlight-card-title">🛡️ Top Classes Played · 24h<span class="highlight-card-arrow">→</span></div>
                         <div id="hl-classes"><div class="loading">Loading…</div></div>
                     </div>
@@ -695,6 +695,7 @@ function renderClassStats(){
   const cols=[
     {key:null,      label:'Class',    cls:''},
     {key:'fights',  label:'Fights',   cls:'r sortable'},
+    {key:'share',   label:'Share',    cls:'r sortable'},
     {key:'winrate', label:'Win rate', cls:'r sortable'},
   ];
 
@@ -726,6 +727,7 @@ function renderClassStats(){
         </div>
       </div></td>
       <td class="r"><span class="fights-num">${c.fights}</span></td>
+      <td class="r"><span style="font-size:13px;color:var(--text3);font-family:'Cinzel',serif">${c.share ?? '–'}%</span></td>
       <td class="r"><div class="winrate-bar">
         <span class="wr-num ${wrCss(wr)}">${wr}%</span>
         <div class="bar-bg"><div class="bar-fill ${barCss(wr)}" style="width:${wr}%"></div></div>
@@ -774,7 +776,7 @@ function renderClassStats(){
     });
 
     tbody+=`<tr class="drill-row">
-      <td colspan="3">
+      <td colspan="4">
         <div class="drill-panel" id="drill-${c.class_id}">
           <table>${drillHead}<tbody>${drillRows}</tbody></table>
         </div>
