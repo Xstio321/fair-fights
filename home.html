@@ -1131,7 +1131,11 @@ function renderActivity(){
   if(!DATA){return;}
 
   const zones = DATA.zone_today || [];
-  const maxVal = Math.max(...zones.flatMap(z=>z.data.map(d=>d.count)), 1);
+  const zonesYest = DATA.zone_yesterday || [];
+
+  // Gemeinsamen Max-Wert für beide Diagramme berechnen (gleiche Y-Achse)
+  const allVals = [...zones, ...zonesYest].flatMap(z=>z.data.map(d=>d.count));
+  const maxVal = Math.max(...allVals, 1);
 
   const legendHtml = ALL_RVR_ZONES.map((name,i)=>{
     const color = ZONE_COLORS[i%ZONE_COLORS.length];
@@ -1141,8 +1145,19 @@ function renderActivity(){
     </div>`;
   }).join('');
 
-  const zoneChartHtml = zones.length > 0
-    ? `<div class="chart-legend">${legendHtml}</div>${buildZoneChart(zones, maxVal)}`
+  const hasAnyData = zones.length > 0 || zonesYest.length > 0;
+  const zoneChartHtml = hasAnyData
+    ? `<div class="chart-legend">${legendHtml}</div>
+       <div style="display:flex;flex-direction:column;gap:20px">
+         <div>
+           <div style="font-size:11px;color:var(--text2);font-family:'Cinzel',serif;margin-bottom:8px;letter-spacing:0.06em">Yesterday</div>
+           ${zonesYest.length > 0 ? buildZoneChart(zonesYest, maxVal) : '<div style="color:var(--text3);font-size:13px">No data for yesterday.</div>'}
+         </div>
+         <div>
+           <div style="font-size:11px;color:var(--text2);font-family:'Cinzel',serif;margin-bottom:8px;letter-spacing:0.06em">Today</div>
+           ${zones.length > 0 ? buildZoneChart(zones, maxVal) : '<div style="color:var(--text3);font-size:13px">No data for today yet.</div>'}
+         </div>
+       </div>`
     : '<div style="color:var(--text3);font-size:13px">No zone data yet.</div>';
 
   // Fights per day
@@ -1199,7 +1214,7 @@ function renderActivity(){
   document.getElementById('activity-body').innerHTML = `
     <div class="activity-grid">
       <div class="activity-card activity-card-full">
-        <div class="activity-card-title">Zone activity – today</div>
+        <div class="activity-card-title">Zone activity – today & yesterday</div>
         ${zoneChartHtml}
       </div>
       <div class="activity-card">
