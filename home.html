@@ -131,12 +131,12 @@
                         <div id="lb-cat-streak"><div class="loading">Loading…</div></div>
                     </div>
                     <div class="highlight-card">
-                        <div class="highlight-card-title">💥 Most Damage Done · 7d</div>
-                        <div id="lb-cat-damage"><div class="loading">Loading…</div></div>
+                        <div class="highlight-card-title">🏆 Most Wins · 7d</div>
+                        <div id="lb-cat-wins"><div class="loading">Loading…</div></div>
                     </div>
                     <div class="highlight-card">
-                        <div class="highlight-card-title">✚ Most Healing Done · 7d</div>
-                        <div id="lb-cat-healing"><div class="loading">Loading…</div></div>
+                        <div class="highlight-card-title">📊 Most Active · 7d</div>
+                        <div id="lb-cat-active"><div class="loading">Loading…</div></div>
                     </div>
                 </div>
                 <div class="controls" style="gap:8px;flex-wrap:wrap;margin-bottom:1rem">
@@ -165,6 +165,8 @@
         <script>
 let DATA = null;
 let PROFILES = null;
+let CLASS_ICONS = {};
+let CLASS_REALM_MAP = {};
 
 let lbPage = 1;
 let lbPageSize = 10;
@@ -179,22 +181,11 @@ let csSortKey = 'fights';
 let csSortDir = -1;
 let drillSort = {};
 
-const REALM_HIB=[39,40,41,42,43,44,45,46,47,48,49,50,55,56,58];
-const REALM_MID=[21,22,23,24,25,26,27,28,29,30,31,32,34,59];
-const REALM_ALB=[1,2,3,4,5,6,7,8,9,10,11,12,13,19,33,63];
-
-const CLASS_ICONS = {
-  1:'Paladin',2:'Armsman',3:'Scout',4:'Minstrel',5:'Theurgist',
-  6:'Cleric',7:'Wizard',8:'Sorcerer',9:'Infiltrator',10:'Friar',
-  11:'Mercenary',12:'Necromancer',13:'Cabalist',19:'Reaver',
-  33:'Heretic',63:'Occultist',
-  21:'Thane',22:'Warrior',23:'Shadowblade',24:'Skald',25:'Hunter',
-  26:'Healer',27:'Spiritmaster',28:'Shaman',29:'Runemaster',
-  30:'Bonedancer',31:'Berserker',32:'Savage',34:'Valkyrie',59:'Warlock',
-  39:'Bainshee',40:'Eldritch',41:'Enchanter',42:'Mentalist',
-  43:'Blademaster',44:'Hero',45:'Champion',46:'Warden',47:'Druid',
-  48:'Bard',49:'Nightshade',50:'Ranger',55:'Animist',56:'Valewalker',58:'Vampiir',
-};
+function initClassMeta(){
+  if(!DATA || !DATA.class_meta) return;
+  CLASS_ICONS = DATA.class_meta.class_names || {};
+  CLASS_REALM_MAP = DATA.class_meta.class_realm || {};
+}
 
 const REALM_FILTER = {
   1: 'brightness(0) saturate(100%) invert(40%) sepia(50%) saturate(500%) hue-rotate(320deg) brightness(85%)',
@@ -202,18 +193,19 @@ const REALM_FILTER = {
   3: 'brightness(0) saturate(100%) invert(52%) sepia(50%) saturate(300%) hue-rotate(55deg) brightness(88%)',
 };
 
-function classIconHtml(classId, size=30) {
-  const name = CLASS_ICONS[classId];
-  const realm = REALM_HIB.includes(classId)?3:REALM_MID.includes(classId)?2:REALM_ALB.includes(classId)?1:0;
+function classIconHtml(classId, size=30){
+  const cid = String(classId);
+  const name = CLASS_ICONS[cid];
+  const realm = parseInt(CLASS_REALM_MAP[cid] || 0);
   const filter = REALM_FILTER[realm] || '';
   if(!name) return `<div class="class-icon av-${realmCss(classId)}" style="width:${size}px;height:${size}px">${initials(name||'?')}</div>`;
   return `<img src="icons/${name}_class_icon.webp" style="width:${size}px;height:${size}px;object-fit:contain;filter:${filter}" alt="${name}">`;
 }
-function realmCss(c){return REALM_HIB.includes(c)?'hib':REALM_MID.includes(c)?'mid':REALM_ALB.includes(c)?'alb':'neu'}
-function realmName(c){return REALM_HIB.includes(c)?'Hibernia':REALM_MID.includes(c)?'Midgard':REALM_ALB.includes(c)?'Albion':''}
-function initials(n){return (n||'?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase()}
-function wrCss(w){return w>=55?'wr-green':w>=45?'wr-amber':'wr-red'}
-function barCss(w){return w>=55?'bar-green':w>=45?'bar-amber':'bar-red'}
+function realmCss(c){ const r=parseInt(CLASS_REALM_MAP[String(c)]||0); return r===3?'hib':r===2?'mid':r===1?'alb':'neu'; }
+function realmName(c){ const r=parseInt(CLASS_REALM_MAP[String(c)]||0); return r===3?'Hibernia':r===2?'Midgard':r===1?'Albion':''; }
+function initials(n){ return (n||'?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase(); }
+function wrCss(w){ return w>=55?'wr-green':w>=45?'wr-amber':'wr-red'; }
+function barCss(w){ return w>=55?'bar-green':w>=45?'bar-amber':'bar-red'; }
 
 function timeAgo(iso){
   if(!iso) return '';
@@ -226,21 +218,12 @@ function timeAgo(iso){
   if(hrs < 24) return hrs+'h ago';
   return Math.floor(hrs/24)+'d ago';
 }
-function formatSince(iso){
-  if(!iso) return 'Collecting data since —';
-  const d = new Date(iso);
-  return 'Collecting data since '+d.toLocaleDateString(undefined,{day:'numeric',month:'long',year:'numeric'});
-}
-
 function formatSinceShort(iso){
   if(!iso) return 'since —';
   const d = new Date(iso);
   return 'since '+d.toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'});
 }
 
-// ── Underdog wins formatting ──
-// Erwartetes Format pro Spieler: {"2": 3, "3": 4, "4": 1}
-// -> Anzeige als Badges: "1v2 ×3"  "1v3 ×4"  "1v4 ×1"
 function underdogCellHtml(underdogWins){
   if(!underdogWins || Object.keys(underdogWins).length === 0){
     return '<span class="underdog-none">–</span>';
@@ -253,7 +236,6 @@ function underdogCellHtml(underdogWins){
   ).join('') + '</div>';
 }
 
-// ── Page switching (Statistics / Leaderboard) ──
 function switchPage(page){
   document.querySelectorAll('.page-tab').forEach(t => t.classList.toggle('active', t.dataset.page === page));
   document.querySelectorAll('.page-panel').forEach(p => p.classList.toggle('active', p.id === 'page-'+page));
@@ -262,7 +244,6 @@ document.querySelectorAll('.page-tab').forEach(tab => {
   tab.addEventListener('click', () => switchPage(tab.dataset.page));
 });
 
-// ── Sub-tab switching (within Statistics) ──
 function switchSub(sub){
   switchPage('statistics');
   document.querySelectorAll('.sub-tab').forEach(t => t.classList.toggle('active', t.dataset.sub === sub));
@@ -283,7 +264,7 @@ function getFilteredLb(){
   else                 lb=[...DATA.leaderboard||[]];
   if(lbSearch){
     const q=lbSearch.toLowerCase();
-    lb=lb.filter(p=>p.name.toLowerCase().includes(q)||p.class_name.toLowerCase().includes(q));
+    lb=lb.filter(p=>p.name.toLowerCase().includes(q)||(p.class_name||'').toLowerCase().includes(q));
   }
   lb.sort((a,b)=>{
     let va=a[lbSortKey],vb=b[lbSortKey];
@@ -297,65 +278,53 @@ function getFilteredLb(){
 function renderLeaderboardCategories(){
   if(!DATA) return;
 
-  // Top Underdog 7d
   const underdogEl = document.getElementById('lb-cat-underdog');
   const underdogList = (DATA.top_underdog_7d || []).slice(0, 5);
-  if(!underdogList.length){
-    underdogEl.innerHTML = highlightEmpty('No underdog wins in the last 7 days.');
-  } else {
-    underdogEl.innerHTML = underdogList.map((p, i) => `
+  underdogEl.innerHTML = !underdogList.length
+    ? highlightEmpty('No underdog wins in the last 7 days.')
+    : underdogList.map((p, i) => `
       <div class="highlight-row">
         <span class="highlight-rank ${rankClassFor(i)}">${i+1}</span>
         ${classIconHtml(p.class_id, 22)}
         <span class="highlight-name">${p.name}</span>
         <span class="highlight-value">1v${p.max_opponents}</span>
       </div>`).join('');
-  }
 
-  // Longest Win Streak 7d
   const streakEl = document.getElementById('lb-cat-streak');
   const streakList = (DATA.top_streak_7d || []).slice(0, 5);
-  if(!streakList.length){
-    streakEl.innerHTML = highlightEmpty('No streak data for the last 7 days.');
-  } else {
-    streakEl.innerHTML = streakList.map((p, i) => `
+  streakEl.innerHTML = !streakList.length
+    ? highlightEmpty('No streak data for the last 7 days.')
+    : streakList.map((p, i) => `
       <div class="highlight-row">
         <span class="highlight-rank ${rankClassFor(i)}">${i+1}</span>
         ${classIconHtml(p.class_id, 22)}
         <span class="highlight-name">${p.name}</span>
-        <span class="highlight-value">${p.streak}W</span>
+        <span class="highlight-value">${p.opponents}W</span>
       </div>`).join('');
-  }
 
-  // Most Damage Done 7d
-  const damageEl = document.getElementById('lb-cat-damage');
-  const damageList = (DATA.top_damage_7d || []).slice(0, 5);
-  if(!damageList.length){
-    damageEl.innerHTML = highlightEmpty('No damage data for the last 7 days.');
-  } else {
-    damageEl.innerHTML = damageList.map((p, i) => `
+  const winsEl = document.getElementById('lb-cat-wins');
+  const winsList = [...(DATA.leaderboard_7d||[])].sort((a,b)=>b.wins-a.wins).slice(0,5);
+  winsEl.innerHTML = !winsList.length
+    ? highlightEmpty('No data for the last 7 days.')
+    : winsList.map((p, i) => `
       <div class="highlight-row">
         <span class="highlight-rank ${rankClassFor(i)}">${i+1}</span>
         ${classIconHtml(p.class_id, 22)}
         <span class="highlight-name">${p.name}</span>
-        <span class="highlight-value">${p.value.toLocaleString()}</span>
+        <span class="highlight-value">${p.wins}W</span>
       </div>`).join('');
-  }
 
-  // Most Healing Done 7d
-  const healingEl = document.getElementById('lb-cat-healing');
-  const healingList = (DATA.top_healing_7d || []).slice(0, 5);
-  if(!healingList.length){
-    healingEl.innerHTML = highlightEmpty('No healing data for the last 7 days.');
-  } else {
-    healingEl.innerHTML = healingList.map((p, i) => `
+  const activeEl = document.getElementById('lb-cat-active');
+  const activeList = [...(DATA.leaderboard_7d||[])].sort((a,b)=>b.fights-a.fights).slice(0,5);
+  activeEl.innerHTML = !activeList.length
+    ? highlightEmpty('No data for the last 7 days.')
+    : activeList.map((p, i) => `
       <div class="highlight-row">
         <span class="highlight-rank ${rankClassFor(i)}">${i+1}</span>
         ${classIconHtml(p.class_id, 22)}
         <span class="highlight-name">${p.name}</span>
-        <span class="highlight-value">${p.value.toLocaleString()}</span>
+        <span class="highlight-value">${p.fights}</span>
       </div>`).join('');
-  }
 }
 
 function renderLeaderboard(){
@@ -376,14 +345,12 @@ function renderLeaderboard(){
   }
 
   const cols=[
-    {key:null,           label:'#',          cls:''},
-    {key:null,           label:'Player',     cls:''},
-    {key:'fights',       label:'Fights',     cls:'r sortable'},
-    {key:'wilson',       label:'Wilson Score', cls:'r sortable'},
-    {key:'winrate',      label:'Win Rate',   cls:'r sortable'},
-    {key:'wins',         label:'W / L',      cls:'r sortable'},
-    {key:'avg_win_rr',   label:'Avg RR (W)', cls:'r'},
-    {key:'avg_loss_rr',  label:'Avg RR (L)', cls:'r'},
+    {key:null,      label:'#',           cls:''},
+    {key:null,      label:'Player',      cls:''},
+    {key:'fights',  label:'Fights',      cls:'r sortable'},
+    {key:'wilson',  label:'Wilson Score',cls:'r sortable'},
+    {key:'winrate', label:'Win Rate',    cls:'r sortable'},
+    {key:'wins',    label:'W / L',       cls:'r sortable'},
   ];
 
   let thead='<thead><tr>';
@@ -401,27 +368,25 @@ function renderLeaderboard(){
     const rlm=realmCss(p.class_id);
     const wr=p.winrate;
     const rankCls=rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'rank-num';
-    const safeName2 = p.name.replace(/'/g,String.fromCharCode(92)+String.fromCharCode(39));
-    tbody+=`<tr class='cs-row' style='cursor:pointer' onclick="toggleProfile('${safeName2}')">
+    const safeName = p.name.replace(/'/g,"\\'");
+    tbody+=`<tr class='cs-row' style='cursor:pointer' onclick="toggleProfile('${safeName}')">
       <td><span class="${rankCls}">${rank}</span></td>
       <td><div class="class-cell">
         ${classIconHtml(p.class_id)}
         <div>
           <div class="player-name">${p.name}</div>
-          <div class="player-sub"><span class="realm-${rlm}">${realmName(p.class_id)}</span> · ${p.class_name} · <span class="rr-badge">${p.rr}</span></div>
+          <div class="player-sub"><span class="realm-${rlm}">${realmName(p.class_id)}</span> · ${p.class_name||''}</div>
         </div>
       </div></td>
       <td class="r"><span class="fights-num">${p.fights}</span></td>
-      <td class="r"><span class="wr-num ${wrCss(p.wilson??0)}" title="Wilson Score – statistically adjusted win rate">${p.wilson!=null?p.wilson:"–"}</span></td>
+      <td class="r"><span class="wr-num ${wrCss(p.wilson??0)}" title="Wilson Score">${p.wilson!=null?p.wilson:'–'}</span></td>
       <td class="r"><div class="winrate-bar">
         <span class="wr-num ${wrCss(wr)}">${wr}%</span>
         <div class="bar-bg"><div class="bar-fill ${barCss(wr)}" style="width:${wr}%"></div></div>
       </div></td>
       <td class="r"><span class="wl-cell"><span class="w-count">${p.wins}W</span> / <span class="l-count">${p.losses}L</span></span></td>
-      <td class="r"><span class="rr-badge" style="color:var(--green)">${p.avg_win_rr||'–'}</span></td>
-      <td class="r"><span class="rr-badge" style="color:var(--red)">${p.avg_loss_rr||'–'}</span></td>
     </tr>
-    <tr><td colspan="8" style="padding:0;border:none">
+    <tr><td colspan="6" style="padding:0;border:none">
       <div class="player-profile${lbProfileOpen===p.name?' open':''}" id="profile-${rank}">
         ${lbProfileOpen===p.name?buildPlayerProfile(p.name):''}
       </div>
@@ -454,16 +419,7 @@ function buildPlayerProfile(name){
   const pp = PROFILES && PROFILES[name];
   if(!pp) return '<div style="padding:12px;color:var(--text3);font-size:12px;font-family:Cinzel,serif">No profile data yet.</div>';
 
-  const statsKey = lbDays===1?'profile_stats_1d':lbDays===3?'profile_stats_3d':lbDays===7?'profile_stats_7d':null;
-  const ts = statsKey && DATA[statsKey] ? DATA[statsKey][name] : null;
-  const wonVsData  = ts ? ts.won_vs  : pp.won_vs;
-  const lostVsData = ts ? ts.lost_vs : pp.lost_vs;
-  const avgDmg     = ts != null ? ts.avg_dmg   : pp.avg_dmg;
-  const avgHeal    = ts != null ? ts.avg_heal  : pp.avg_heal;
-  const avgTaken   = ts != null ? ts.avg_taken : pp.avg_taken;
-  const statsPeriod = lbDays===1?'24h':lbDays===3?'3d':lbDays===7?'7d':'30d';
-
-  let zonesHtml = pp.top_zones.length
+  let zonesHtml = pp.top_zones && pp.top_zones.length
     ? pp.top_zones.map(z=>`<div class="profile-item">
         <span class="profile-item-name">${z.name}</span>
         <span class="profile-item-count">${z.count}</span>
@@ -485,70 +441,68 @@ function buildPlayerProfile(name){
   });
   hoursHtml += '</div>';
 
-  let wonHtml = wonVsData.length
-    ? wonVsData.map(v=>`<div class="profile-item">
-        <div style="flex:1">
-          <span class="profile-item-name">${v.class_name}</span>
-          ${v.avg_rr?`<span style="font-size:10px;color:var(--text3);margin-left:4px">avg ${v.avg_rr}</span>`:''}
-        </div>
+  const wonHtml = pp.won_vs && pp.won_vs.length
+    ? pp.won_vs.map(v=>`<div class="profile-item">
+        <span class="profile-item-name">${v.class_name}</span>
         <span class="profile-item-count" style="color:var(--green)">${v.count}W</span>
       </div>`).join('')
     : '<div style="color:var(--text3);font-size:11px">No data</div>';
 
-  let lostHtml = lostVsData.length
-    ? lostVsData.map(v=>`<div class="profile-item">
-        <div style="flex:1">
-          <span class="profile-item-name">${v.class_name}</span>
-          ${v.avg_rr?`<span style="font-size:10px;color:var(--text3);margin-left:4px">avg ${v.avg_rr}</span>`:''}
-        </div>
+  const lostHtml = pp.lost_vs && pp.lost_vs.length
+    ? pp.lost_vs.map(v=>`<div class="profile-item">
+        <span class="profile-item-name">${v.class_name}</span>
         <span class="profile-item-count" style="color:var(--red)">${v.count}L</span>
       </div>`).join('')
     : '<div style="color:var(--text3);font-size:11px">No data</div>';
 
-  const statsHtml = `
-    <div style="display:flex;gap:24px;padding:8px 10px;border-top:0.5px solid var(--border2)">
-      <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
-        <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase">Avg Dmg</span>
-        <span style="font-size:14px;font-family:'Cinzel',serif;color:var(--alb);font-weight:600">${avgDmg!=null?avgDmg.toLocaleString():'–'}</span>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
-        <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase">Avg Heal</span>
-        <span style="font-size:14px;font-family:'Cinzel',serif;color:var(--mid);font-weight:600">${avgHeal!=null?avgHeal.toLocaleString():'–'}</span>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
-        <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase">Avg Taken</span>
-        <span style="font-size:14px;font-family:'Cinzel',serif;color:var(--text2);font-weight:600">${avgTaken!=null?avgTaken.toLocaleString():'–'}</span>
-      </div>
-    </div>`;
+  const wonPlayerHtml = pp.won_vs_player && pp.won_vs_player.length
+    ? pp.won_vs_player.map(v=>`<div class="profile-item">
+        <span class="profile-item-name">${v.name}</span>
+        <span class="profile-item-count" style="color:var(--green)">${v.count}W</span>
+      </div>`).join('')
+    : '<div style="color:var(--text3);font-size:11px">No data</div>';
 
-  // ── Underdog Wins block (1 vs X) ──
+  const lostPlayerHtml = pp.lost_vs_player && pp.lost_vs_player.length
+    ? pp.lost_vs_player.map(v=>`<div class="profile-item">
+        <span class="profile-item-name">${v.name}</span>
+        <span class="profile-item-count" style="color:var(--red)">${v.count}L</span>
+      </div>`).join('')
+    : '<div style="color:var(--text3);font-size:11px">No data</div>';
+
   const underdogHtml = `
     <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-top:0.5px solid var(--border2)">
       <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase;flex-shrink:0">Underdog Wins</span>
       ${underdogCellHtml(pp.underdog_wins)}
     </div>`;
 
-  return `<div class="profile-grid">
+  return `<div class="profile-grid" style="grid-template-columns:repeat(3,1fr)">
     <div>
       <div class="profile-section-title">⚔ Most active zones</div>
       ${zonesHtml}
+    </div>
+    <div>
+      <div class="profile-section-title">✓ Most wins vs class</div>
+      ${wonHtml}
+    </div>
+    <div>
+      <div class="profile-section-title">✗ Most losses vs class</div>
+      ${lostHtml}
     </div>
     <div>
       <div class="profile-section-title">Peak hours</div>
       ${hoursHtml}
     </div>
     <div>
-      <div class="profile-section-title">✓ Most wins vs</div>
-      ${wonHtml}
+      <div class="profile-section-title">✓ Most wins vs player</div>
+      ${wonPlayerHtml}
     </div>
     <div>
-      <div class="profile-section-title">✗ Most losses vs</div>
-      ${lostHtml}
+      <div class="profile-section-title">✗ Most losses vs player</div>
+      ${lostPlayerHtml}
     </div>
   </div>
-  ${statsHtml}
   ${underdogHtml}
-  <div style="padding:4px 10px 8px;font-size:10px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.06em">Zones & peak hours / underdog wins: all-time · Wins/losses/dmg: last ${statsPeriod}</div>`;
+  <div style="padding:4px 10px 8px;font-size:10px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.06em">All-time data</div>`;
 }
 
 function toggleProfile(name){
@@ -574,7 +528,6 @@ function sortLb(key){
 document.getElementById('lb-search').addEventListener('input', e=>{
   lbSearch=e.target.value; lbPage=1; renderLeaderboard();
 });
-
 document.getElementById('tf-leaderboard').addEventListener('click', e=>{
   const btn = e.target.closest('.tf');
   if(!btn) return;
@@ -584,7 +537,6 @@ document.getElementById('tf-leaderboard').addEventListener('click', e=>{
   lbPage = 1;
   renderLeaderboard();
 });
-
 document.getElementById('tf-lb-size').addEventListener('click', e=>{
   const btn = e.target.closest('.tf');
   if(!btn) return;
@@ -643,7 +595,7 @@ function renderClassStats(){
   cols.forEach(c=>{
     let extra='';
     if(c.key===csSortKey) extra=csSortDir===-1?' sort-desc':' sort-asc';
-    const click=c.key?`onclick="sortCs('${c.key}')"`:'' ;
+    const click=c.key?`onclick="sortCs('${c.key}')"`:'';
     thead+=`<th class="${c.cls}${extra}" ${click}>${c.label}</th>`;
   });
   thead+='</tr></thead>';
@@ -652,7 +604,11 @@ function renderClassStats(){
   sorted.forEach(c=>{
     const rlm=realmCss(c.class_id);
     const wr=c.winrate;
-    const players=(DATA.class_players&&DATA.class_players[c.class_id])||[];
+    let players;
+    if(csDays===1)       players=(DATA.class_players_1d&&DATA.class_players_1d[c.class_id])||[];
+    else if(csDays===3)  players=(DATA.class_players_3d&&DATA.class_players_3d[c.class_id])||[];
+    else if(csDays===7)  players=(DATA.class_players_7d&&DATA.class_players_7d[c.class_id])||[];
+    else                 players=(DATA.class_players&&DATA.class_players[c.class_id])||[];
 
     tbody+=`<tr class="cs-row" onclick="toggleDrill(${c.class_id})">
       <td><div class="class-cell">
@@ -678,18 +634,18 @@ function renderClassStats(){
     });
 
     const drillCols=[
-      {key:'name',    label:'Player',   cls:''},
-      {key:'fights',  label:'Fights',   cls:'r sortable'},
+      {key:'name',    label:'Player',       cls:''},
+      {key:'fights',  label:'Fights',       cls:'r sortable'},
       {key:'wilson',  label:'Wilson Score', cls:'r sortable'},
-      {key:'winrate', label:'Win rate', cls:'r sortable'},
-      {key:'wins',    label:'W / L',    cls:'r sortable'},
-      {key:null,      label:'Underdog Wins', cls:'r'},
+      {key:'winrate', label:'Win rate',     cls:'r sortable'},
+      {key:'wins',    label:'W / L',        cls:'r sortable'},
+      {key:null,      label:'Underdog Wins',cls:'r'},
     ];
     let drillHead='<thead><tr>';
     drillCols.forEach(dc=>{
       let ex='';
       if(dc.key===ds.key)ex=ds.dir===-1?' sort-desc':' sort-asc';
-      const cl=dc.key?`onclick="sortDrill(${c.class_id},'${dc.key}')"`:'' ;
+      const cl=dc.key?`onclick="sortDrill(${c.class_id},'${dc.key}')"`:'';
       drillHead+=`<th class="${dc.cls}${ex}" ${cl}>${dc.label}</th>`;
     });
     drillHead+='</tr></thead>';
@@ -698,11 +654,9 @@ function renderClassStats(){
     sortedP.forEach((p)=>{
       const wr2=p.winrate;
       drillRows+=`<tr>
-        <td><span style="font-weight:600">${p.name}</span>
-          <span class="rr-badge" style="margin-left:6px">${p.rr}</span>
-        </td>
+        <td><span style="font-weight:600">${p.name}</span></td>
         <td class="r"><span class="fights-num">${p.fights}</span></td>
-        <td class="r"><span class="wr-num ${wrCss(p.wilson??0)}" title="Wilson Score">${p.wilson!=null?p.wilson:"–"}</span></td>
+        <td class="r"><span class="wr-num ${wrCss(p.wilson??0)}" title="Wilson Score">${p.wilson!=null?p.wilson:'–'}</span></td>
         <td class="r"><div class="winrate-bar">
           <span class="wr-num ${wrCss(wr2)}">${wr2}%</span>
           <div class="bar-bg"><div class="bar-fill ${barCss(wr2)}" style="width:${wr2}%"></div></div>
@@ -729,7 +683,7 @@ function toggleDrill(classId){
   const icon=document.getElementById('ei-'+classId);
   if(!panel)return;
   panel.classList.toggle('open');
-  icon.classList.toggle('open');
+  if(icon) icon.classList.toggle('open');
 }
 
 function sortDrill(classId,key){
@@ -739,12 +693,12 @@ function sortDrill(classId,key){
   setTimeout(()=>{
     const panel=document.getElementById('drill-'+classId);
     const icon=document.getElementById('ei-'+classId);
-    if(panel){panel.classList.add('open');icon.classList.add('open');}
+    if(panel){panel.classList.add('open');if(icon)icon.classList.add('open');}
   },10);
 }
 
 // ══════════════════════════════════════════════
-// DRILLDOWN (Classes Played / Active Zones full view)
+// DRILLDOWN
 // ══════════════════════════════════════════════
 let drilldownType = null;
 let drilldownWindow = '24h';
@@ -769,15 +723,12 @@ document.getElementById('tf-drilldown').addEventListener('click', e => {
 function renderDrilldown(){
   if(!DATA || !drilldownType) return;
   const el = document.getElementById('drilldown-body');
-
   const source = drilldownType === 'classes' ? DATA.classes_played_by_window : DATA.active_zones_by_window;
   const list = (source && source[drilldownWindow]) || [];
-
   if(!list.length){
-    el.innerHTML = `<div class="error-msg">No data for this time window.</div>`;
+    el.innerHTML = '<div class="error-msg">No data for this time window.</div>';
     return;
   }
-
   const rows = list.map((item, i) => {
     const rankCls = i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-num';
     const nameCell = drilldownType === 'classes'
@@ -793,16 +744,12 @@ function renderDrilldown(){
       </div></td>
     </tr>`;
   }).join('');
-
-  el.innerHTML = `<table>
-    <thead><tr>
-      <th>#</th>
-      <th>${drilldownType === 'classes' ? 'Class' : 'Zone'}</th>
-      <th class="r">Count</th>
-      <th class="r">Share</th>
-    </tr></thead>
-    <tbody>${rows}</tbody>
-  </table>`;
+  el.innerHTML = `<table><thead><tr>
+    <th>#</th>
+    <th>${drilldownType === 'classes' ? 'Class' : 'Zone'}</th>
+    <th class="r">Count</th>
+    <th class="r">Share</th>
+  </tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 // ══════════════════════════════════════════════
@@ -815,7 +762,6 @@ function renderHome(){
 
   const diff = DATA.summary.fights_today - DATA.summary.fights_yesterday;
   document.getElementById('stat-today-sub').textContent = (diff>=0?'+':'') + diff + ' vs. yesterday';
-
   document.getElementById('stat-total-sub').textContent = formatSinceShort(DATA.summary.tracking_since);
 
   const updated = new Date(DATA.generated_at);
@@ -832,12 +778,8 @@ function renderHome(){
 function highlightEmpty(msg){
   return `<div style="color:var(--text3);font-size:13px;padding:6px 0">${msg}</div>`;
 }
+function rankClassFor(i){ return i===0?'r1':i===1?'r2':i===2?'r3':''; }
 
-function rankClassFor(i){
-  return i===0?'r1':i===1?'r2':i===2?'r3':'';
-}
-
-// Karte 1: Longest Win Streak (top_underdog = bestehendes Win-Streak-Feld)
 function renderHighlightStreak(){
   const list = (DATA.top_underdog || []).slice(0, 5);
   const el = document.getElementById('hl-streak');
@@ -846,12 +788,11 @@ function renderHighlightStreak(){
     <div class="highlight-row">
       <span class="highlight-rank ${rankClassFor(i)}">${i+1}</span>
       ${classIconHtml(p.class_id, 22)}
-      <span class="highlight-name">${p.name}<span class="highlight-sub">${p.class_name}</span></span>
+      <span class="highlight-name">${p.name}</span>
       <span class="highlight-value">${p.opponents}W</span>
     </div>`).join('');
 }
 
-// Karte 2: Most Active Zone last hour (busy_zones)
 function renderHighlightZone(){
   const list = ((DATA.active_zones_by_window && DATA.active_zones_by_window['24h']) || []).slice(0, 5);
   const el = document.getElementById('hl-zone');
@@ -865,7 +806,6 @@ function renderHighlightZone(){
     </div>`).join('');
 }
 
-// Karte: Top 5 Classes Played (24h, klickbar -> Drilldown)
 function renderHighlightClasses(){
   const list = ((DATA.classes_played_by_window && DATA.classes_played_by_window['24h']) || []).slice(0, 5);
   const el = document.getElementById('hl-classes');
@@ -880,7 +820,6 @@ function renderHighlightClasses(){
     </div>`).join('');
 }
 
-// Karte 3: Top 5 Underdogs (höchster je geschaffter 1-vs-X Sieg)
 function renderHighlightUnderdog(){
   const list = (DATA.top_underdogs_overall || []).slice(0, 5);
   const el = document.getElementById('hl-underdog');
@@ -894,7 +833,6 @@ function renderHighlightUnderdog(){
     </div>`).join('');
 }
 
-// Karte 4: Most Kills last hour
 function renderHighlightKills(){
   const list = (DATA.top_kills_last_hour || []).slice(0, 5);
   const el = document.getElementById('hl-kills');
@@ -903,7 +841,7 @@ function renderHighlightKills(){
     <div class="highlight-row">
       <span class="highlight-rank ${rankClassFor(i)}">${i+1}</span>
       ${classIconHtml(p.class_id, 22)}
-      <span class="highlight-name">${p.name}<span class="highlight-sub">${p.class_name}</span></span>
+      <span class="highlight-name">${p.name}</span>
       <span class="highlight-value">${p.kills}</span>
     </div>`).join('');
 }
@@ -916,13 +854,14 @@ async function loadData(){
     const r = await fetch('data.json?t='+Date.now());
     if(!r.ok) throw new Error('HTTP '+r.status);
     DATA = await r.json();
+    initClassMeta();
     renderHome();
     renderLeaderboardCategories();
     renderLeaderboard();
     renderClassStats();
   } catch(e){
     console.error(e);
-    ['top-list','leaderboard-body','classstats-body'].forEach(id=>{
+    ['leaderboard-body','classstats-body'].forEach(id=>{
       const el=document.getElementById(id);
       if(el)el.innerHTML='<div class="error-msg">⚠ Could not load fight data.</div>';
     });
