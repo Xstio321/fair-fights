@@ -98,8 +98,8 @@
                         <div class="highlight-card-title">💀 Most Kills — Last Hour</div>
                         <div id="hl-kills"><div class="loading">Loading…</div></div>
                     </div>
-                    <div class="highlight-card">
-                        <div class="highlight-card-title">⚔️ Top Matchups · 24h</div>
+                    <div class="highlight-card clickable" onclick="openDrilldown('matchups')">
+                        <div class="highlight-card-title">⚔️ Top Matchups · 24h<span class="highlight-card-arrow">→</span></div>
                         <div id="hl-matchups"><div class="loading">Loading…</div></div>
                     </div>
                     <div class="highlight-card clickable" onclick="openDrilldown('classes')">
@@ -527,20 +527,30 @@ function buildPlayerProfile(name){
       </div>`).join('')
     : '<div style="color:var(--text3);font-size:11px">No data</div>';
 
-  // ── Peak Hours (all-time) ──
-  const maxH = Math.max(...((pp && pp.top_hours)||[]).map(h=>h.count), 1);
-  const hourMap = Object.fromEntries(((pp && pp.top_hours)||[]).map(h=>[h.hour, h.count]));
+  // ── Peak Hours (all-time, in Browser-Timezone konvertiert) ──
+  // Timestamps im Backend sind UTC — wir verschieben die Stunden um den lokalen UTC-Offset
+  const tzOffset = -new Date().getTimezoneOffset() / 60; // positiv = östlich von UTC
+  const tzLabel = tzOffset === 0 ? 'UTC'
+    : `UTC${tzOffset>0?'+':''}${tzOffset % 1 === 0 ? tzOffset : tzOffset.toFixed(1)}`;
+  const rawHours = (pp && pp.top_hours) || [];
+  // Stunden von UTC in lokale Zeit verschieben
+  const localHourMap = {};
+  rawHours.forEach(h => {
+    const localH = ((h.hour + Math.round(tzOffset)) % 24 + 24) % 24;
+    localHourMap[localH] = (localHourMap[localH] || 0) + h.count;
+  });
+  const maxH = Math.max(...Object.values(localHourMap), 1);
   let hoursHtml = '<div style="display:flex;align-items:flex-end;gap:2px;height:36px">';
   for(let h=0;h<24;h++){
-    const cnt = hourMap[h]||0;
+    const cnt = localHourMap[h]||0;
     const ht = cnt>0 ? Math.max(3, Math.round((cnt/maxH)*34)) : 2;
-    hoursHtml += `<div title="${String(h).padStart(2,'0')}:00 – ${cnt}" style="flex:1;height:${ht}px;border-radius:1px 1px 0 0;background:${cnt>0?'var(--hib)':'var(--bg4)'}"></div>`;
+    hoursHtml += `<div title="${String(h).padStart(2,'0')}:00 ${tzLabel} – ${cnt}" style="flex:1;height:${ht}px;border-radius:1px 1px 0 0;background:${cnt>0?'var(--hib)':'var(--bg4)'}"></div>`;
   }
   hoursHtml += '</div><div style="display:flex;justify-content:space-between;margin-top:3px">';
   [0,6,12,18,23].forEach(h=>{
     hoursHtml += `<span style="font-size:8px;color:var(--text3);font-family:'Cinzel',serif">${String(h).padStart(2,'0')}</span>`;
   });
-  hoursHtml += '</div>';
+  hoursHtml += `</div><div style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;margin-top:4px;text-align:right">${tzLabel} (your local time)</div>`;
 
   // ── Win/Loss vs Class und Player (zeitgefiltert) ──
   const wonHtml = src.won_vs && src.won_vs.length
@@ -802,7 +812,9 @@ function openDrilldown(type){
   drilldownType = type;
   switchPage('drilldown');
   document.getElementById('drilldown-title').textContent =
-    type === 'classes' ? 'Classes Played' : 'Most Active Zones';
+    type === 'classes' ? 'Classes Played'
+    : type === 'matchups' ? 'Top Matchups'
+    : 'Most Active Zones';
   renderDrilldown();
 }
 
@@ -818,6 +830,43 @@ document.getElementById('tf-drilldown').addEventListener('click', e => {
 function renderDrilldown(){
   if(!DATA || !drilldownType) return;
   const el = document.getElementById('drilldown-body');
+
+  if(drilldownType === 'matchups'){
+    const list = (DATA.top_matchups_by_window && DATA.top_matchups_by_window[drilldownWindow]) || [];
+    if(!list.length){
+      el.innerHTML = '<div class="error-msg">No matchup data for this time window.</div>';
+      return;
+    }
+    const maxFights = list[0].fights;
+    const rows = list.map((m,i)=>{
+      const rankCls = i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-num';
+      const barW = maxFights > 0 ? m.fights/maxFights*100 : 0;
+      const wrCls = m.winrate_a>=55?'wr-green':m.winrate_a<=45?'wr-red':'wr-amber';
+      return `<tr>
+        <td><span class="${rankCls}">${i+1}</span></td>
+        <td><div class="class-cell" style="gap:6px">
+          ${classIconHtml(m.class_a_id)}
+          <span class="class-name">${m.class_a_name}</span>
+          <span style="font-size:10px;color:var(--text3)">vs</span>
+          ${classIconHtml(m.class_b_id)}
+          <span class="class-name">${m.class_b_name}</span>
+        </div></td>
+        <td class="r"><span class="fights-num">${m.fights}</span></td>
+        <td class="r"><span class="wr-num ${wrCls}" title="${m.class_a_name} win rate">${m.winrate_a}%</span></td>
+        <td class="r"><div class="winrate-bar">
+          <div class="bar-bg"><div class="bar-fill bar-green" style="width:${barW}%"></div></div>
+        </div></td>
+      </tr>`;
+    }).join('');
+    el.innerHTML = `<table><thead><tr>
+      <th>#</th><th>Matchup</th>
+      <th class="r">Fights</th>
+      <th class="r">Win Rate (left)</th>
+      <th class="r">Frequency</th>
+    </tr></thead><tbody>${rows}</tbody></table>`;
+    return;
+  }
+
   const source = drilldownType === 'classes' ? DATA.classes_played_by_window : DATA.active_zones_by_window;
   const list = (source && source[drilldownWindow]) || [];
   if(!list.length){
@@ -857,8 +906,11 @@ function renderHome(){
   document.getElementById('stat-active').textContent = DATA.summary.active_players.toLocaleString();
   document.getElementById('stat-total').textContent = DATA.summary.total_fights.toLocaleString();
 
-  const diff = DATA.summary.fights_today - DATA.summary.fights_yesterday;
-  document.getElementById('stat-today-sub').textContent = (diff>=0?'+':'') + diff + ' vs. yesterday';
+  const diff = DATA.summary.fights_today - (DATA.summary.fights_yesterday_until_now || DATA.summary.fights_yesterday);
+  const diffLabel = DATA.summary.fights_yesterday_until_now != null
+    ? `${diff>=0?'+':''}${diff} vs. yesterday same time`
+    : `${diff>=0?'+':''}${diff} vs. yesterday`;
+  document.getElementById('stat-today-sub').textContent = diffLabel;
   document.getElementById('stat-total-sub').textContent = formatSinceShort(DATA.summary.tracking_since);
 
   const updated = new Date(DATA.generated_at);
