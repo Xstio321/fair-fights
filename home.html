@@ -41,9 +41,12 @@
   .chart-svg-wrap{width:100%;overflow-x:auto}
   @media(max-width:760px){.activity-grid{grid-template-columns:1fr}.activity-card-full{grid-column:1}}
 
-  .tf.active-alb { background: var(--alb); color: #0d0f0e; border-color: var(--alb); font-weight: 600; }
-  .tf.active-mid { background: var(--mid); color: #0d0f0e; border-color: var(--mid); font-weight: 600; }
-  .tf.active-hib { background: var(--hib); color: #0d0f0e; border-color: var(--hib); font-weight: 600; }
+  .tf.tf-alb { color: var(--alb); border-color: var(--alb2); }
+  .tf.tf-mid { color: var(--mid); border-color: var(--mid2); }
+  .tf.tf-hib { color: var(--hib); border-color: var(--hib2); }
+  .tf.active-alb { background: var(--alb); color: #0d0f0e !important; border-color: var(--alb); font-weight: 600; }
+  .tf.active-mid { background: var(--mid); color: #0d0f0e !important; border-color: var(--mid); font-weight: 600; }
+  .tf.active-hib { background: var(--hib); color: #0d0f0e !important; border-color: var(--hib); font-weight: 600; }
 </style>
     </head>
     <body>
@@ -146,17 +149,17 @@
                             <div style="display:flex;gap:6px;align-items:center">
                                 <span style="font-size:10px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.06em">Rows:</span>
                                 <div class="time-filters" id="tf-matchups-realm">
-                                    <div class="tf" data-realm="alb" style="color:var(--alb)">Albion</div>
-                                    <div class="tf" data-realm="mid" style="color:var(--mid)">Midgard</div>
-                                    <div class="tf" data-realm="hib" style="color:var(--hib)">Hibernia</div>
+                                    <div class="tf tf-alb" data-realm="alb">Albion</div>
+                                    <div class="tf tf-mid" data-realm="mid">Midgard</div>
+                                    <div class="tf tf-hib" data-realm="hib">Hibernia</div>
                                 </div>
                             </div>
                             <div style="display:flex;gap:6px;align-items:center">
                                 <span style="font-size:10px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.06em">Cols:</span>
                                 <div class="time-filters" id="tf-matchups-col-realm">
-                                    <div class="tf" data-colrealm="alb" style="color:var(--alb)">Albion</div>
-                                    <div class="tf" data-colrealm="mid" style="color:var(--mid)">Midgard</div>
-                                    <div class="tf" data-colrealm="hib" style="color:var(--hib)">Hibernia</div>
+                                    <div class="tf tf-alb" data-colrealm="alb">Albion</div>
+                                    <div class="tf tf-mid" data-colrealm="mid">Midgard</div>
+                                    <div class="tf tf-hib" data-colrealm="hib">Hibernia</div>
                                 </div>
                             </div>
                         </div>
