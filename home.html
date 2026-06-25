@@ -288,14 +288,16 @@ function formatSinceShort(iso){
 
 function underdogCellHtml(underdogWins){
   if(!underdogWins || Object.keys(underdogWins).length === 0){
-    return '<span class="underdog-none">–</span>';
+    return '<span style="color:var(--text3);font-size:12px;font-family:\'Cinzel\',serif">–</span>';
   }
   const entries = Object.entries(underdogWins)
     .map(([opp, wins]) => [parseInt(opp), wins])
     .sort((a, b) => a[0] - b[0]);
-  return '<div class="underdog-cell">' + entries.map(([opp, wins]) =>
-    `<span class="underdog-badge">1v${opp} ×${wins}</span>`
-  ).join('') + '</div>';
+  return '<span style="font-family:\'Cinzel\',serif;font-size:12px;color:var(--text2)">' +
+    entries.map(([opp, wins]) =>
+      `1v${opp} <span style="color:var(--hib);font-weight:600">×${wins}</span>`
+    ).join('<span style="color:var(--text3);margin:0 5px">·</span>') +
+    '</span>';
 }
 
 function switchPage(page){
