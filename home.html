@@ -840,11 +840,12 @@ function renderHighlightZone(){
   const list = ((DATA.active_zones_by_window && DATA.active_zones_by_window['24h']) || []).slice(0, 5);
   const el = document.getElementById('hl-zone');
   if(!list.length){ el.innerHTML = highlightEmpty('No fights in the last 24h.'); return; }
+  const maxPct = list[0].pct;
   el.innerHTML = list.map((z, i) => `
     <div class="highlight-row">
       <span class="highlight-rank ${rankClassFor(i)}">${i+1}</span>
       <span class="highlight-name">${z.name}</span>
-      <div class="pct-bar-bg"><div class="pct-bar-fill" style="width:${z.pct}%"></div></div>
+      <div class="pct-bar-bg"><div class="pct-bar-fill" style="width:${z.pct/maxPct*100}%"></div></div>
       <span class="highlight-value">${z.pct}%</span>
     </div>`).join('');
 }
@@ -853,12 +854,13 @@ function renderHighlightClasses(){
   const list = ((DATA.classes_played_by_window && DATA.classes_played_by_window['24h']) || []).slice(0, 5);
   const el = document.getElementById('hl-classes');
   if(!list.length){ el.innerHTML = highlightEmpty('No fights in the last 24h.'); return; }
+  const maxPct = list[0].pct;
   el.innerHTML = list.map((c, i) => `
     <div class="highlight-row">
       <span class="highlight-rank ${rankClassFor(i)}">${i+1}</span>
       ${classIconHtml(c.class_id, 22)}
       <span class="highlight-name">${c.class_name}</span>
-      <div class="pct-bar-bg"><div class="pct-bar-fill" style="width:${c.pct}%"></div></div>
+      <div class="pct-bar-bg"><div class="pct-bar-fill" style="width:${c.pct/maxPct*100}%"></div></div>
       <span class="highlight-value">${c.pct}%</span>
     </div>`).join('');
 }
