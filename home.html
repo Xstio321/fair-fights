@@ -774,18 +774,20 @@ function renderDrilldown(){
     el.innerHTML = '<div class="error-msg">No data for this time window.</div>';
     return;
   }
+  const maxPct = list[0].pct;
   const rows = list.map((item, i) => {
     const rankCls = i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-num';
     const nameCell = drilldownType === 'classes'
       ? `<div class="class-cell">${classIconHtml(item.class_id)}<span class="class-name">${item.class_name}</span></div>`
       : `<span class="class-name">${item.name}</span>`;
+    const barWidth = maxPct > 0 ? item.pct / maxPct * 100 : 0;
     return `<tr>
       <td><span class="${rankCls}">${i+1}</span></td>
       <td>${nameCell}</td>
       <td class="r"><span class="fights-num">${item.count}</span></td>
       <td class="r"><div class="winrate-bar">
         <span class="wr-num wr-green">${item.pct}%</span>
-        <div class="bar-bg"><div class="bar-fill bar-green" style="width:${item.pct}%"></div></div>
+        <div class="bar-bg"><div class="bar-fill bar-green" style="width:${barWidth}%"></div></div>
       </div></td>
     </tr>`;
   }).join('');
@@ -845,8 +847,10 @@ function renderHighlightZone(){
     <div class="highlight-row">
       <span class="highlight-rank ${rankClassFor(i)}">${i+1}</span>
       <span class="highlight-name">${z.name}</span>
-      <div class="pct-bar-bg"><div class="pct-bar-fill" style="width:${z.pct/maxPct*100}%"></div></div>
-      <span class="highlight-value">${z.pct}%</span>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;width:110px;justify-content:flex-end">
+        <div class="pct-bar-bg" style="width:60px"><div class="pct-bar-fill" style="width:${z.pct/maxPct*100}%"></div></div>
+        <span class="highlight-value" style="min-width:38px;text-align:right">${z.pct}%</span>
+      </div>
     </div>`).join('');
 }
 
@@ -860,8 +864,10 @@ function renderHighlightClasses(){
       <span class="highlight-rank ${rankClassFor(i)}">${i+1}</span>
       ${classIconHtml(c.class_id, 22)}
       <span class="highlight-name">${c.class_name}</span>
-      <div class="pct-bar-bg"><div class="pct-bar-fill" style="width:${c.pct/maxPct*100}%"></div></div>
-      <span class="highlight-value">${c.pct}%</span>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;width:110px;justify-content:flex-end">
+        <div class="pct-bar-bg" style="width:60px"><div class="pct-bar-fill" style="width:${c.pct/maxPct*100}%"></div></div>
+        <span class="highlight-value" style="min-width:38px;text-align:right">${c.pct}%</span>
+      </div>
     </div>`).join('');
 }
 
@@ -1079,6 +1085,12 @@ function toggleZone(zoneName){
   renderActivity();
 }
 
+// Event-Delegation für Zonen-Legende (vermeidet Apostroph-Probleme in onclick)
+document.addEventListener('click', e=>{
+  const btn = e.target.closest('[data-zone]');
+  if(btn) toggleZone(btn.dataset.zone);
+});
+
 function smoothPath(points){
   if(points.length < 2) return '';
   let d = `M${points[0][0].toFixed(1)},${points[0][1].toFixed(1)}`;
@@ -1096,14 +1108,21 @@ function buildZoneChart(zoneData, maxVal){
   const iW=W-PL-PR, iH=H-PT-PB;
   const xPos=h=>PL+(h/23)*iW, yPos=v=>PT+iH-(v/maxVal)*iH;
 
-  // zoneData: [{name, total, data:[{hour,count},...]}]
   const byName = Object.fromEntries((zoneData||[]).map(z=>[z.name, z.data]));
 
   let linesHtml = '';
   ALL_RVR_ZONES.forEach((zoneName,i)=>{
     if(zoneChartHidden.has(zoneName)) return;
-    const data = byName[zoneName] || [];
+    let data = byName[zoneName] || [];
+    if(!data.length) return;
+
+    // Trailing Nullen abschneiden — verhindert dass die Linie in die Zukunft gezogen wird
+    let lastActive = -1;
+    data.forEach((d,idx)=>{ if(d.count > 0) lastActive = idx; });
+    if(lastActive === -1) return; // komplett leer, nicht zeichnen
+    data = data.slice(0, lastActive + 1);
     if(data.length < 2) return;
+
     const color = ZONE_COLORS[i%ZONE_COLORS.length];
     const pts = data.map(d=>[xPos(d.hour), yPos(d.count)]);
     const path = smoothPath(pts);
@@ -1138,7 +1157,7 @@ function renderActivity(){
   const legendHtml = ALL_RVR_ZONES.map((name,i)=>{
     const color = ZONE_COLORS[i%ZONE_COLORS.length];
     const inactive = zoneChartHidden.has(name) ? ' inactive' : '';
-    return `<div class="legend-btn${inactive}" style="border-color:${color};color:${color}" onclick="toggleZone('${name.replace(/'/g,"\'")}')">
+    return `<div class="legend-btn${inactive}" data-zone="${name.replace(/"/g,'&quot;')}" style="border-color:${color};color:${color};cursor:pointer">
       <div style="width:10px;height:2px;background:${color};border-radius:1px"></div>${name}
     </div>`;
   }).join('');
