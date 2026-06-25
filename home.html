@@ -83,17 +83,9 @@
                 </div>
 
                 <div class="highlight-grid">
-                    <div class="highlight-card">
-                        <div class="highlight-card-title">🔥 Longest Win Streak</div>
-                        <div id="hl-streak"><div class="loading">Loading…</div></div>
-                    </div>
                     <div class="highlight-card clickable" onclick="openDrilldown('zones')">
                         <div class="highlight-card-title">📍 Most Active Zones<span class="highlight-card-arrow">→</span></div>
                         <div id="hl-zone"><div class="loading">Loading…</div></div>
-                    </div>
-                    <div class="highlight-card">
-                        <div class="highlight-card-title">⚔️ Top 5 Underdogs</div>
-                        <div id="hl-underdog"><div class="loading">Loading…</div></div>
                     </div>
                     <div class="highlight-card">
                         <div class="highlight-card-title">💀 Most Kills — Last Hour</div>
@@ -821,9 +813,7 @@ function renderHome(){
   document.getElementById('stat-updated').textContent = timeAgo(DATA.generated_at);
   document.getElementById('stat-updated').title = updated.toLocaleString();
 
-  renderHighlightStreak();
   renderHighlightZone();
-  renderHighlightUnderdog();
   renderHighlightKills();
   renderHighlightClasses();
 }
