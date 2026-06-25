@@ -810,10 +810,20 @@ function sortDrill(classId,key){
 let drilldownType = null;
 let drilldownWindow = '24h';
 let matchupClassFilter = null;
+let matchupSortKey = 'fights';
+let matchupSortDir = -1;
+
+function sortMatchups(key){
+  if(matchupSortKey === key) matchupSortDir *= -1;
+  else { matchupSortKey = key; matchupSortDir = -1; }
+  renderDrilldown();
+}
 
 function openDrilldown(type){
   drilldownType = type;
   matchupClassFilter = null;
+  matchupSortKey = 'fights';
+  matchupSortDir = -1;
   // Zeitfilter-Buttons zurücksetzen wenn kein Matchup-Drilldown
   const tfContainer = document.getElementById('tf-drilldown');
   if(type !== 'matchups' && tfContainer._matchupMode){
@@ -841,6 +851,8 @@ document.getElementById('tf-drilldown').addEventListener('click', e => {
   btn.classList.add('active');
   drilldownWindow = btn.dataset.window;
   matchupClassFilter = null;
+  matchupSortKey = 'fights';
+  matchupSortDir = -1;
   renderDrilldown();
 });
 
@@ -896,11 +908,19 @@ function renderDrilldown(){
       list = allMatchups;
     }
 
-    const maxFights = list.length ? list[0].fights : 1;
+    // Sortierung anwenden
+    list = [...list].sort((a,b) => {
+      const va = matchupSortKey === 'fights' ? a.fights : a.winrate_a;
+      const vb = matchupSortKey === 'fights' ? b.fights : b.winrate_a;
+      return (va - vb) * matchupSortDir;
+    });
+
+    const maxFights = list.length ? Math.max(...list.map(m=>m.fights)) : 1;
+    const sortFightsExtra = matchupSortKey==='fights' ? (matchupSortDir===-1?' sort-desc':' sort-asc') : '';
+    const sortWrExtra = matchupSortKey==='winrate_a' ? (matchupSortDir===-1?' sort-desc':' sort-asc') : '';
     const rows = list.map((m,i)=>{
       const rankCls = i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-num';
-      const barW = maxFights > 0 ? m.fights/maxFights*100 : 0;
-      const wrCls = m.winrate_a>=55?'wr-green':m.winrate_a<=45?'wr-red':'wr-amber';
+      const barW = maxFights > 0 ? m.fights/maxFights*100 : 0;      const wrCls = m.winrate_a>=55?'wr-green':m.winrate_a<=45?'wr-red':'wr-amber';
       const clickA = matchupClassFilter === null ? `style="cursor:pointer" onclick="matchupClassFilter=${m.class_a_id};renderDrilldown()"` : '';
       const clickB = matchupClassFilter === null ? `style="cursor:pointer" onclick="matchupClassFilter=${m.class_b_id};renderDrilldown()"` : '';
       return `<tr>
@@ -921,8 +941,8 @@ function renderDrilldown(){
     }).join('');
     el.innerHTML = `${headerExtra}<table><thead><tr>
       <th>#</th><th>Matchup</th>
-      <th class="r">Fights</th>
-      <th class="r">Win Rate (left)</th>
+      <th class="r sortable${sortFightsExtra}" onclick="sortMatchups('fights')">Fights</th>
+      <th class="r sortable${sortWrExtra}" onclick="sortMatchups('winrate_a')">Win Rate (left)</th>
       <th class="r">Frequency</th>
     </tr></thead><tbody>${rows}</tbody></table>`;
     return;
@@ -1501,6 +1521,7 @@ function renderActivity(){
 // ══════════════════════════════════════════════
 async function loadData(){
   try{
+    const scrollY = window.scrollY;
     const r = await fetch('data.json?t='+Date.now());
     if(!r.ok) throw new Error('HTTP '+r.status);
     DATA = await r.json();
@@ -1511,6 +1532,7 @@ async function loadData(){
     renderClassStats();
     renderMatchups();
     renderActivity();
+    window.scrollTo(0, scrollY);
   } catch(e){
     console.error(e);
     ['leaderboard-body','classstats-body'].forEach(id=>{
