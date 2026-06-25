@@ -478,24 +478,63 @@ function renderPagination(totalPages, total){
 }
 
 function buildPlayerProfile(name){
+  // Zeitgefilterte Daten je nach aktivem Leaderboard-Filter
+  const profileKey = lbDays===1 ? 'player_profiles_1d'
+    : lbDays===3 ? 'player_profiles_3d'
+    : lbDays===7 ? 'player_profiles_7d'
+    : 'player_profiles';
+  const filtered = DATA[profileKey] && DATA[profileKey][name];
+  // All-time Profil für Zonen, Stunden, Underdog (immer all-time)
   const pp = PROFILES && PROFILES[name];
-  if(!pp) return '<div style="padding:12px;color:var(--text3);font-size:12px;font-family:Cinzel,serif">No profile data yet.</div>';
+  if(!pp && !filtered) return '<div style="padding:12px;color:var(--text3);font-size:12px;font-family:Cinzel,serif">No profile data yet.</div>';
 
-  let zonesHtml = pp.top_zones && pp.top_zones.length
+  const src = filtered || pp; // zeitgefilterter Kontext für Win/Loss
+  const period = lbDays===1?'24h':lbDays===3?'3d':lbDays===7?'7d':'All time';
+
+  // ── Stats-Header ──
+  const wins = src.total_wins || 0;
+  const total = src.total_fights || 0;
+  const losses = total - wins;
+  const wr = src.winrate || 0;
+  const wrCls = wr>=55?'wr-green':wr>=45?'wr-amber':'wr-red';
+  const statsHeader = `<div style="display:flex;align-items:center;gap:24px;padding:10px 14px;border-bottom:0.5px solid var(--border2);flex-wrap:wrap">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+      <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase">Fights</span>
+      <span style="font-size:16px;font-family:'Cinzel',serif;color:var(--text);font-weight:600">${total}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+      <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase">W / L</span>
+      <span style="font-size:16px;font-family:'Cinzel',serif;font-weight:600"><span style="color:var(--green)">${wins}W</span> <span style="color:var(--text3);font-size:12px">/</span> <span style="color:var(--red)">${losses}L</span></span>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+      <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase">Win Rate</span>
+      <span style="font-size:16px;font-family:'Cinzel',serif;font-weight:600;color:var(--${wrCls.replace('wr-','')})">${wr}%</span>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+      <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase">Underdog Wins</span>
+      <span style="font-size:13px">${underdogCellHtml(pp ? pp.underdog_wins : {})}</span>
+    </div>
+    <div style="margin-left:auto;font-size:10px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.06em">
+      ${period}
+    </div>
+  </div>`;
+
+  // ── Zonen (all-time) ──
+  const zonesHtml = pp && pp.top_zones && pp.top_zones.length
     ? pp.top_zones.map(z=>`<div class="profile-item">
         <span class="profile-item-name">${z.name}</span>
         <span class="profile-item-count">${z.count}</span>
       </div>`).join('')
     : '<div style="color:var(--text3);font-size:11px">No data</div>';
 
-  const maxH = Math.max(...(pp.top_hours||[]).map(h=>h.count), 1);
-  const hourMap = Object.fromEntries((pp.top_hours||[]).map(h=>[h.hour, h.count]));
+  // ── Peak Hours (all-time) ──
+  const maxH = Math.max(...((pp && pp.top_hours)||[]).map(h=>h.count), 1);
+  const hourMap = Object.fromEntries(((pp && pp.top_hours)||[]).map(h=>[h.hour, h.count]));
   let hoursHtml = '<div style="display:flex;align-items:flex-end;gap:2px;height:36px">';
   for(let h=0;h<24;h++){
     const cnt = hourMap[h]||0;
     const ht = cnt>0 ? Math.max(3, Math.round((cnt/maxH)*34)) : 2;
-    const color = cnt>0?'var(--hib)':'var(--bg4)';
-    hoursHtml += `<div title="${String(h).padStart(2,'0')}:00 – ${cnt} fights" style="flex:1;height:${ht}px;border-radius:1px 1px 0 0;background:${color}"></div>`;
+    hoursHtml += `<div title="${String(h).padStart(2,'0')}:00 – ${cnt}" style="flex:1;height:${ht}px;border-radius:1px 1px 0 0;background:${cnt>0?'var(--hib)':'var(--bg4)'}"></div>`;
   }
   hoursHtml += '</div><div style="display:flex;justify-content:space-between;margin-top:3px">';
   [0,6,12,18,23].forEach(h=>{
@@ -503,68 +542,62 @@ function buildPlayerProfile(name){
   });
   hoursHtml += '</div>';
 
-  const wonHtml = pp.won_vs && pp.won_vs.length
-    ? pp.won_vs.map(v=>`<div class="profile-item">
+  // ── Win/Loss vs Class und Player (zeitgefiltert) ──
+  const wonHtml = src.won_vs && src.won_vs.length
+    ? src.won_vs.map(v=>`<div class="profile-item">
         <span class="profile-item-name">${v.class_name}</span>
         <span class="profile-item-count" style="color:var(--green)">${v.count}W</span>
       </div>`).join('')
     : '<div style="color:var(--text3);font-size:11px">No data</div>';
 
-  const lostHtml = pp.lost_vs && pp.lost_vs.length
-    ? pp.lost_vs.map(v=>`<div class="profile-item">
+  const lostHtml = src.lost_vs && src.lost_vs.length
+    ? src.lost_vs.map(v=>`<div class="profile-item">
         <span class="profile-item-name">${v.class_name}</span>
         <span class="profile-item-count" style="color:var(--red)">${v.count}L</span>
       </div>`).join('')
     : '<div style="color:var(--text3);font-size:11px">No data</div>';
 
-  const wonPlayerHtml = pp.won_vs_player && pp.won_vs_player.length
-    ? pp.won_vs_player.map(v=>`<div class="profile-item">
+  const wonPlayerHtml = src.won_vs_player && src.won_vs_player.length
+    ? src.won_vs_player.map(v=>`<div class="profile-item">
         <span class="profile-item-name">${v.name}</span>
         <span class="profile-item-count" style="color:var(--green)">${v.count}W</span>
       </div>`).join('')
     : '<div style="color:var(--text3);font-size:11px">No data</div>';
 
-  const lostPlayerHtml = pp.lost_vs_player && pp.lost_vs_player.length
-    ? pp.lost_vs_player.map(v=>`<div class="profile-item">
+  const lostPlayerHtml = src.lost_vs_player && src.lost_vs_player.length
+    ? src.lost_vs_player.map(v=>`<div class="profile-item">
         <span class="profile-item-name">${v.name}</span>
         <span class="profile-item-count" style="color:var(--red)">${v.count}L</span>
       </div>`).join('')
     : '<div style="color:var(--text3);font-size:11px">No data</div>';
 
-  const underdogHtml = `
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-top:0.5px solid var(--border2)">
-      <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase;flex-shrink:0">Underdog Wins</span>
-      ${underdogCellHtml(pp.underdog_wins)}
-    </div>`;
-
-  return `<div class="profile-grid" style="grid-template-columns:repeat(3,1fr)">
-    <div>
+  return `${statsHeader}
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;padding:0">
+    <div style="padding:12px 14px;border-right:0.5px solid var(--border2);border-bottom:0.5px solid var(--border2)">
       <div class="profile-section-title">⚔ Most active zones</div>
       ${zonesHtml}
     </div>
-    <div>
-      <div class="profile-section-title">✓ Most wins vs class</div>
-      ${wonHtml}
-    </div>
-    <div>
-      <div class="profile-section-title">✗ Most losses vs class</div>
-      ${lostHtml}
-    </div>
-    <div>
+    <div style="padding:12px 14px;border-bottom:0.5px solid var(--border2)">
       <div class="profile-section-title">Peak hours</div>
       ${hoursHtml}
     </div>
-    <div>
-      <div class="profile-section-title">✓ Most wins vs player</div>
+    <div style="padding:12px 14px;border-right:0.5px solid var(--border2);border-bottom:0.5px solid var(--border2)">
+      <div class="profile-section-title">✓ Wins vs class · ${period}</div>
+      ${wonHtml}
+    </div>
+    <div style="padding:12px 14px;border-bottom:0.5px solid var(--border2)">
+      <div class="profile-section-title">✗ Losses vs class · ${period}</div>
+      ${lostHtml}
+    </div>
+    <div style="padding:12px 14px;border-right:0.5px solid var(--border2)">
+      <div class="profile-section-title">✓ Wins vs player · ${period}</div>
       ${wonPlayerHtml}
     </div>
-    <div>
-      <div class="profile-section-title">✗ Most losses vs player</div>
+    <div style="padding:12px 14px">
+      <div class="profile-section-title">✗ Losses vs player · ${period}</div>
       ${lostPlayerHtml}
     </div>
-  </div>
-  ${underdogHtml}
-  <div style="padding:4px 10px 8px;font-size:10px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.06em">All-time data</div>`;
+  </div>`;
 }
 
 function toggleProfile(name){
