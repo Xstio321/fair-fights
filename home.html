@@ -809,9 +809,11 @@ function sortDrill(classId,key){
 // ══════════════════════════════════════════════
 let drilldownType = null;
 let drilldownWindow = '24h';
+let matchupClassFilter = null;
 
 function openDrilldown(type){
   drilldownType = type;
+  matchupClassFilter = null;
   // Zeitfilter-Buttons zurücksetzen wenn kein Matchup-Drilldown
   const tfContainer = document.getElementById('tf-drilldown');
   if(type !== 'matchups' && tfContainer._matchupMode){
@@ -838,6 +840,7 @@ document.getElementById('tf-drilldown').addEventListener('click', e => {
   document.querySelectorAll('#tf-drilldown .tf').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   drilldownWindow = btn.dataset.window;
+  matchupClassFilter = null;
   renderDrilldown();
 });
 
@@ -857,24 +860,57 @@ function renderDrilldown(){
       tfContainer._matchupMode = true;
       drilldownWindow = '1d';
     }
-    const list = (DATA.top_matchups_by_window && DATA.top_matchups_by_window[drilldownWindow]) || [];
-    if(!list.length){
+    const allMatchups = (DATA.top_matchups_by_window && DATA.top_matchups_by_window[drilldownWindow]) || [];
+    if(!allMatchups.length){
       el.innerHTML = '<div class="error-msg">No matchup data for this time window.</div>';
       return;
     }
-    const maxFights = list[0].fights;
+
+    // Gefilterte Liste: wenn eine Klasse ausgewählt ist, zeige beide Richtungen
+    let list, headerExtra = '';
+    if(matchupClassFilter !== null){
+      // Alle Matchups wo die gewählte Klasse beteiligt ist, normalisiert so dass sie links steht
+      const filtered = [];
+      allMatchups.forEach(m => {
+        if(m.class_a_id === matchupClassFilter){
+          filtered.push(m);
+        } else if(m.class_b_id === matchupClassFilter){
+          // Perspektive umdrehen
+          filtered.push({
+            ...m,
+            class_a_id: m.class_b_id, class_a_name: m.class_b_name,
+            class_b_id: m.class_a_id, class_b_name: m.class_a_name,
+            winrate_a: 100 - m.winrate_a,
+          });
+        }
+      });
+      filtered.sort((a,b) => b.fights - a.fights);
+      list = filtered;
+      const filterName = allMatchups.find(m => m.class_a_id === matchupClassFilter || m.class_b_id === matchupClassFilter);
+      const fname = filterName ? (filterName.class_a_id === matchupClassFilter ? filterName.class_a_name : filterName.class_b_name) : '';
+      headerExtra = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <button onclick="matchupClassFilter=null;renderDrilldown()" style="background:none;border:0.5px solid var(--border2);border-radius:20px;padding:4px 12px;font-size:11px;color:var(--text3);font-family:'Cinzel',serif;cursor:pointer">← All matchups</button>
+        <span style="font-size:13px;color:var(--text2);font-family:'Cinzel',serif">${fname} vs …</span>
+      </div>`;
+    } else {
+      list = allMatchups;
+    }
+
+    const maxFights = list.length ? list[0].fights : 1;
     const rows = list.map((m,i)=>{
       const rankCls = i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-num';
       const barW = maxFights > 0 ? m.fights/maxFights*100 : 0;
       const wrCls = m.winrate_a>=55?'wr-green':m.winrate_a<=45?'wr-red':'wr-amber';
+      const clickA = matchupClassFilter === null ? `style="cursor:pointer" onclick="matchupClassFilter=${m.class_a_id};renderDrilldown()"` : '';
+      const clickB = matchupClassFilter === null ? `style="cursor:pointer" onclick="matchupClassFilter=${m.class_b_id};renderDrilldown()"` : '';
       return `<tr>
         <td><span class="${rankCls}">${i+1}</span></td>
         <td><div class="class-cell" style="gap:6px">
-          ${classIconHtml(m.class_a_id)}
-          <span class="class-name">${m.class_a_name}</span>
+          <span ${clickA} title="Filter by ${m.class_a_name}">${classIconHtml(m.class_a_id)}</span>
+          <span class="class-name" ${clickA} title="Filter by ${m.class_a_name}" style="${matchupClassFilter===null?'cursor:pointer':''}">${m.class_a_name}</span>
           <span style="font-size:10px;color:var(--text3)">vs</span>
-          ${classIconHtml(m.class_b_id)}
-          <span class="class-name">${m.class_b_name}</span>
+          <span ${clickB} title="Filter by ${m.class_b_name}">${classIconHtml(m.class_b_id)}</span>
+          <span class="class-name" ${clickB} title="Filter by ${m.class_b_name}" style="${matchupClassFilter===null?'cursor:pointer':''}">${m.class_b_name}</span>
         </div></td>
         <td class="r"><span class="fights-num">${m.fights}</span></td>
         <td class="r"><span class="wr-num ${wrCls}" title="${m.class_a_name} win rate">${m.winrate_a}%</span></td>
@@ -883,7 +919,7 @@ function renderDrilldown(){
         </div></td>
       </tr>`;
     }).join('');
-    el.innerHTML = `<table><thead><tr>
+    el.innerHTML = `${headerExtra}<table><thead><tr>
       <th>#</th><th>Matchup</th>
       <th class="r">Fights</th>
       <th class="r">Win Rate (left)</th>
