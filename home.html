@@ -810,6 +810,18 @@ let drilldownWindow = '24h';
 
 function openDrilldown(type){
   drilldownType = type;
+  // Zeitfilter-Buttons zurücksetzen wenn kein Matchup-Drilldown
+  const tfContainer = document.getElementById('tf-drilldown');
+  if(type !== 'matchups' && tfContainer._matchupMode){
+    tfContainer.innerHTML = `
+      <div class="tf" data-window="1h">1h</div>
+      <div class="tf active" data-window="24h">24h</div>
+      <div class="tf" data-window="3d">3d</div>
+      <div class="tf" data-window="7d">7d</div>
+      <div class="tf" data-window="30d">30d</div>`;
+    tfContainer._matchupMode = false;
+    drilldownWindow = '24h';
+  }
   switchPage('drilldown');
   document.getElementById('drilldown-title').textContent =
     type === 'classes' ? 'Classes Played'
@@ -832,6 +844,17 @@ function renderDrilldown(){
   const el = document.getElementById('drilldown-body');
 
   if(drilldownType === 'matchups'){
+    // Zeitfenster-Buttons für Matchups anpassen (nutzen 1d/3d/7d/30d statt 1h/24h)
+    const tfContainer = document.getElementById('tf-drilldown');
+    if(tfContainer._matchupMode !== true){
+      tfContainer.innerHTML = `
+        <div class="tf active" data-window="1d">24h</div>
+        <div class="tf" data-window="3d">3d</div>
+        <div class="tf" data-window="7d">7d</div>
+        <div class="tf" data-window="30d">30d</div>`;
+      tfContainer._matchupMode = true;
+      drilldownWindow = '1d';
+    }
     const list = (DATA.top_matchups_by_window && DATA.top_matchups_by_window[drilldownWindow]) || [];
     if(!list.length){
       el.innerHTML = '<div class="error-msg">No matchup data for this time window.</div>';
