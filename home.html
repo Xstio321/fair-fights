@@ -949,7 +949,7 @@ function renderHighlightKills(){
 }
 
 function renderHighlightMatchups(){
-  const list = ((DATA.top_matchups_by_window && DATA.top_matchups_by_window['24h']) || []).slice(0, 5);
+  const list = ((DATA.top_matchups_by_window && DATA.top_matchups_by_window['1d']) || []).slice(0, 5);
   const el = document.getElementById('hl-matchups');
   if(!el) return;
   if(!list.length){ el.innerHTML = highlightEmpty('No matchup data yet.'); return; }
@@ -1330,11 +1330,11 @@ function renderActivity(){
       <tbody>
         ${heatmapData.map((row,d)=>`<tr>
           <td style="font-size:9px;color:var(--text3);font-family:Cinzel,serif;padding:2px 6px 2px 0;white-space:nowrap">${DAY_LABELS[d]}</td>
-          ${row.map(v=>{
+          ${row.map((v,h)=>{
             const intensity = v/maxHeat;
             const bg = v===0 ? 'var(--bg3)'
               : `rgba(122,182,72,${(0.1+intensity*0.85).toFixed(2)})`;
-            return `<td style="background:${bg};width:${cellW}%;height:18px;border:0.5px solid var(--bg)" title="${DAY_LABELS[d]} ${row.indexOf(v).toString().padStart(2,'0')}:00 – ${v} fights"></td>`;
+            return `<td style="background:${bg};width:${cellW}%;height:18px;border:0.5px solid var(--bg)" title="${DAY_LABELS[d]} ${String(h).padStart(2,'0')}:00 – ${v} fights"></td>`;
           }).join('')}
         </tr>`).join('')}
       </tbody>
