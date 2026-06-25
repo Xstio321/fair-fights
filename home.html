@@ -1096,10 +1096,8 @@ function buildZoneChart(zoneData, maxVal){
   const iW=W-PL-PR, iH=H-PT-PB;
   const xPos=h=>PL+(h/23)*iW, yPos=v=>PT+iH-(v/maxVal)*iH;
 
-  // zoneData ist active_zones_by_window[key] — Array von {name, count, pct}
-  // Aber für den Stundenchart brauchen wir zone_today (mit stündlicher Aufschlüsselung)
-  // zone_today Format: [{name, total, data:[{hour,count},...]}]
-  const byName = Object.fromEntries((DATA.zone_today||[]).map(z=>[z.name, z.data]));
+  // zoneData: [{name, total, data:[{hour,count},...]}]
+  const byName = Object.fromEntries((zoneData||[]).map(z=>[z.name, z.data]));
 
   let linesHtml = '';
   ALL_RVR_ZONES.forEach((zoneName,i)=>{
