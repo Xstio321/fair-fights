@@ -54,6 +54,10 @@
   body.light .drill-panel tbody td { background: var(--bg3); }
   body.light .drill-panel tbody tr:hover td { background: var(--bg4); }
   body.light body::before { opacity: 0.3; }
+
+  .hl-right { display:flex;align-items:center;gap:6px;flex-shrink:0;width:100px;justify-content:flex-end; }
+  .hl-right .pct-bar-bg { width:60px; }
+  .hl-right .highlight-value { min-width:34px;text-align:right; }
 </style>
     </head>
     <body>
@@ -1105,9 +1109,9 @@ function renderHighlightZone(){
     <div class="highlight-row">
       <span class="highlight-rank ${rankClassFor(i)}">${i+1}</span>
       <span class="highlight-name">${z.name}</span>
-      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;width:110px;justify-content:flex-end">
-        <div class="pct-bar-bg" style="width:60px"><div class="pct-bar-fill" style="width:${z.pct/maxPct*100}%"></div></div>
-        <span class="highlight-value" style="min-width:38px;text-align:right">${z.pct}%</span>
+      <div class="hl-right">
+        <div class="pct-bar-bg"><div class="pct-bar-fill" style="width:${z.pct/maxPct*100}%"></div></div>
+        <span class="highlight-value">${z.pct}%</span>
       </div>
     </div>`).join('');
 }
@@ -1122,9 +1126,9 @@ function renderHighlightClasses(){
       <span class="highlight-rank ${rankClassFor(i)}">${i+1}</span>
       ${classIconHtml(c.class_id, 22)}
       <span class="highlight-name">${c.class_name}</span>
-      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;width:110px;justify-content:flex-end">
-        <div class="pct-bar-bg" style="width:60px"><div class="pct-bar-fill" style="width:${c.pct/maxPct*100}%"></div></div>
-        <span class="highlight-value" style="min-width:38px;text-align:right">${c.pct}%</span>
+      <div class="hl-right">
+        <div class="pct-bar-bg"><div class="pct-bar-fill" style="width:${c.pct/maxPct*100}%"></div></div>
+        <span class="highlight-value">${c.pct}%</span>
       </div>
     </div>`).join('');
 }
@@ -1146,12 +1150,16 @@ function renderHighlightKills(){
   const list = (DATA.top_kills_last_hour || []).slice(0, 5);
   const el = document.getElementById('hl-kills');
   if(!list.length){ el.innerHTML = highlightEmpty('No kills in the last hour.'); return; }
+  const maxKills = list[0].kills;
   el.innerHTML = list.map((p, i) => `
     <div class="highlight-row">
       <span class="highlight-rank ${rankClassFor(i)}">${i+1}</span>
       ${classIconHtml(p.class_id, 22)}
       <span class="highlight-name">${p.name}</span>
-      <span class="highlight-value">${p.kills}</span>
+      <div class="hl-right">
+        <div class="pct-bar-bg"><div class="pct-bar-fill" style="width:${p.kills/maxKills*100}%"></div></div>
+        <span class="highlight-value">${p.kills}</span>
+      </div>
     </div>`).join('');
 }
 
@@ -1174,22 +1182,18 @@ function renderHighlightMatchups(){
   if(!el) return;
   if(!list.length){ el.innerHTML = highlightEmpty('No matchup data yet.'); return; }
   const maxFights = list[0].fights;
-  el.innerHTML = list.map((m, i) => {
-    const barW = maxFights > 0 ? m.fights / maxFights * 100 : 0;
-    return `<div class="highlight-row" style="gap:6px">
+  el.innerHTML = list.map((m, i) => `
+    <div class="highlight-row">
       <span class="highlight-rank ${rankClassFor(i)}">${i+1}</span>
-      <span onclick="filterMatrixByClass(${m.class_a_id});event.stopPropagation()" style="cursor:pointer" title="Filter matrix by ${m.class_a_name}">${classIconHtml(m.class_a_id, 20)}</span>
-      <span style="font-size:9px;color:var(--text3)">vs</span>
-      <span onclick="filterMatrixByClass(${m.class_b_id});event.stopPropagation()" style="cursor:pointer" title="Filter matrix by ${m.class_b_name}">${classIconHtml(m.class_b_id, 20)}</span>
-      <span class="highlight-name" style="font-size:12px">${m.class_a_name}<span style="color:var(--text3);font-size:10px;margin:0 3px">vs</span>${m.class_b_name}</span>
-      <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
-        <div class="pct-bar-bg" style="width:36px"><div class="pct-bar-fill" style="width:${barW}%"></div></div>
-        <span class="highlight-value" style="font-size:11px;min-width:28px;text-align:right">${m.fights}</span>
+      <span onclick="filterMatrixByClass(${m.class_a_id});event.stopPropagation()" style="cursor:pointer" title="Filter by ${m.class_a_name}">${classIconHtml(m.class_a_id, 22)}</span>
+      <span onclick="filterMatrixByClass(${m.class_b_id});event.stopPropagation()" style="cursor:pointer" title="Filter by ${m.class_b_name}">${classIconHtml(m.class_b_id, 22)}</span>
+      <span class="highlight-name">${m.class_a_name}<span style="color:var(--text3);font-size:10px;margin:0 4px">vs</span>${m.class_b_name}</span>
+      <div class="hl-right">
+        <div class="pct-bar-bg"><div class="pct-bar-fill" style="width:${m.fights/maxFights*100}%"></div></div>
+        <span class="highlight-value">${m.fights}</span>
       </div>
-    </div>`;
-  }).join('');
+    </div>`).join('');
 }
-
 
 function renderHighlightFights(){
   const list = (DATA.recent_fights || []).slice(0, 5);
@@ -1200,14 +1204,14 @@ function renderHighlightFights(){
     const ago = timeAgo(f.timestamp);
     const loser = f.loser_names[0] || '?';
     const extra = f.loser_names.length > 1 ? ` +${f.loser_names.length-1}` : '';
-    return `<div class="highlight-row" style="gap:6px;align-items:center">
-      ${classIconHtml(f.winner_class_id, 20)}
-      <span class="highlight-name" style="font-size:12px">
+    return `<div class="highlight-row">
+      ${classIconHtml(f.winner_class_id, 22)}
+      <span class="highlight-name">
         <span style="color:var(--green)">${f.winner_name}</span>
-        <span style="color:var(--text3);font-size:10px;margin:0 3px">vs</span>
+        <span style="color:var(--text3);font-size:10px;margin:0 4px">vs</span>
         <span style="color:var(--red)">${loser}${extra}</span>
       </span>
-      <span style="font-size:10px;color:var(--text3);margin-left:auto;white-space:nowrap">${ago}</span>
+      <span class="highlight-value" style="color:var(--text3);font-size:11px;font-weight:400">${ago}</span>
     </div>`;
   }).join('');
 }
