@@ -537,7 +537,7 @@ function buildPlayerProfile(name){
   if(!pp && !filtered) return '<div style="padding:12px;color:var(--text3);font-size:12px;font-family:Cinzel,serif">No profile data yet.</div>';
 
   const src = filtered || pp; // zeitgefilterter Kontext für Win/Loss
-  const period = lbDays===1?'24h':lbDays===3?'3d':lbDays===7?'7d':'All time';
+  const period = lbDays===1?'24h':lbDays===3?'3d':lbDays===7?'7d':'30d';
 
   // ── Stats-Header ──
   const wins = src.total_wins || 0;
@@ -557,10 +557,6 @@ function buildPlayerProfile(name){
     <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
       <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase">Win Rate</span>
       <span style="font-size:16px;font-family:'Cinzel',serif;font-weight:600;color:var(--${wrCls.replace('wr-','')})">${wr}%</span>
-    </div>
-    <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
-      <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase">Underdog Wins</span>
-      <span style="font-size:13px">${underdogCellHtml(pp ? pp.underdog_wins : {})}</span>
     </div>
     <div style="margin-left:auto;font-size:10px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.06em">
       ${period}
@@ -647,13 +643,17 @@ function buildPlayerProfile(name){
       <div class="profile-section-title">✗ Losses vs class · ${period}</div>
       ${lostHtml}
     </div>
-    <div style="padding:12px 14px;border-right:0.5px solid var(--border2)">
+    <div style="padding:12px 14px;border-right:0.5px solid var(--border2);border-bottom:0.5px solid var(--border2)">
       <div class="profile-section-title">✓ Wins vs player · ${period}</div>
       ${wonPlayerHtml}
     </div>
-    <div style="padding:12px 14px">
+    <div style="padding:12px 14px;border-bottom:0.5px solid var(--border2)">
       <div class="profile-section-title">✗ Losses vs player · ${period}</div>
       ${lostPlayerHtml}
+    </div>
+    <div style="padding:12px 14px;grid-column:1/-1">
+      <div class="profile-section-title">⚡ Underdog wins · all time</div>
+      ${underdogCellHtml(pp ? pp.underdog_wins : {})}
     </div>
   </div>`;
 }
