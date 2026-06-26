@@ -845,6 +845,8 @@ function sortMatchups(key){
 }
 
 let fightsSearch = '';
+let fightsPage = 1;
+const fightsPageSize = 20;
 
 function openDrilldown(type){
   drilldownType = type;
@@ -852,23 +854,19 @@ function openDrilldown(type){
   matchupSortKey = 'fights';
   matchupSortDir = -1;
   fightsSearch = '';
+  fightsPage = 1;
   const searchWrap = document.getElementById('drilldown-search-wrap');
   const searchInput = document.getElementById('drilldown-search');
+  const tfContainer = document.getElementById('tf-drilldown');
   if(type === 'fights'){
     if(searchWrap) searchWrap.style.display = '';
     if(searchInput) searchInput.value = '';
-    // Zeitfilter für Fights: 1d/3d/7d/30d statt 1h/24h
-    const tfContainer = document.getElementById('tf-drilldown');
-    tfContainer.innerHTML = `
-      <div class="tf active" data-window="1d">24h</div>
-      <div class="tf" data-window="3d">3d</div>
-      <div class="tf" data-window="7d">7d</div>
-      <div class="tf" data-window="30d">30d</div>`;
+    // Zeitfilter ausblenden für Fights
+    tfContainer.style.display = 'none';
     drilldownWindow = '1d';
   } else {
     if(searchWrap) searchWrap.style.display = 'none';
-    // Zeitfilter für Zonen/Klassen zurücksetzen
-    const tfContainer = document.getElementById('tf-drilldown');
+    tfContainer.style.display = '';
     if(tfContainer._matchupMode || drilldownWindow === '1d'){
       tfContainer.innerHTML = `
         <div class="tf" data-window="1h">1h</div>
@@ -883,13 +881,14 @@ function openDrilldown(type){
   switchPage('drilldown');
   document.getElementById('drilldown-title').textContent =
     type === 'classes' ? 'Classes Played'
-    : type === 'fights' ? 'Recent Fights'
+    : type === 'fights' ? 'Recent Fights · 24h'
     : 'Most Active Zones';
   renderDrilldown();
 }
 
 document.getElementById('drilldown-search').addEventListener('input', e => {
   fightsSearch = e.target.value.toLowerCase();
+  fightsPage = 1;
   renderDrilldown();
 });
 
@@ -913,8 +912,7 @@ function renderDrilldown(){
   const el = document.getElementById('drilldown-body');
 
   if(drilldownType === 'fights'){
-    const key = drilldownWindow || '1d';
-    let list = (DATA.recent_fights_by_window && DATA.recent_fights_by_window[key]) || [];
+    let list = (DATA.recent_fights_by_window && DATA.recent_fights_by_window['1d']) || [];
     if(fightsSearch){
       list = list.filter(f =>
         f.winner_name.toLowerCase().includes(fightsSearch) ||
@@ -927,7 +925,12 @@ function renderDrilldown(){
       el.innerHTML = '<div class="error-msg">No fights found.</div>';
       return;
     }
-    const rows = list.map(f => {
+    const totalPages = Math.max(1, Math.ceil(list.length / fightsPageSize));
+    if(fightsPage > totalPages) fightsPage = 1;
+    const start = (fightsPage - 1) * fightsPageSize;
+    const page = list.slice(start, start + fightsPageSize);
+
+    const rows = page.map(f => {
       const ago = timeAgo(f.timestamp);
       const losers = f.loser_names.map((n,i) => `
         <div class="class-cell" style="gap:6px">
@@ -961,6 +964,24 @@ function renderDrilldown(){
         <td class="r">${urlBtn}</td>
       </tr>`;
     }).join('');
+
+    // Pagination
+    let paginationHtml = '';
+    if(totalPages > 1){
+      paginationHtml = `<div class="pagination">
+        <button class="page-btn" onclick="fightsPage--;renderDrilldown()" ${fightsPage===1?'disabled':''}>‹</button>`;
+      for(let i=1;i<=totalPages;i++){
+        if(totalPages>7&&i>2&&i<totalPages-1&&Math.abs(i-fightsPage)>1){
+          if(i===3||i===totalPages-2) paginationHtml+=`<span class="page-info">…</span>`;
+          continue;
+        }
+        paginationHtml+=`<button class="page-btn ${i===fightsPage?'active':''}" onclick="fightsPage=${i};renderDrilldown()">${i}</button>`;
+      }
+      paginationHtml += `<button class="page-btn" onclick="fightsPage++;renderDrilldown()" ${fightsPage===totalPages?'disabled':''}>›</button>
+        <span class="page-info">${list.length} fights</span>
+      </div>`;
+    }
+
     el.innerHTML = `<table><thead><tr>
       <th>Winner</th>
       <th>Loser(s)</th>
@@ -968,7 +989,7 @@ function renderDrilldown(){
       <th class="r">Zone</th>
       <th class="r">Time</th>
       <th class="r"></th>
-    </tr></thead><tbody>${rows}</tbody></table>`;
+    </tr></thead><tbody>${rows}</tbody></table>${paginationHtml}`;
     return;
   }
 
