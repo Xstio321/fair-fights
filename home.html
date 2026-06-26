@@ -237,7 +237,19 @@
         </div>
         <script>
 let DATA = null;
-let PROFILES = null;
+let PROFILES_DATA = null;
+let PROFILES_LOADING = false;
+
+async function ensureProfiles(){
+  if(PROFILES_DATA) return;
+  if(PROFILES_LOADING) return;
+  PROFILES_LOADING = true;
+  try {
+    const r = await fetch('profiles.json?t='+Date.now());
+    if(r.ok) PROFILES_DATA = await r.json();
+  } catch(e) { console.error('profiles.json laden fehlgeschlagen', e); }
+  PROFILES_LOADING = false;
+}
 let CLASS_ICONS = {};
 let CLASS_REALM_MAP = {};
 
@@ -491,14 +503,13 @@ function renderPagination(totalPages, total){
 }
 
 function buildPlayerProfile(name){
-  // Zeitgefilterte Daten je nach aktivem Leaderboard-Filter
+  if(!PROFILES_DATA) return '<div style="padding:12px;color:var(--text3);font-size:12px;font-family:Cinzel,serif">Loading profile…</div>';
   const profileKey = lbDays===1 ? 'player_profiles_1d'
     : lbDays===3 ? 'player_profiles_3d'
     : lbDays===7 ? 'player_profiles_7d'
     : 'player_profiles';
-  const filtered = DATA[profileKey] && DATA[profileKey][name];
-  // All-time Profil für Zonen, Stunden, Underdog (immer all-time)
-  const pp = PROFILES && PROFILES[name];
+  const filtered = PROFILES_DATA[profileKey] && PROFILES_DATA[profileKey][name];
+  const pp = PROFILES_DATA.player_profiles && PROFILES_DATA.player_profiles[name];
   if(!pp && !filtered) return '<div style="padding:12px;color:var(--text3);font-size:12px;font-family:Cinzel,serif">No profile data yet.</div>';
 
   const src = filtered || pp; // zeitgefilterter Kontext für Win/Loss
@@ -623,13 +634,15 @@ function buildPlayerProfile(name){
   </div>`;
 }
 
-function toggleProfile(name){
+async function toggleProfile(name){
   if(lbProfileOpen === name){
     lbProfileOpen = null;
-  } else {
-    lbProfileOpen = name;
-    PROFILES = DATA.player_profiles || {};
+    renderLeaderboard();
+    return;
   }
+  lbProfileOpen = name;
+  await ensureProfiles();
+  PROFILES = PROFILES_DATA ? PROFILES_DATA.player_profiles || {} : {};
   renderLeaderboard();
   setTimeout(()=>{
     const open = document.querySelector('.player-profile.open');
