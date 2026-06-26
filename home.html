@@ -102,6 +102,11 @@
                         <div class="highlight-card-title">⚔️ Top Matchups · 24h<span class="highlight-card-arrow">→</span></div>
                         <div id="hl-matchups"><div class="loading">Loading…</div></div>
                     </div>
+                    <div class="highlight-card clickable" onclick="openDrilldown('fights')">
+                        <div class="highlight-card-title">🗡️ Recent Fights<span class="highlight-card-arrow">→</span></div>
+                        <div id="hl-fights"><div class="loading">Loading…</div></div>
+                    </div>
+                    </div>
                     <div class="highlight-card clickable" onclick="switchSub('classstats')">
                         <div class="highlight-card-title">🛡️ Top Classes Played · 24h<span class="highlight-card-arrow">→</span></div>
                         <div id="hl-classes"><div class="loading">Loading…</div></div>
@@ -116,12 +121,18 @@
                 <button class="back-link" onclick="switchPage('overview')">← Back to Overview</button>
                 <div class="drilldown-header">
                     <div class="drilldown-title" id="drilldown-title">—</div>
-                    <div class="time-filters" id="tf-drilldown">
-                        <div class="tf" data-window="1h">1h</div>
-                        <div class="tf active" data-window="24h">24h</div>
-                        <div class="tf" data-window="3d">3d</div>
-                        <div class="tf" data-window="7d">7d</div>
-                        <div class="tf" data-window="30d">30d</div>
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                        <div class="search-wrap" id="drilldown-search-wrap" style="display:none">
+                            <span class="search-icon">🔍</span>
+                            <input class="search-input" id="drilldown-search" placeholder="Search name or class…">
+                        </div>
+                        <div class="time-filters" id="tf-drilldown">
+                            <div class="tf" data-window="1h">1h</div>
+                            <div class="tf active" data-window="24h">24h</div>
+                            <div class="tf" data-window="3d">3d</div>
+                            <div class="tf" data-window="7d">7d</div>
+                            <div class="tf" data-window="30d">30d</div>
+                        </div>
                     </div>
                 </div>
                 <div id="drilldown-body"><div class="loading">Loading…</div></div>
@@ -137,9 +148,9 @@
                 <!-- Class Stats -->
                 <div class="sub-panel active" id="sub-classstats">
                     <div class="time-filters" id="tf-classstats" style="margin-bottom:1.25rem">
-                        <button class="tf active" data-csdays="1">Today</button>
-                        <button class="tf" data-csdays="3">3 Days</button>
-                        <button class="tf" data-csdays="7">7 Days</button>
+                        <button class="tf active" data-csdays="1">24h</button>
+                        <button class="tf" data-csdays="3">3d</button>
+                        <button class="tf" data-csdays="7">7d</button>
                         <button class="tf" data-csdays="0">All Time</button>
                     </div>
                     <div id="classstats-body">
@@ -821,27 +832,54 @@ function sortMatchups(key){
   renderDrilldown();
 }
 
+let fightsSearch = '';
+
 function openDrilldown(type){
   drilldownType = type;
   matchupClassFilter = null;
   matchupSortKey = 'fights';
   matchupSortDir = -1;
-  const tfContainer = document.getElementById('tf-drilldown');
-  if(tfContainer._matchupMode){
+  fightsSearch = '';
+  const searchWrap = document.getElementById('drilldown-search-wrap');
+  const searchInput = document.getElementById('drilldown-search');
+  if(type === 'fights'){
+    if(searchWrap) searchWrap.style.display = '';
+    if(searchInput) searchInput.value = '';
+    // Zeitfilter für Fights: 1d/3d/7d/30d statt 1h/24h
+    const tfContainer = document.getElementById('tf-drilldown');
     tfContainer.innerHTML = `
-      <div class="tf" data-window="1h">1h</div>
-      <div class="tf active" data-window="24h">24h</div>
+      <div class="tf active" data-window="1d">24h</div>
       <div class="tf" data-window="3d">3d</div>
       <div class="tf" data-window="7d">7d</div>
       <div class="tf" data-window="30d">30d</div>`;
-    tfContainer._matchupMode = false;
-    drilldownWindow = '24h';
+    drilldownWindow = '1d';
+  } else {
+    if(searchWrap) searchWrap.style.display = 'none';
+    // Zeitfilter für Zonen/Klassen zurücksetzen
+    const tfContainer = document.getElementById('tf-drilldown');
+    if(tfContainer._matchupMode || drilldownWindow === '1d'){
+      tfContainer.innerHTML = `
+        <div class="tf" data-window="1h">1h</div>
+        <div class="tf active" data-window="24h">24h</div>
+        <div class="tf" data-window="3d">3d</div>
+        <div class="tf" data-window="7d">7d</div>
+        <div class="tf" data-window="30d">30d</div>`;
+      tfContainer._matchupMode = false;
+      drilldownWindow = '24h';
+    }
   }
   switchPage('drilldown');
   document.getElementById('drilldown-title').textContent =
-    type === 'classes' ? 'Classes Played' : 'Most Active Zones';
+    type === 'classes' ? 'Classes Played'
+    : type === 'fights' ? 'Recent Fights'
+    : 'Most Active Zones';
   renderDrilldown();
 }
+
+document.getElementById('drilldown-search').addEventListener('input', e => {
+  fightsSearch = e.target.value.toLowerCase();
+  renderDrilldown();
+});
 
 document.getElementById('tf-drilldown').addEventListener('click', e => {
   const btn = e.target.closest('[data-window]');
@@ -852,12 +890,75 @@ document.getElementById('tf-drilldown').addEventListener('click', e => {
   matchupClassFilter = null;
   matchupSortKey = 'fights';
   matchupSortDir = -1;
+  fightsSearch = '';
+  const si = document.getElementById('drilldown-search');
+  if(si) si.value = '';
   renderDrilldown();
 });
 
 function renderDrilldown(){
   if(!DATA || !drilldownType) return;
   const el = document.getElementById('drilldown-body');
+
+  if(drilldownType === 'fights'){
+    const key = drilldownWindow || '1d';
+    let list = (DATA.recent_fights_by_window && DATA.recent_fights_by_window[key]) || [];
+    if(fightsSearch){
+      list = list.filter(f =>
+        f.winner_name.toLowerCase().includes(fightsSearch) ||
+        (f.winner_class||'').toLowerCase().includes(fightsSearch) ||
+        f.loser_names.some(n => n.toLowerCase().includes(fightsSearch)) ||
+        f.loser_classes.some(c => (c||'').toLowerCase().includes(fightsSearch))
+      );
+    }
+    if(!list.length){
+      el.innerHTML = '<div class="error-msg">No fights found.</div>';
+      return;
+    }
+    const rows = list.map(f => {
+      const ago = timeAgo(f.timestamp);
+      const losers = f.loser_names.map((n,i) => `
+        <div class="class-cell" style="gap:6px">
+          ${classIconHtml(f.loser_class_ids[i], 22)}
+          <span style="color:var(--red);font-size:13px">${n}</span>
+          <span style="font-size:11px;color:var(--text3)">${f.loser_classes[i]||''}</span>
+        </div>`).join('');
+      const urlBtn = f.fight_url
+        ? `<a href="${f.fight_url}" target="_blank" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border:0.5px solid var(--border2);border-radius:12px;font-size:11px;color:var(--text3);font-family:'Cinzel',serif;text-decoration:none;transition:all 0.15s" onmouseover="this.style.borderColor='var(--hib)';this.style.color='var(--hib)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">↗ View</a>`
+        : '';
+      return `<tr>
+        <td>
+          <div class="class-cell" style="gap:6px">
+            ${classIconHtml(f.winner_class_id, 22)}
+            <div>
+              <span style="color:var(--green);font-size:13px;font-weight:600">${f.winner_name}</span>
+              <span style="font-size:11px;color:var(--text3);margin-left:6px">${f.winner_class||''}</span>
+            </div>
+          </div>
+        </td>
+        <td>${losers}</td>
+        <td class="r" style="white-space:nowrap">
+          <span style="font-size:11px;color:var(--text3);font-family:'Cinzel',serif">${f.size}</span>
+        </td>
+        <td class="r" style="white-space:nowrap">
+          <span style="font-size:11px;color:var(--text3);font-family:'Cinzel',serif">${f.zone||''}</span>
+        </td>
+        <td class="r" style="white-space:nowrap">
+          <span style="font-size:11px;color:var(--text3);font-family:'Cinzel',serif">${ago}</span>
+        </td>
+        <td class="r">${urlBtn}</td>
+      </tr>`;
+    }).join('');
+    el.innerHTML = `<table><thead><tr>
+      <th>Winner</th>
+      <th>Loser(s)</th>
+      <th class="r">Size</th>
+      <th class="r">Zone</th>
+      <th class="r">Time</th>
+      <th class="r"></th>
+    </tr></thead><tbody>${rows}</tbody></table>`;
+    return;
+  }
 
   const source = drilldownType === 'classes' ? DATA.classes_played_by_window : DATA.active_zones_by_window;
   const list = (source && source[drilldownWindow]) || [];
@@ -913,6 +1014,7 @@ function renderHome(){
   renderHighlightKills();
   renderHighlightClasses();
   renderHighlightMatchups();
+  renderHighlightFights();
 }
 
 function highlightEmpty(msg){
@@ -1028,9 +1130,27 @@ function renderHighlightMatchups(){
 }
 
 
-// ══════════════════════════════════════════════
-// MATCHUP MATRIX
-// ══════════════════════════════════════════════
+function renderHighlightFights(){
+  const list = (DATA.recent_fights || []).slice(0, 5);
+  const el = document.getElementById('hl-fights');
+  if(!el) return;
+  if(!list.length){ el.innerHTML = highlightEmpty('No fights recorded yet.'); return; }
+  el.innerHTML = list.map(f => {
+    const ago = timeAgo(f.timestamp);
+    const loser = f.loser_names[0] || '?';
+    const extra = f.loser_names.length > 1 ? ` +${f.loser_names.length-1}` : '';
+    return `<div class="highlight-row" style="gap:6px;align-items:center">
+      ${classIconHtml(f.winner_class_id, 20)}
+      <span class="highlight-name" style="font-size:12px">
+        <span style="color:var(--green)">${f.winner_name}</span>
+        <span style="color:var(--text3);font-size:10px;margin:0 3px">vs</span>
+        <span style="color:var(--red)">${loser}${extra}</span>
+      </span>
+      <span style="font-size:10px;color:var(--text3);margin-left:auto;white-space:nowrap">${ago}</span>
+      ${f.fight_url ? `<a href="${f.fight_url}" target="_blank" onclick="event.stopPropagation()" style="color:var(--text3);font-size:14px;text-decoration:none;flex-shrink:0" title="View fight">↗</a>` : ''}
+    </div>`;
+  }).join('');
+}
 let matchupHiddenClasses = new Set();
 let matchupRealmFilter = null;
 let matchupColRealmFilter = null;
