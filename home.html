@@ -549,6 +549,9 @@ function buildPlayerProfile(name){
   const losses = total - wins;
   const wr = src.winrate || 0;
   const wrCls = wr>=55?'wr-green':wr>=45?'wr-amber':'wr-red';
+  const bestStreak = pp ? (pp.best_streak || 0) : 0;
+  const underdogMax = pp && pp.underdog_wins ? Math.max(...Object.keys(pp.underdog_wins).map(Number), 0) : 0;
+
   const statsHeader = `<div style="display:flex;align-items:center;gap:24px;padding:10px 14px;border-bottom:0.5px solid var(--border2);flex-wrap:wrap">
     <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
       <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase">Fights</span>
@@ -562,13 +565,13 @@ function buildPlayerProfile(name){
       <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase">Win Rate</span>
       <span style="font-size:16px;font-family:'Cinzel',serif;font-weight:600;color:var(--${wrCls.replace('wr-','')})">${wr}%</span>
     </div>
-    ${pp && pp.best_streak ? `<div style="display:flex;flex-direction:column;align-items:center;gap:2px">
-      <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase">Best Streak</span>
-      <span style="font-size:16px;font-family:'Cinzel',serif;font-weight:600;color:var(--amber)">${pp.best_streak}W</span>
-    </div>` : ''}
-    ${pp && pp.underdog_wins && Object.keys(pp.underdog_wins).length ? `<div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+      <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase">Longest Streak</span>
+      <span style="font-size:16px;font-family:'Cinzel',serif;font-weight:600;color:var(--amber)">${bestStreak}W</span>
+    </div>
+    ${underdogMax > 0 ? `<div style="display:flex;flex-direction:column;align-items:center;gap:2px">
       <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase">Underdog</span>
-      <span style="font-size:13px;font-family:'Cinzel',serif">${underdogCellHtml(pp.underdog_wins)}</span>
+      <span style="font-size:16px;font-family:'Cinzel',serif;font-weight:600;color:var(--hib)">1v${underdogMax}</span>
     </div>` : ''}
     <div style="margin-left:auto;font-size:10px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.06em">
       ${period}
