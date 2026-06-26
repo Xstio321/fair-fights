@@ -59,13 +59,12 @@
   .hl-right .pct-bar-bg { width:60px; }
   .hl-right .highlight-value { min-width:34px;text-align:right; }
 
-  /* Class icon wrapper — dark mode: transparent bg, realm-colored icon */
   .class-icon-wrap { background: transparent; }
-  /* Light mode: realm bg, white icon */
-  body.light .class-icon-wrap.ci-alb { background: var(--alb2); }
-  body.light .class-icon-wrap.ci-mid { background: var(--mid2); }
-  body.light .class-icon-wrap.ci-hib { background: var(--hib2); }
-  body.light .class-icon-wrap .ci-img { filter: brightness(0) invert(1) !important; }
+
+  body.light .class-icon-wrap.ci-alb .ci-img { filter: brightness(0) saturate(100%) invert(25%) sepia(80%) saturate(600%) hue-rotate(320deg) brightness(70%) !important; }
+  body.light .class-icon-wrap.ci-mid .ci-img { filter: brightness(0) saturate(100%) invert(35%) sepia(60%) saturate(500%) hue-rotate(175deg) brightness(70%) !important; }
+  body.light .class-icon-wrap.ci-hib .ci-img { filter: brightness(0) saturate(100%) invert(40%) sepia(60%) saturate(400%) hue-rotate(55deg) brightness(70%) !important; }
+
 </style>
     </head>
     <body>
@@ -320,7 +319,7 @@ function classIconHtml(classId, size=30){
   const filter = REALM_FILTER[realm] || '';
   const realmCls = realm===1?'alb':realm===2?'mid':realm===3?'hib':'';
   if(!name) return `<div class="class-icon av-${realmCss(classId)}" style="width:${size}px;height:${size}px">${initials(name||'?')}</div>`;
-  return `<div class="class-icon-wrap ci-${realmCls}" style="width:${size}px;height:${size}px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">
+  return `<div class="class-icon-wrap ci-${realmCls}" style="width:${size}px;height:${size}px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">
     <img src="icons/${name}_class_icon.webp" class="ci-img" style="width:${Math.round(size*0.72)}px;height:${Math.round(size*0.72)}px;object-fit:contain;filter:${filter}" alt="${name}">
   </div>`;
 }
