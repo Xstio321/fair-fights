@@ -725,6 +725,7 @@ async function toggleProfile(name){
   if(lbProfileOpen === name){
     lbProfileOpen = null;
     renderLeaderboard();
+    if(document.getElementById('page-elo').classList.contains('active')) renderEloTab();
     return;
   }
   lbProfileOpen = name;
