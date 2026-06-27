@@ -1057,6 +1057,30 @@ async function renderEloTab(){
     const peakColor = p.peak_elo>=1600?'var(--amber)':p.peak_elo>=1500?'var(--hib)':p.peak_elo>=1400?'var(--text2)':'var(--text3)';
     const safeName = p.name.replace(/'/g,"\\'");
     const isOpen = eloOpenPlayer === p.name;
+
+    // Sparkline aus fight_history
+    let sparkline = '';
+    if(p.fight_history && p.fight_history.length >= 2){
+      const history = [...p.fight_history].reverse(); // älteste zuerst
+      const elos = history.map(f => f.elo_after);
+      const minElo = Math.min(...elos);
+      const maxElo = Math.max(...elos);
+      const range = maxElo - minElo || 1;
+      const w = 80, h = 28, pad = 2;
+      const points = elos.map((e, i) => {
+        const x = pad + (i / (elos.length - 1)) * (w - pad*2);
+        const y = pad + (1 - (e - minElo) / range) * (h - pad*2);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ');
+      const trend = elos[elos.length-1] >= elos[0];
+      const color = trend ? '#7ab648' : '#c44a4a';
+      sparkline = `<td style="padding:0 8px"><svg width="${w}" height="${h}" style="display:block;overflow:visible">
+        <polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+      </svg></td>`;
+    } else {
+      sparkline = `<td></td>`;
+    }
+
     return `<tr class="cs-row" onclick="toggleEloProfile('${safeName}')">
       <td><span class="${rankCls}">${p.rank}</span></td>
       <td><div class="class-cell">
@@ -1068,12 +1092,13 @@ async function renderEloTab(){
         <a href="https://eden-daoc.net/herald?n=player&k=${encodeURIComponent(p.name)}" target="_blank" onclick="event.stopPropagation()" style="margin-left:6px;color:var(--text3);text-decoration:none;opacity:0.5;transition:all 0.15s;flex-shrink:0;display:inline-flex;align-items:center" onmouseover="this.style.opacity='1';this.style.color='var(--hib)'" onmouseout="this.style.opacity='0.5';this.style.color='var(--text3)'" title="View on Eden Herald"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>
       </div></td>
       <td class="r"><span style="font-family:'Cinzel',serif;font-size:15px;font-weight:700;color:${eloColor}">${p.elo}</span></td>
+      ${sparkline}
       <td class="r"><span style="font-family:'Cinzel',serif;font-size:13px;color:${peakColor};opacity:0.8" title="Season peak ELO">▲ ${p.peak_elo}</span></td>
       <td class="r"><span class="fights-num">${p.fights}</span></td>
       <td class="r"><span class="wr-num ${wrCss_}">${p.winrate}%</span></td>
       <td class="r"><span class="wl-cell"><span class="w-count">${p.wins}W</span> / <span class="l-count">${p.losses}L</span></span></td>
     </tr>
-    <tr><td colspan="7" style="padding:0;border:none">
+    <tr><td colspan="8" style="padding:0;border:none">
       <div class="player-profile${isOpen?' open':''}" id="elo-profile-${p.rank}" data-name="${p.name}">
         ${isOpen ? buildEloFightHistory(p.name) : ''}
       </div>
@@ -1145,6 +1170,7 @@ async function renderEloTab(){
   el.innerHTML = `<table><thead><tr>
     <th>#</th><th>Player</th>
     <th class="r">ELO</th>
+    <th></th>
     <th class="r">Peak</th>
     <th class="r">Fights</th>
     <th class="r">Win Rate</th>
