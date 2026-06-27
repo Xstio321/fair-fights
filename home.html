@@ -462,7 +462,9 @@ function renderLeaderboardCategories(){
         <span class="highlight-rank ${rankClassFor(i)}">${i+1}</span>
         ${classIconHtml(p.class_id, 22)}
         <span class="highlight-name">${p.name}</span>
-        <span class="highlight-value">1v${p.max_opponents}</span>
+        ${p.fight_url
+          ? `<a href="${p.fight_url}" target="_blank" class="highlight-value" style="color:var(--hib);text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">1v${p.max_opponents}</a>`
+          : `<span class="highlight-value">1v${p.max_opponents}</span>`}
       </div>`).join('');
 
   const streakEl = document.getElementById('lb-cat-streak');
