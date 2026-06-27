@@ -553,7 +553,7 @@ function renderLeaderboard(){
       <td class="r"><span class="wl-cell"><span class="w-count">${p.wins}W</span> / <span class="l-count">${p.losses}L</span></span></td>
     </tr>
     <tr><td colspan="6" style="padding:0;border:none">
-      <div class="player-profile${lbProfileOpen===p.name?' open':''}" id="profile-${rank}">
+      <div class="player-profile${lbProfileOpen===p.name?' open':''}" id="profile-${rank}" data-name="${p.name}">
         ${lbProfileOpen===p.name?buildPlayerProfile(p.name):''}
       </div>
     </td></tr>`;
@@ -591,7 +591,7 @@ function buildPlayerProfile(name){
   const pp = PROFILES_DATA.player_profiles && PROFILES_DATA.player_profiles[name];
   if(!pp && !filtered) return '<div style="padding:12px;color:var(--text3);font-size:12px;font-family:Cinzel,serif">No profile data yet.</div>';
 
-  const src = filtered || pp; // zeitgefilterter Kontext für Win/Loss
+  const src = filtered || pp;
   const period = lbDays===1?'24h':lbDays===3?'3d':lbDays===7?'7d':'30d';
 
   // ── Stats-Header ──
@@ -731,7 +731,6 @@ async function toggleProfile(name){
   if(lbProfileOpen === name){
     lbProfileOpen = null;
     renderLeaderboard();
-    if(document.getElementById('page-elo').classList.contains('active')) renderEloTab();
     return;
   }
   lbProfileOpen = name;
@@ -739,8 +738,6 @@ async function toggleProfile(name){
   await ensureElo();
   PROFILES = PROFILES_DATA ? PROFILES_DATA.player_profiles || {} : {};
   renderLeaderboard();
-  // Falls ELO-Tab aktiv, auch dort neu rendern
-  if(document.getElementById('page-elo').classList.contains('active')) renderEloTab();
   setTimeout(()=>{
     const open = document.querySelector('.player-profile.open');
     if(open) open.scrollIntoView({behavior:'smooth',block:'nearest'});
@@ -927,9 +924,77 @@ function sortDrill(classId,key){
   },10);
 }
 
-// ══════════════════════════════════════════════
-// ELO RANKING
-// ══════════════════════════════════════════════
+let eloOpenPlayer = null;
+let eloFightPage  = 1;
+const eloFightPageSize = 15;
+
+function toggleEloProfile(name){
+  if(eloOpenPlayer === name){
+    eloOpenPlayer = null;
+  } else {
+    eloOpenPlayer = name;
+    eloFightPage  = 1;
+  }
+  renderEloTab();
+}
+
+function buildEloFightHistory(name){
+  if(!ELO_DATA || !ELO_DATA.by_player || !ELO_DATA.by_player[name])
+    return '<div style="padding:12px;color:var(--text3);font-size:12px;font-family:Cinzel,serif">No ELO data for this player.</div>';
+
+  const player = ELO_DATA.by_player[name];
+  const history = player.fight_history || [];
+  if(!history.length)
+    return '<div style="padding:12px;color:var(--text3);font-size:12px;font-family:Cinzel,serif">No fights recorded this season.</div>';
+
+  const totalPages = Math.max(1, Math.ceil(history.length / eloFightPageSize));
+  if(eloFightPage > totalPages) eloFightPage = 1;
+  const start = (eloFightPage - 1) * eloFightPageSize;
+  const page  = history.slice(start, start + eloFightPageSize);
+
+  const rows = page.map(f => {
+    const isWin    = f.result === 'W';
+    const changeColor = f.elo_change >= 0 ? 'var(--green)' : 'var(--red)';
+    const changeStr   = (f.elo_change >= 0 ? '+' : '') + f.elo_change;
+    const ago = timeAgo(f.timestamp);
+    return `<tr>
+      <td style="width:20px"><span style="font-size:12px;font-weight:700;color:${isWin?'var(--green)':'var(--red)'}">${f.result}</span></td>
+      <td><div class="class-cell" style="gap:6px">
+        ${classIconHtml(f.opponent_class_id, 22)}
+        <span style="font-size:13px;color:var(--text)">${f.opponent}</span>
+      </div></td>
+      <td class="r"><span style="font-family:'Cinzel',serif;font-size:13px;font-weight:700;color:${changeColor}">${changeStr}</span></td>
+      <td class="r"><span style="font-family:'Cinzel',serif;font-size:12px;color:var(--text2)">${f.elo_after}</span></td>
+      <td class="r"><span style="font-size:11px;color:var(--text3);font-family:'Cinzel',serif">${ago}</span></td>
+    </tr>`;
+  }).join('');
+
+  let paginationHtml = '';
+  if(totalPages > 1){
+    paginationHtml = `<div class="pagination" style="margin:8px 0 4px">
+      <button class="page-btn" onclick="eloFightPage--;renderEloTab()" ${eloFightPage===1?'disabled':''}>‹</button>`;
+    for(let i=1;i<=totalPages;i++){
+      if(totalPages>7&&i>2&&i<totalPages-1&&Math.abs(i-eloFightPage)>1){
+        if(i===3||i===totalPages-2) paginationHtml+=`<span class="page-info">…</span>`;
+        continue;
+      }
+      paginationHtml+=`<button class="page-btn ${i===eloFightPage?'active':''}" onclick="eloFightPage=${i};renderEloTab()">${i}</button>`;
+    }
+    paginationHtml+=`<button class="page-btn" onclick="eloFightPage++;renderEloTab()" ${eloFightPage===totalPages?'disabled':''}>›</button>
+      <span class="page-info">${history.length} fights</span></div>`;
+  }
+
+  return `<div style="padding:10px 14px">
+    <table style="width:100%"><thead><tr>
+      <th style="width:20px"></th>
+      <th>Opponent</th>
+      <th class="r">ELO Change</th>
+      <th class="r">ELO After</th>
+      <th class="r">Time</th>
+    </tr></thead><tbody>${rows}</tbody></table>
+    ${paginationHtml}
+  </div>`;
+}
 async function renderEloTab(){
   const el = document.getElementById('elo-body');
   if(!ELO_DATA){
@@ -943,7 +1008,13 @@ async function renderEloTab(){
   if(seasonEl && ELO_DATA.season_start){
     const start = new Date(ELO_DATA.season_start).toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'});
     const next  = new Date(ELO_DATA.next_reset).toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'});
-    seasonEl.textContent = `Current season started ${start} · Next reset ${next} · ${ELO_DATA.total_players} players ranked`;
+    // Season-Nummer: wie viele abgeschlossene Seasons gibt es + 1
+    let seasonNum = 1;
+    try {
+      const hr = await fetch('elo_history.json?t='+Date.now());
+      if(hr.ok){ const h = await hr.json(); seasonNum = h.filter(s=>s.season_start!==ELO_DATA.season_start).length + 1; }
+    } catch(e){}
+    seasonEl.innerHTML = `<span style="color:var(--text2);font-weight:600">ELO Season ${seasonNum}</span> &nbsp;·&nbsp; Started ${start} &nbsp;·&nbsp; Next reset ${next} &nbsp;·&nbsp; ${ELO_DATA.total_players} players ranked`;
   }
 
   const list = ELO_DATA.ranking || [];
@@ -962,8 +1033,8 @@ async function renderEloTab(){
     const eloColor = p.elo>=1600?'var(--amber)':p.elo>=1500?'var(--hib)':p.elo>=1400?'var(--text2)':'var(--text3)';
     const peakColor = p.peak_elo>=1600?'var(--amber)':p.peak_elo>=1500?'var(--hib)':p.peak_elo>=1400?'var(--text2)':'var(--text3)';
     const safeName = p.name.replace(/'/g,"\\'");
-    const isOpen = lbProfileOpen === p.name;
-    return `<tr class="cs-row" onclick="toggleProfile('${safeName}')">
+    const isOpen = eloOpenPlayer === p.name;
+    return `<tr class="cs-row" onclick="toggleEloProfile('${safeName}')">
       <td><span class="${rankCls}">${p.rank}</span></td>
       <td><div class="class-cell">
         ${classIconHtml(p.class_id)}
@@ -980,8 +1051,8 @@ async function renderEloTab(){
       <td class="r"><span class="wl-cell"><span class="w-count">${p.wins}W</span> / <span class="l-count">${p.losses}L</span></span></td>
     </tr>
     <tr><td colspan="7" style="padding:0;border:none">
-      <div class="player-profile${isOpen?' open':''}" id="elo-profile-${p.rank}">
-        ${isOpen ? buildPlayerProfile(p.name) : ''}
+      <div class="player-profile${isOpen?' open':''}" id="elo-profile-${p.rank}" data-name="${p.name}">
+        ${isOpen ? buildEloFightHistory(p.name) : ''}
       </div>
     </td></tr>`;
   }).join('');
@@ -992,8 +1063,12 @@ async function renderEloTab(){
     const hr = await fetch('elo_history.json?t='+Date.now());
     if(hr.ok){
       const history = await hr.json();
-      if(history && history.length){
-        const sections = history.map(s => {
+      // Nur abgeschlossene Seasons anzeigen (nicht die aktuelle)
+      const currentSeason = ELO_DATA.season_start;
+      const past = history.filter(s => s.season_start !== currentSeason);
+      if(past.length){
+        const sections = past.map((s, idx) => {
+          const seasonNum = past.length - idx; // neueste Season hat höchste Nummer
           const start = new Date(s.season_start).toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'});
           const end   = new Date(s.season_end).toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'});
           const rows = s.top10.map(p => {
@@ -1007,8 +1082,11 @@ async function renderEloTab(){
             </tr>`;
           }).join('');
           return `<div style="margin-bottom:1.5rem">
-            <div style="font-family:'Cinzel',serif;font-size:12px;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.75rem">
-              Season ${start} – ${end}
+            <div style="font-family:'Cinzel',serif;font-size:13px;color:var(--text2);font-weight:600;margin-bottom:2px">
+              ELO Season ${seasonNum}
+            </div>
+            <div style="font-size:11px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.06em;margin-bottom:0.75rem">
+              ${start} – ${end}
             </div>
             <table><thead><tr>
               <th>#</th><th>Player</th>
