@@ -732,6 +732,8 @@ async function toggleProfile(name){
   await ensureElo();
   PROFILES = PROFILES_DATA ? PROFILES_DATA.player_profiles || {} : {};
   renderLeaderboard();
+  // Falls ELO-Tab aktiv, auch dort neu rendern
+  if(document.getElementById('page-elo').classList.contains('active')) renderEloTab();
   setTimeout(()=>{
     const open = document.querySelector('.player-profile.open');
     if(open) open.scrollIntoView({behavior:'smooth',block:'nearest'});
@@ -947,7 +949,10 @@ async function renderEloTab(){
     const rlmCls = rlm==='1'?'alb':rlm==='2'?'mid':'hib';
     const wrCss_ = p.winrate>=55?'wr-green':p.winrate<=45?'wr-red':'wr-amber';
     const eloColor = p.elo>=1600?'var(--amber)':p.elo>=1500?'var(--hib)':p.elo>=1400?'var(--text2)':'var(--text3)';
-    return `<tr>
+    const peakColor = p.peak_elo>=1600?'var(--amber)':p.peak_elo>=1500?'var(--hib)':p.peak_elo>=1400?'var(--text2)':'var(--text3)';
+    const safeName = p.name.replace(/'/g,"\\'");
+    const isOpen = lbProfileOpen === p.name;
+    return `<tr class="cs-row" onclick="toggleProfile('${safeName}')">
       <td><span class="${rankCls}">${rank}</span></td>
       <td><div class="class-cell">
         ${classIconHtml(p.class_id)}
@@ -958,19 +963,65 @@ async function renderEloTab(){
         <a href="https://eden-daoc.net/herald?n=player&k=${encodeURIComponent(p.name)}" target="_blank" onclick="event.stopPropagation()" style="margin-left:6px;color:var(--text3);text-decoration:none;opacity:0.5;transition:all 0.15s;flex-shrink:0;display:inline-flex;align-items:center" onmouseover="this.style.opacity='1';this.style.color='var(--hib)'" onmouseout="this.style.opacity='0.5';this.style.color='var(--text3)'" title="View on Eden Herald"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>
       </div></td>
       <td class="r"><span style="font-family:'Cinzel',serif;font-size:15px;font-weight:700;color:${eloColor}">${p.elo}</span></td>
+      <td class="r"><span style="font-family:'Cinzel',serif;font-size:13px;color:${peakColor};opacity:0.8" title="Season peak ELO">▲ ${p.peak_elo}</span></td>
       <td class="r"><span class="fights-num">${p.fights}</span></td>
       <td class="r"><span class="wr-num ${wrCss_}">${p.winrate}%</span></td>
       <td class="r"><span class="wl-cell"><span class="w-count">${p.wins}W</span> / <span class="l-count">${p.losses}L</span></span></td>
-    </tr>`;
+    </tr>
+    <tr><td colspan="7" style="padding:0;border:none">
+      <div class="player-profile${isOpen?' open':''}" id="elo-profile-${rank}">
+        ${isOpen ? buildPlayerProfile(p.name) : ''}
+      </div>
+    </td></tr>`;
   }).join('');
+
+  // Season History laden und anzeigen
+  let historyHtml = '';
+  try {
+    const hr = await fetch('elo_history.json?t='+Date.now());
+    if(hr.ok){
+      const history = await hr.json();
+      if(history && history.length){
+        const sections = history.map(s => {
+          const start = new Date(s.season_start).toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'});
+          const end   = new Date(s.season_end).toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'});
+          const rows = s.top10.map(p => {
+            const rankCls = p.rank===1?'rank-1':p.rank===2?'rank-2':p.rank===3?'rank-3':'rank-num';
+            const pc = p.peak_elo>=1600?'var(--amber)':p.peak_elo>=1500?'var(--hib)':p.peak_elo>=1400?'var(--text2)':'var(--text3)';
+            return `<tr>
+              <td><span class="${rankCls}">${p.rank}</span></td>
+              <td><div class="class-cell">${classIconHtml(p.class_id)}<span class="class-name">${p.name}</span></div></td>
+              <td class="r"><span style="font-family:'Cinzel',serif;font-weight:700;color:${pc}">▲ ${p.peak_elo}</span></td>
+              <td class="r"><span style="font-family:'Cinzel',serif;color:var(--text3)">${p.elo}</span></td>
+            </tr>`;
+          }).join('');
+          return `<div style="margin-bottom:1.5rem">
+            <div style="font-family:'Cinzel',serif;font-size:12px;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.75rem">
+              Season ${start} – ${end}
+            </div>
+            <table><thead><tr>
+              <th>#</th><th>Player</th>
+              <th class="r">Peak ELO</th>
+              <th class="r">Final ELO</th>
+            </tr></thead><tbody>${rows}</tbody></table>
+          </div>`;
+        }).join('');
+        historyHtml = `<div style="margin-top:2rem;padding-top:1.5rem;border-top:0.5px solid var(--border2)">
+          <div style="font-family:'Cinzel',serif;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);margin-bottom:1.25rem">📜 Season History</div>
+          ${sections}
+        </div>`;
+      }
+    }
+  } catch(e){}
 
   el.innerHTML = `<table><thead><tr>
     <th>#</th><th>Player</th>
     <th class="r">ELO</th>
+    <th class="r">Peak</th>
     <th class="r">Fights</th>
     <th class="r">Win Rate</th>
     <th class="r">W / L</th>
-  </tr></thead><tbody>${rows}</tbody></table>`;
+  </tr></thead><tbody>${rows}</tbody></table>${historyHtml}`;
 }
 
 // ══════════════════════════════════════════════
