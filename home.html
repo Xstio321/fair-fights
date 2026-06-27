@@ -1050,6 +1050,7 @@ async function renderEloTab(){
       <b style="color:var(--text2)">Minimum fights:</b> ${ELO_DATA.min_fights} to appear in ranking &nbsp;·&nbsp;
       <b style="color:var(--text2)">Season reset:</b> ${resetLabel}`;
   }
+  const seasonEl = document.getElementById('elo-season-info');
   if(seasonEl && ELO_DATA.season_start){
     const start = new Date(ELO_DATA.season_start).toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'});
     const next  = new Date(ELO_DATA.next_reset).toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'});
