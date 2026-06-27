@@ -298,11 +298,12 @@ if(localStorage.getItem('ff-theme') === 'light'){
 
 let ELO_DATA = null;
 let ELO_LOADING = false;
+let ELO_FIGHTS = null;
+let ELO_FIGHTS_LOADING = false;
 
 async function ensureElo(){
   if(ELO_DATA) return;
-  if(ELO_LOADING) {
-    // Warten bis der laufende Load fertig ist
+  if(ELO_LOADING){
     while(ELO_LOADING) await new Promise(r => setTimeout(r, 50));
     return;
   }
@@ -312,6 +313,20 @@ async function ensureElo(){
     if(r.ok) ELO_DATA = await r.json();
   } catch(e){ console.error('elo.json laden fehlgeschlagen', e); }
   ELO_LOADING = false;
+}
+
+async function ensureEloFights(){
+  if(ELO_FIGHTS) return;
+  if(ELO_FIGHTS_LOADING){
+    while(ELO_FIGHTS_LOADING) await new Promise(r => setTimeout(r, 50));
+    return;
+  }
+  ELO_FIGHTS_LOADING = true;
+  try {
+    const r = await fetch('elo_fights.json?t='+Date.now());
+    if(r.ok) ELO_FIGHTS = await r.json();
+  } catch(e){ console.error('elo_fights.json laden fehlgeschlagen', e); }
+  ELO_FIGHTS_LOADING = false;
 }
 
 let DATA = null;
@@ -941,22 +956,21 @@ let eloFightPage  = 1;
 let eloSearch     = '';
 const eloFightPageSize = 15;
 
-function toggleEloProfile(name){
+async function toggleEloProfile(name){
   if(eloOpenPlayer === name){
     eloOpenPlayer = null;
   } else {
     eloOpenPlayer = name;
     eloFightPage  = 1;
+    await ensureEloFights();
   }
   renderEloTab();
 }
 
 function buildEloFightHistory(name){
-  if(!ELO_DATA || !ELO_DATA.by_player || !ELO_DATA.by_player[name])
-    return '<div style="padding:12px;color:var(--text3);font-size:12px;font-family:Cinzel,serif">No ELO data for this player.</div>';
-
-  const player = ELO_DATA.by_player[name];
-  const history = player.fight_history || [];
+  if(!ELO_FIGHTS)
+    return '<div style="padding:12px;color:var(--text3);font-size:12px;font-family:Cinzel,serif">Loading fight history…</div>';
+  const history = ELO_FIGHTS[name] || [];
   if(!history.length)
     return '<div style="padding:12px;color:var(--text3);font-size:12px;font-family:Cinzel,serif">No fights recorded this season.</div>';
 
@@ -1072,8 +1086,8 @@ async function renderEloTab(){
 
     // Sparkline aus fight_history
     let sparkline = '';
-    if(p.fight_history && p.fight_history.length >= 2){
-      const history = [...p.fight_history].reverse(); // älteste zuerst
+    if(ELO_FIGHTS && ELO_FIGHTS[p.name] && ELO_FIGHTS[p.name].length >= 2){
+      const history = [...ELO_FIGHTS[p.name]].reverse(); // älteste zuerst
       const elos = history.map(f => f.elo_after);
       const minElo = Math.min(...elos);
       const maxElo = Math.max(...elos);
