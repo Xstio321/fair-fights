@@ -270,6 +270,12 @@
                     </div>
                     <div id="elo-season-info" style="margin-top:0.75rem;font-size:12px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.04em"></div>
                 </div>
+                <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:1rem">
+                  <div class="search-wrap">
+                    <span class="search-icon">🔍</span>
+                    <input class="search-input" id="elo-search" placeholder="Search player…">
+                  </div>
+                </div>
                 <div id="elo-body"><div class="loading">Loading ELO data…</div></div>
             </div>
 
@@ -402,7 +408,12 @@ function underdogCellHtml(underdogWins){
 function switchPage(page){
   document.querySelectorAll('.page-tab').forEach(t => t.classList.toggle('active', t.dataset.page === page));
   document.querySelectorAll('.page-panel').forEach(p => p.classList.toggle('active', p.id === 'page-'+page));
-  if(page === 'elo') renderEloTab();
+  if(page === 'elo'){
+    eloSearch = '';
+    const si = document.getElementById('elo-search');
+    if(si) si.value = '';
+    renderEloTab();
+  }
 }
 document.querySelectorAll('.page-tab').forEach(tab => {
   tab.addEventListener('click', () => switchPage(tab.dataset.page));
@@ -924,6 +935,7 @@ function sortDrill(classId,key){
 
 let eloOpenPlayer = null;
 let eloFightPage  = 1;
+let eloSearch     = '';
 const eloFightPageSize = 15;
 
 function toggleEloProfile(name){
@@ -993,6 +1005,13 @@ function buildEloFightHistory(name){
     ${paginationHtml}
   </div>`;
 }
+document.getElementById('elo-search').addEventListener('input', e => {
+  eloSearch = e.target.value.toLowerCase();
+  eloPage = 1;
+  eloOpenPlayer = null;
+  renderEloTab();
+});
+
 async function renderEloTab(){
   const el = document.getElementById('elo-body');
   if(!ELO_DATA){
@@ -1015,8 +1034,12 @@ async function renderEloTab(){
     seasonEl.innerHTML = `<span style="color:var(--text2);font-weight:600">ELO Season ${seasonNum}</span> &nbsp;·&nbsp; Started ${start} &nbsp;·&nbsp; Next reset ${next} &nbsp;·&nbsp; ${ELO_DATA.total_players} players ranked`;
   }
 
-  const list = ELO_DATA.ranking || [];
+  let list = ELO_DATA.ranking || [];
   if(!list.length){ el.innerHTML = '<div class="error-msg">No players ranked yet (min. 10 fights required).</div>'; return; }
+
+  if(eloSearch){
+    list = list.filter(p => p.name.toLowerCase().includes(eloSearch));
+  }
 
   const totalPages = Math.max(1, Math.ceil(list.length / eloPageSize));
   if(eloPage > totalPages) eloPage = 1;
