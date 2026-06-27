@@ -322,6 +322,8 @@ let CLASS_REALM_MAP = {};
 
 let lbPage = 1;
 let lbPageSize = 10;
+let eloPage = 1;
+const eloPageSize = 20;
 let lbSortKey = 'wilson';
 let lbSortDir = -1;
 let lbDays = 1;
@@ -943,8 +945,12 @@ async function renderEloTab(){
   const list = ELO_DATA.ranking || [];
   if(!list.length){ el.innerHTML = '<div class="error-msg">No players ranked yet (min. 10 fights required).</div>'; return; }
 
-  const rows = list.map(p => {
-    const rank = p.rank;
+  const totalPages = Math.max(1, Math.ceil(list.length / eloPageSize));
+  if(eloPage > totalPages) eloPage = 1;
+  const start = (eloPage - 1) * eloPageSize;
+  const paginated = list.slice(start, start + eloPageSize);
+
+  const rows = paginated.map(p => {
     const rankCls = rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'rank-num';
     const rlm = CLASS_REALM_MAP[String(p.class_id)];
     const rlmCls = rlm==='1'?'alb':rlm==='2'?'mid':'hib';
@@ -1015,6 +1021,22 @@ async function renderEloTab(){
     }
   } catch(e){}
 
+  let paginationHtml = '';
+  if(totalPages > 1){
+    paginationHtml = `<div class="pagination">
+      <button class="page-btn" onclick="eloPage--;renderEloTab()" ${eloPage===1?'disabled':''}>‹</button>`;
+    for(let i=1;i<=totalPages;i++){
+      if(totalPages>7&&i>2&&i<totalPages-1&&Math.abs(i-eloPage)>1){
+        if(i===3||i===totalPages-2) paginationHtml+=`<span class="page-info">…</span>`;
+        continue;
+      }
+      paginationHtml+=`<button class="page-btn ${i===eloPage?'active':''}" onclick="eloPage=${i};renderEloTab()">${i}</button>`;
+    }
+    paginationHtml+=`<button class="page-btn" onclick="eloPage++;renderEloTab()" ${eloPage===totalPages?'disabled':''}>›</button>
+      <span class="page-info">${list.length} players</span>
+    </div>`;
+  }
+
   el.innerHTML = `<table><thead><tr>
     <th>#</th><th>Player</th>
     <th class="r">ELO</th>
@@ -1022,7 +1044,7 @@ async function renderEloTab(){
     <th class="r">Fights</th>
     <th class="r">Win Rate</th>
     <th class="r">W / L</th>
-  </tr></thead><tbody>${rows}</tbody></table>${historyHtml}`;
+  </tr></thead><tbody>${rows}</tbody></table>${paginationHtml}${historyHtml}`;
 }
 
 // ══════════════════════════════════════════════
