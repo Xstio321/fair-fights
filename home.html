@@ -428,7 +428,7 @@ function switchPage(page){
     eloSearch = '';
     const si = document.getElementById('elo-search');
     if(si) si.value = '';
-    renderEloTab();
+    ensureEloFights().then(() => renderEloTab());
   }
 }
 document.querySelectorAll('.page-tab').forEach(tab => {
