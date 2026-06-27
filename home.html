@@ -951,7 +951,7 @@ async function renderEloTab(){
   const paginated = list.slice(start, start + eloPageSize);
 
   const rows = paginated.map(p => {
-    const rankCls = rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'rank-num';
+    const rankCls = p.rank===1?'rank-1':p.rank===2?'rank-2':p.rank===3?'rank-3':'rank-num';
     const rlm = CLASS_REALM_MAP[String(p.class_id)];
     const rlmCls = rlm==='1'?'alb':rlm==='2'?'mid':'hib';
     const wrCss_ = p.winrate>=55?'wr-green':p.winrate<=45?'wr-red':'wr-amber';
