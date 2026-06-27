@@ -86,6 +86,7 @@
                 <button class="page-tab active" data-page="overview">Overview</button>
                 <button class="page-tab" data-page="statistics">Statistics</button>
                 <button class="page-tab" data-page="leaderboard">Leaderboard</button>
+                <button class="page-tab" data-page="elo">ELO Ranking</button>
             </div>
             <!-- ── OVERVIEW PANEL ── -->
             <div class="page-panel active" id="page-overview">
@@ -254,6 +255,24 @@
                 </div>
                 <div id="leaderboard-pagination"></div>
             </div>
+            <!-- ── ELO RANKING PANEL ── -->
+            <div class="page-panel" id="page-elo">
+                <div id="elo-info" style="background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:1.1rem 1.25rem;margin-bottom:1.5rem">
+                    <div style="font-family:'Cinzel',serif;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);margin-bottom:0.75rem">⚔ About ELO Ranking</div>
+                    <div style="font-size:14px;color:var(--text2);line-height:1.7">
+                        The ELO system rates players based on the strength of their opponents. Beating a highly-rated player gains more points than beating a lower-rated one — and losing to a weaker player costs more points than losing to a stronger one.<br><br>
+                        <span style="color:var(--text3);font-size:12px;font-family:'Cinzel',serif">
+                            <b style="color:var(--text2)">Starting ELO:</b> 1500 &nbsp;·&nbsp;
+                            <b style="color:var(--text2)">K-Factor:</b> 32 (first 30 fights), 16 (after) &nbsp;·&nbsp;
+                            <b style="color:var(--text2)">Minimum fights:</b> 10 to appear in ranking &nbsp;·&nbsp;
+                            <b style="color:var(--text2)">Season reset:</b> every 3 months
+                        </span>
+                    </div>
+                    <div id="elo-season-info" style="margin-top:0.75rem;font-size:12px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.04em"></div>
+                </div>
+                <div id="elo-body"><div class="loading">Loading ELO data…</div></div>
+            </div>
+
             <footer>Fair Fights is an independent, unofficial fan project. Not affiliated with the server it tracks.</footer>
         </div>
         <script>
@@ -268,6 +287,20 @@ function toggleTheme(){
 if(localStorage.getItem('ff-theme') === 'light'){
   document.body.classList.add('light');
   document.getElementById('theme-toggle').textContent = '🌙 Dark';
+}
+
+let ELO_DATA = null;
+let ELO_LOADING = false;
+
+async function ensureElo(){
+  if(ELO_DATA) return;
+  if(ELO_LOADING) return;
+  ELO_LOADING = true;
+  try {
+    const r = await fetch('elo.json?t='+Date.now());
+    if(r.ok) ELO_DATA = await r.json();
+  } catch(e){ console.error('elo.json laden fehlgeschlagen', e); }
+  ELO_LOADING = false;
 }
 
 let DATA = null;
@@ -363,6 +396,7 @@ function underdogCellHtml(underdogWins){
 function switchPage(page){
   document.querySelectorAll('.page-tab').forEach(t => t.classList.toggle('active', t.dataset.page === page));
   document.querySelectorAll('.page-panel').forEach(p => p.classList.toggle('active', p.id === 'page-'+page));
+  if(page === 'elo') renderEloTab();
 }
 document.querySelectorAll('.page-tab').forEach(tab => {
   tab.addEventListener('click', () => switchPage(tab.dataset.page));
@@ -562,6 +596,9 @@ function buildPlayerProfile(name){
   const wrCls = wr>=55?'wr-green':wr>=45?'wr-amber':'wr-red';
   const bestStreak = pp ? (pp.best_streak || 0) : 0;
   const underdogMax = pp && pp.underdog_wins ? Math.max(...Object.keys(pp.underdog_wins).map(Number), 0) : 0;
+  const eloEntry = ELO_DATA && ELO_DATA.by_player && ELO_DATA.by_player[name];
+  const eloVal = eloEntry ? eloEntry.elo : null;
+  const eloColor = eloVal ? (eloVal>=1600?'var(--amber)':eloVal>=1500?'var(--hib)':eloVal>=1400?'var(--text2)':'var(--text3)') : 'var(--text3)';
 
   const statsHeader = `<div style="display:flex;align-items:center;gap:24px;padding:10px 14px;border-bottom:0.5px solid var(--border2);flex-wrap:wrap">
     <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
@@ -576,6 +613,10 @@ function buildPlayerProfile(name){
       <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase">Win Rate</span>
       <span style="font-size:16px;font-family:'Cinzel',serif;font-weight:600;color:var(--${wrCls.replace('wr-','')})">${wr}%</span>
     </div>
+    ${eloVal ? `<div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+      <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase">ELO</span>
+      <span style="font-size:16px;font-family:'Cinzel',serif;font-weight:700;color:${eloColor}">${eloVal}</span>
+    </div>` : ''}
     <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
       <span style="font-size:9px;color:var(--text3);font-family:'Cinzel',serif;letter-spacing:0.1em;text-transform:uppercase">Longest Streak</span>
       <span style="font-size:16px;font-family:'Cinzel',serif;font-weight:600;color:var(--amber)">${bestStreak}W</span>
@@ -688,6 +729,7 @@ async function toggleProfile(name){
   }
   lbProfileOpen = name;
   await ensureProfiles();
+  await ensureElo();
   PROFILES = PROFILES_DATA ? PROFILES_DATA.player_profiles || {} : {};
   renderLeaderboard();
   setTimeout(()=>{
@@ -874,6 +916,61 @@ function sortDrill(classId,key){
     const icon=document.getElementById('ei-'+classId);
     if(panel){panel.classList.add('open');if(icon)icon.classList.add('open');}
   },10);
+}
+
+// ══════════════════════════════════════════════
+// ELO RANKING
+// ══════════════════════════════════════════════
+async function renderEloTab(){
+  const el = document.getElementById('elo-body');
+  if(!ELO_DATA){
+    el.innerHTML = '<div class="loading">Loading…</div>';
+    await ensureElo();
+    if(!ELO_DATA){ el.innerHTML = '<div class="error-msg">ELO data not available yet.</div>'; return; }
+  }
+
+  // Season-Info
+  const seasonEl = document.getElementById('elo-season-info');
+  if(seasonEl && ELO_DATA.season_start){
+    const start = new Date(ELO_DATA.season_start).toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'});
+    const next  = new Date(ELO_DATA.next_reset).toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'});
+    seasonEl.textContent = `Current season started ${start} · Next reset ${next} · ${ELO_DATA.total_players} players ranked`;
+  }
+
+  const list = ELO_DATA.ranking || [];
+  if(!list.length){ el.innerHTML = '<div class="error-msg">No players ranked yet (min. 10 fights required).</div>'; return; }
+
+  const rows = list.map(p => {
+    const rank = p.rank;
+    const rankCls = rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'rank-num';
+    const rlm = CLASS_REALM_MAP[String(p.class_id)];
+    const rlmCls = rlm==='1'?'alb':rlm==='2'?'mid':'hib';
+    const wrCss_ = p.winrate>=55?'wr-green':p.winrate<=45?'wr-red':'wr-amber';
+    const eloColor = p.elo>=1600?'var(--amber)':p.elo>=1500?'var(--hib)':p.elo>=1400?'var(--text2)':'var(--text3)';
+    return `<tr>
+      <td><span class="${rankCls}">${rank}</span></td>
+      <td><div class="class-cell">
+        ${classIconHtml(p.class_id)}
+        <div>
+          <div class="player-name">${p.name}</div>
+          <div class="player-sub"><span class="realm-${rlmCls}">${realmName(p.class_id)}</span> · ${p.class_name||''}</div>
+        </div>
+        <a href="https://eden-daoc.net/herald?n=player&k=${encodeURIComponent(p.name)}" target="_blank" onclick="event.stopPropagation()" style="margin-left:6px;color:var(--text3);text-decoration:none;opacity:0.5;transition:all 0.15s;flex-shrink:0;display:inline-flex;align-items:center" onmouseover="this.style.opacity='1';this.style.color='var(--hib)'" onmouseout="this.style.opacity='0.5';this.style.color='var(--text3)'" title="View on Eden Herald"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>
+      </div></td>
+      <td class="r"><span style="font-family:'Cinzel',serif;font-size:15px;font-weight:700;color:${eloColor}">${p.elo}</span></td>
+      <td class="r"><span class="fights-num">${p.fights}</span></td>
+      <td class="r"><span class="wr-num ${wrCss_}">${p.winrate}%</span></td>
+      <td class="r"><span class="wl-cell"><span class="w-count">${p.wins}W</span> / <span class="l-count">${p.losses}L</span></span></td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `<table><thead><tr>
+    <th>#</th><th>Player</th>
+    <th class="r">ELO</th>
+    <th class="r">Fights</th>
+    <th class="r">Win Rate</th>
+    <th class="r">W / L</th>
+  </tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 // ══════════════════════════════════════════════
