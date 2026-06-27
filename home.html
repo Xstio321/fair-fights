@@ -866,7 +866,6 @@ function renderClassStats(){
       {key:'wilson',  label:'Wilson Score', cls:'r sortable'},
       {key:'winrate', label:'Win rate',     cls:'r sortable'},
       {key:'wins',    label:'W / L',        cls:'r sortable'},
-      {key:null,      label:'Underdog Wins',cls:'r'},
     ];
     let drillHead='<thead><tr>';
     drillCols.forEach(dc=>{
@@ -889,7 +888,6 @@ function renderClassStats(){
           <div class="bar-bg"><div class="bar-fill ${barCss(wr2)}" style="width:${wr2}%"></div></div>
         </div></td>
         <td class="r"><span class="wl-cell"><span class="w-count">${p.wins}W</span> / <span class="l-count">${p.losses}L</span></span></td>
-        <td class="r">${underdogCellHtml(p.underdog_wins)}</td>
       </tr>`;
     });
 
