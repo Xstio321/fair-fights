@@ -294,7 +294,11 @@ let ELO_LOADING = false;
 
 async function ensureElo(){
   if(ELO_DATA) return;
-  if(ELO_LOADING) return;
+  if(ELO_LOADING) {
+    // Warten bis der laufende Load fertig ist
+    while(ELO_LOADING) await new Promise(r => setTimeout(r, 50));
+    return;
+  }
   ELO_LOADING = true;
   try {
     const r = await fetch('elo.json?t='+Date.now());
@@ -960,7 +964,7 @@ async function renderEloTab(){
     const safeName = p.name.replace(/'/g,"\\'");
     const isOpen = lbProfileOpen === p.name;
     return `<tr class="cs-row" onclick="toggleProfile('${safeName}')">
-      <td><span class="${rankCls}">${rank}</span></td>
+      <td><span class="${rankCls}">${p.rank}</span></td>
       <td><div class="class-cell">
         ${classIconHtml(p.class_id)}
         <div>
@@ -976,7 +980,7 @@ async function renderEloTab(){
       <td class="r"><span class="wl-cell"><span class="w-count">${p.wins}W</span> / <span class="l-count">${p.losses}L</span></span></td>
     </tr>
     <tr><td colspan="7" style="padding:0;border:none">
-      <div class="player-profile${isOpen?' open':''}" id="elo-profile-${rank}">
+      <div class="player-profile${isOpen?' open':''}" id="elo-profile-${p.rank}">
         ${isOpen ? buildPlayerProfile(p.name) : ''}
       </div>
     </td></tr>`;
@@ -1758,8 +1762,11 @@ function renderActivity(){
           <td style="font-size:9px;color:var(--text3);font-family:Cinzel,serif;padding:2px 6px 2px 0;white-space:nowrap">${DAY_LABELS[d]}</td>
           ${row.map((v,h)=>{
             const intensity = v/maxHeat;
-            const bg = v===0 ? 'var(--bg3)'
-              : `rgba(122,182,72,${(0.1+intensity*0.85).toFixed(2)})`;
+            // Grün (niedrig) → Gelb (mittel) → Rot (hoch)
+            const r = Math.round(intensity < 0.5 ? intensity*2*200 : 200+(intensity-0.5)*2*55);
+            const g = Math.round(intensity < 0.5 ? 180 : 180*(1-(intensity-0.5)*2));
+            const a = v===0 ? 0 : (0.15 + intensity*0.85).toFixed(2);
+            const bg = v===0 ? 'var(--bg3)' : `rgba(${r},${g},50,${a})`;
             return `<td style="background:${bg};width:${cellW}%;height:18px;border:0.5px solid var(--bg)" title="${DAY_LABELS[d]} ${String(h).padStart(2,'0')}:00 – ${v} fights"></td>`;
           }).join('')}
         </tr>`).join('')}
@@ -1767,7 +1774,7 @@ function renderActivity(){
     </table>
     <div style="display:flex;align-items:center;gap:8px;margin-top:6px;justify-content:flex-end">
       <span style="font-size:9px;color:var(--text3);font-family:Cinzel,serif">Low</span>
-      ${[0.1,0.3,0.5,0.7,0.9].map(i=>`<div style="width:16px;height:8px;border-radius:2px;background:rgba(122,182,72,${i.toFixed(1)})"></div>`).join('')}
+      ${[[0,180,50,0.25],[100,180,50,0.5],[160,130,50,0.7],[200,80,50,0.85],[220,40,50,0.95]].map(([r,g,b,a])=>`<div style="width:16px;height:8px;border-radius:2px;background:rgba(${r},${g},${b},${a})"></div>`).join('')}
       <span style="font-size:9px;color:var(--text3);font-family:Cinzel,serif">High</span>
     </div></div>`;
   }
