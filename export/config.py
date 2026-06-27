@@ -14,7 +14,8 @@ from pathlib import Path
 
 try:
     from dotenv import load_dotenv
-    _ENV_PATH = Path(__file__).resolve().parent / ".env"
+    # .env im Root-Ordner (fair-fights/.env) — eine Ebene über export/
+    _ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
     load_dotenv(dotenv_path=_ENV_PATH)
 except ImportError:
     pass
