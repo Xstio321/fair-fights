@@ -34,7 +34,7 @@ LOG_PATH = _optional("LOG_PATH", str(_EXPORT / "export.log"))
 
 # ── Web-Output ────────────────────────────────────────────────────────────────
 # Auf dem Server z.B. auf "/var/www/fair-fights/" setzen
-JSON_PATH = _optional("JSON_PATH", str(_ROOT / "web" / "data.json"))
+JSON_PATH = _optional("JSON_PATH", str(_ROOT / "data.json"))
 
 # ── Export-Verhalten ──────────────────────────────────────────────────────────
 # GIT_PUSH="false" deaktiviert den automatischen Git-Push (für Server-Hosting)
