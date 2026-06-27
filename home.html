@@ -1502,6 +1502,8 @@ function renderHighlightFights(){
     const extra = f.loser_names.length > 1 ? ` +${f.loser_names.length-1}` : '';
     return `<div class="highlight-row">
       ${classIconHtml(f.winner_class_id, 22)}
+      <span style="color:var(--text3);font-size:9px">vs</span>
+      ${classIconHtml(f.loser_class_ids[0], 22)}
       <span class="highlight-name">
         <span style="color:var(--green)">${f.winner_name}</span>
         <span style="color:var(--text3);font-size:10px;margin:0 4px">vs</span>
