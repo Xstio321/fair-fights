@@ -1074,7 +1074,7 @@ async function renderEloTab(){
       }).join(' ');
       const trend = elos[elos.length-1] >= elos[0];
       const color = trend ? '#7ab648' : '#c44a4a';
-      sparkline = `<td style="padding:0 8px"><svg width="${w}" height="${h}" style="display:block;overflow:visible">
+      sparkline = `<td style="padding:0 8px;text-align:center"><svg width="${w}" height="${h}" style="display:block;overflow:visible;margin:0 auto">
         <polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
       </svg></td>`;
     } else {
@@ -1170,7 +1170,7 @@ async function renderEloTab(){
   el.innerHTML = `<table><thead><tr>
     <th>#</th><th>Player</th>
     <th class="r">ELO</th>
-    <th></th>
+    <th style="text-align:center">Trend</th>
     <th class="r">Peak</th>
     <th class="r">Fights</th>
     <th class="r">Win Rate</th>
